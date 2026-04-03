@@ -553,50 +553,10 @@ class PatientController extends Controller
                             }
                         }
                         if (isset($topDoctor) && count($topDoctor) > 0) {
-                            $topDoctorIds = collect($topDoctor)->pluck('id')->filter()->unique()->values()->all();
-                            $topDoctorRatings = $this->getDoctorRatingsByIds($topDoctorIds);
-                            $topDoctorFavourites = $this->getFavouriteFlagsByDoctorIds($patient->id, $topDoctorIds);
-
-                            foreach ($topDoctor as $key => $dr) {
-                                $dr->varProfile = !empty($dr->varProfile) ? config('app.url') . 'api/docterprofile/' . $dr->varProfile : 'null';
-                                $dr->isFavouriteFlag = $topDoctorFavourites[$dr->id] ?? 'N';
-                                $ratingData = $topDoctorRatings[$dr->id] ?? ['ratings' => 0, 'review_count' => 0];
-                                $dr->ratings = $ratingData['ratings'];
-                                $dr->review_count = $ratingData['review_count'];
-            
-                                // Structure the ratings as an object with keys 'ratings' and 'review_count' inside an array
-                                $dr->ratings = [
-                                    [
-                                        'ratings' => $dr->ratings,
-                                        'review_count' => $dr->review_count
-                                    ]
-                                ];
-            
-                                // Remove the review_count field from the root object (optional)
-                                unset($dr->review_count);
-                            }
+                            User::formatDoctorListing($topDoctor, $patient->id);
                         }
                         if (isset($favDoctor) && count($favDoctor) > 0) {
-                            $favDoctorIds = collect($favDoctor)->pluck('id')->filter()->unique()->values()->all();
-                            $favDoctorRatings = $this->getDoctorRatingsByIds($favDoctorIds);
-
-                            foreach ($favDoctor as $key => $favdr) {
-                                $favdr->varProfile = !empty($favdr->varProfile) ? config('app.url') . 'api/docterprofile/' . $favdr->varProfile : 'null';
-                                $ratingData = $favDoctorRatings[$favdr->id] ?? ['ratings' => 0, 'review_count' => 0];
-                                $favdr->ratings = $ratingData['ratings'];
-                                $favdr->review_count = $ratingData['review_count'];
-            
-                                // Structure the ratings as an object with keys 'ratings' and 'review_count' inside an array
-                                $favdr->ratings = [
-                                    [
-                                        'ratings' => $favdr->ratings,
-                                        'review_count' => $favdr->review_count
-                                    ]
-                                ];
-            
-                                // Remove the review_count field from the root object (optional)
-                                unset($favdr->review_count);
-                            }
+                            User::formatDoctorListing($favDoctor, $patient->id);
                         }
                         $patient->varProfile =  !empty($patient->varProfile) ? config('app.url') . 'api/patientprofile/' . $patient->varProfile : 'null';
                         return response()->json([
@@ -775,28 +735,7 @@ class PatientController extends Controller
 
                         // Format topDoctor profiles
                         if (isset($topDoctor) && count($topDoctor) > 0) {
-                            $topDoctorIds = collect($topDoctor->items())->pluck('id')->filter()->unique()->values()->all();
-                            $topDoctorRatings = $this->getDoctorRatingsByIds($topDoctorIds);
-                            $topDoctorFavourites = $this->getFavouriteFlagsByDoctorIds($patient->id, $topDoctorIds);
-
-                            foreach ($topDoctor as $dr) {
-                                $dr->varProfile = !empty($dr->varProfile) ? config('app.url') . 'api/docterprofile/' . $dr->varProfile : 'null';
-                                $dr->isFavouriteFlag = $topDoctorFavourites[$dr->id] ?? 'N';
-                                $ratingData = $topDoctorRatings[$dr->id] ?? ['ratings' => 0, 'review_count' => 0];
-                                $dr->ratings = $ratingData['ratings'];
-                                $dr->review_count = $ratingData['review_count'];
-            
-                                // Structure the ratings as an object with keys 'ratings' and 'review_count' inside an array
-                                $dr->ratings = [
-                                    [
-                                        'ratings' => $dr->ratings,
-                                        'review_count' => $dr->review_count
-                                    ]
-                                ];
-            
-                                // Remove the review_count field from the root object (optional)
-                                unset($dr->review_count);
-                            }
+                            User::formatDoctorListing($topDoctor, $patient->id);
 
                             $topDoctorResponse = [
                                 'current_page' => $topDoctor->currentPage(),
@@ -807,26 +746,7 @@ class PatientController extends Controller
 
                         // Format favourite doctor profiles
                         if (isset($favDoctor) && count($favDoctor) > 0) {
-                            $favDoctorIds = collect($favDoctor->items())->pluck('id')->filter()->unique()->values()->all();
-                            $favDoctorRatings = $this->getDoctorRatingsByIds($favDoctorIds);
-
-                            foreach ($favDoctor as $favdr) {
-                                $favdr->varProfile = !empty($favdr->varProfile) ? config('app.url') . 'api/docterprofile/' . $favdr->varProfile : 'null';
-                                $ratingData = $favDoctorRatings[$favdr->id] ?? ['ratings' => 0, 'review_count' => 0];
-                                $favdr->ratings = $ratingData['ratings'];
-                                $favdr->review_count = $ratingData['review_count'];
-            
-                                // Structure the ratings as an object with keys 'ratings' and 'review_count' inside an array
-                                $favdr->ratings = [
-                                    [
-                                        'ratings' => $favdr->ratings,
-                                        'review_count' => $favdr->review_count
-                                    ]
-                                ];
-            
-                                // Remove the review_count field from the root object (optional)
-                                unset($favdr->review_count);
-                            }
+                            User::formatDoctorListing($favDoctor, $patient->id);
                             $favDoctorResponse = [
                                 'current_page' => $favDoctor->currentPage(),
                                 'doctor' => $favDoctor->items(),
@@ -1012,27 +932,7 @@ class PatientController extends Controller
     
                     // Format topDoctor profiles
                     if (isset($searchDoctor) && count($searchDoctor) > 0) {
-                        $searchDoctorIds = collect($searchDoctor->items())->pluck('id')->filter()->unique()->values()->all();
-                        $searchDoctorRatings = $this->getDoctorRatingsByIds($searchDoctorIds);
-                        $searchDoctorFavourites = $this->getFavouriteFlagsByDoctorIds($patient->id, $searchDoctorIds);
-
-                        foreach ($searchDoctor as $dr) {
-                            $dr->varProfile = !empty($dr->varProfile) ? config('app.url') . 'api/docterprofile/' . $dr->varProfile : 'null';
-                            $ratingData = $searchDoctorRatings[$dr->id] ?? ['ratings' => 0, 'review_count' => 0];
-                            $dr->ratings = $ratingData['ratings'];
-                            $dr->review_count = $ratingData['review_count'];
-                             $dr->ratings = [
-                                [
-                                    'ratings' => $dr->ratings,
-                                    'review_count' => $dr->review_count
-                                ]
-                            ];
-        
-                            // Remove the review_count field from the root object (optional)
-                            unset($dr->review_count);
-
-                            $dr->isFavouriteFlag = $searchDoctorFavourites[$dr->id] ?? 'N';
-                        }
+                        User::formatDoctorListing($searchDoctor, $patient->id);
     
                         $topDoctorResponse = [
                             'current_page' => $searchDoctor->currentPage(),
@@ -1561,38 +1461,4 @@ class PatientController extends Controller
         ], 401);
     }
 
-    private function getDoctorRatingsByIds(array $doctorIds): array
-    {
-        if (empty($doctorIds)) {
-            return [];
-        }
-
-        return Rating::query()
-            ->selectRaw('doctor_id, IFNULL(AVG(rating), 0) as ratings, IFNULL(COUNT(id), 0) as review_count')
-            ->whereIn('doctor_id', $doctorIds)
-            ->groupBy('doctor_id')
-            ->get()
-            ->mapWithKeys(function ($item) {
-                return [
-                    $item->doctor_id => [
-                        'ratings' => (float) $item->ratings,
-                        'review_count' => (int) $item->review_count,
-                    ],
-                ];
-            })
-            ->toArray();
-    }
-
-    private function getFavouriteFlagsByDoctorIds(int $patientId, array $doctorIds): array
-    {
-        if (empty($doctorIds)) {
-            return [];
-        }
-
-        return Favourite::query()
-            ->where('patinet_id', $patientId)
-            ->whereIn('user_id', $doctorIds)
-            ->pluck('chrFav', 'user_id')
-            ->toArray();
-    }
 }
