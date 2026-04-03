@@ -128,18 +128,23 @@ class AppointmentController extends Controller
         ], 400);
     }
     }
-     public function getAppointmentData(Request $request)
+    public function getAppointmentData(Request $request)
     {
         $headers = $request->header('Authorization');
         $headerArray = explode('Bearer ', $headers);
         $today = Carbon::today();
         $currentDateTime = now();
+        $pageSize = max(1, min((int) $request->input('pageSize', 10), 100));
+        $upcomingPage = max(1, (int) $request->input('upcomingPageNumber', 1));
+        $pastPage = max(1, (int) $request->input('pastPageNumber', 1));
+        $shouldPaginateUpcoming = $request->filled('upcomingPageNumber') || $request->filled('pageSize');
+        $shouldPaginatePast = $request->filled('pastPageNumber') || $request->filled('pageSize');
         if (!empty($headerArray[1])) {
             try {
                 $tokenData = decrypt($headerArray[1]);
                 if (!empty($tokenData['id'])) {
                     $patient = Patients::find($tokenData['id']);
-                    $nextAppointmentData = Appointment::select('appointment.*','users.name','users.surname','users.varProfile','dr_category.title as category','users.varFees as amount')
+                    $nextAppointmentQuery = Appointment::select('appointment.*','users.name','users.surname','users.varProfile','dr_category.title as category','users.varFees as amount')
                     ->join('users','appointment.dr_id','users.id')
                     ->join('dr_category','users.category','dr_category.id')
                     ->where('appointment.patient_id', $patient->id)
@@ -152,13 +157,17 @@ class AppointmentController extends Controller
                               ->orWhereDate('appointment.varAppointment', '>', $currentDateTime->format('Y-m-d')); // Also include future dates regardless of time
                     })
                     ->orderBy('appointment.varAppointment', 'asc')     // Order by appointment date, ascending
-                     ->orderBy('appointment.startTime', 'asc')
-                    ->get();  // Get the next appointment only
+                     ->orderBy('appointment.startTime', 'asc');
+
+                $nextAppointmentData = $shouldPaginateUpcoming
+                    ? $nextAppointmentQuery->paginate($pageSize, ['*'], 'upcomingPage', $upcomingPage)
+                    : $nextAppointmentQuery->get();
 
                 $nextAppointmentResponse = [];
                 $bnextAppointmentResponseData = [];
                 if (isset($nextAppointmentData) && !empty($nextAppointmentData)) {
-                    foreach($nextAppointmentData as $nextAppointment){   
+                    $nextAppointments = $shouldPaginateUpcoming ? $nextAppointmentData->items() : $nextAppointmentData;
+                    foreach($nextAppointments as $nextAppointment){   
                         $nextAppointmentResponse['id'] = $nextAppointment->id;
                         $nextAppointmentResponse['startTime'] = $nextAppointment->startTime;
                         $nextAppointmentResponse['endTime'] = $nextAppointment->endTime;
@@ -175,7 +184,7 @@ class AppointmentController extends Controller
                   
                 }
 
-                $bookingHistory = Appointment::select('appointment.*','users.name','users.surname','users.varProfile','dr_category.title as category','users.varFees as amount')
+                $bookingHistoryQuery = Appointment::select('appointment.*','users.name','users.surname','users.varProfile','dr_category.title as category','users.varFees as amount')
                                     ->where('appointment.patient_id', $patient->id)
                                     ->join('users','appointment.dr_id','users.id')
                                     ->join('dr_category','users.category','dr_category.id')
@@ -189,12 +198,15 @@ class AppointmentController extends Controller
                                             ->orWhereDate('appointment.varAppointment', '<', $currentDateTime->format('Y-m-d')); // Also include future dates regardless of time
                                     })
                                     ->orderBy('appointment.varAppointment', 'desc')     // Order by appointment date, ascending
-                                     ->orderBy('appointment.startTime', 'desc')
-                                    ->get();
+                                     ->orderBy('appointment.startTime', 'desc');
+                $bookingHistory = $shouldPaginatePast
+                    ? $bookingHistoryQuery->paginate($pageSize, ['*'], 'pastPage', $pastPage)
+                    : $bookingHistoryQuery->get();
                 $bookingHistoryResponse = [];
                 $bookingHistoryResponseData = [];
                 if(isset($bookingHistory) && count($bookingHistory) > 0){
-                    foreach($bookingHistory as $booking){
+                    $pastAppointments = $shouldPaginatePast ? $bookingHistory->items() : $bookingHistory;
+                    foreach($pastAppointments as $booking){
                         $bookingHistoryResponse['id'] = $booking->id;
                         $bookingHistoryResponse['startTime'] = $booking->startTime;
                         $bookingHistoryResponse['endTime'] = $booking->endTime;
@@ -226,6 +238,18 @@ class AppointmentController extends Controller
                         ],
                         'upcomingAppointment' => $bnextAppointmentResponseData,
                         'pastAppointment' =>$bookingHistoryResponseData,
+                        'upcomingPagination' => $shouldPaginateUpcoming ? [
+                            'current_page' => $nextAppointmentData->currentPage(),
+                            'per_page' => $nextAppointmentData->perPage(),
+                            'total' => $nextAppointmentData->total(),
+                            'last_page' => $nextAppointmentData->lastPage(),
+                        ] : new \stdClass(),
+                        'pastPagination' => $shouldPaginatePast ? [
+                            'current_page' => $bookingHistory->currentPage(),
+                            'per_page' => $bookingHistory->perPage(),
+                            'total' => $bookingHistory->total(),
+                            'last_page' => $bookingHistory->lastPage(),
+                        ] : new \stdClass(),
                     ]
                 ], 200);
 

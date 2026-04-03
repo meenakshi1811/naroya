@@ -1465,6 +1465,9 @@ class PatientController extends Controller
     {
         $headers = $request->header('Authorization');
         $headerArray = explode('Bearer ', $headers);
+        $reviewPageSize = max(1, min((int) $request->input('reviewPageSize', $request->input('pageSize', 10)), 100));
+        $reviewPage = max(1, (int) $request->input('reviewPageNumber', 1));
+        $shouldPaginateReviews = $request->filled('reviewPageNumber') || $request->filled('reviewPageSize') || $request->filled('pageSize');
         if (!empty($headerArray[1])) {
             try {
                 $request->validate([
@@ -1570,9 +1573,16 @@ class PatientController extends Controller
                         $doctor->biography =  !empty($doctor->biography) ? $doctor->biography : 'null';
                         $doctor->language =  !empty($doctor->language) ? $doctor->language : 'null';
 
-                        $reviews = Rating::select('rating', 'varShortTitle as title', 'varReview as review','ratings.created_at as date' , 'patients.name', 'patients.lastname', 'patients.varProfile')->join('patients', 'ratings.patinet_id', 'patients.id')->where('doctor_id', $doctor->id)->get();
-                        if (isset($reviews) && !empty($reviews)) {
-                            foreach ($reviews as $review) {
+                        $reviewQuery = Rating::select('rating', 'varShortTitle as title', 'varReview as review','ratings.created_at as date' , 'patients.name', 'patients.lastname', 'patients.varProfile')
+                            ->join('patients', 'ratings.patinet_id', 'patients.id')
+                            ->where('doctor_id', $doctor->id)
+                            ->orderBy('ratings.created_at', 'desc');
+                        $reviews = $shouldPaginateReviews
+                            ? $reviewQuery->paginate($reviewPageSize, ['*'], 'reviewPage', $reviewPage)
+                            : $reviewQuery->get();
+                        $reviewItems = $shouldPaginateReviews ? $reviews->items() : $reviews;
+                        if (isset($reviewItems) && !empty($reviewItems)) {
+                            foreach ($reviewItems as $review) {
                                 $review->profile_picture =  !empty($review->varProfile) ? config('app.url') . 'api/patientprofile/' . $review->varProfile : 'null';
                             }
                         }
@@ -1580,7 +1590,13 @@ class PatientController extends Controller
                             'message' => 'success',
                             'data' => [
                                 'doctor' => [$doctor],
-                                'reviews' => isset($reviews) && !empty($reviews) ? $reviews : new \stdClass()
+                                'reviews' => isset($reviewItems) && !empty($reviewItems) ? $reviewItems : new \stdClass(),
+                                'reviewsPagination' => $shouldPaginateReviews ? [
+                                    'current_page' => $reviews->currentPage(),
+                                    'per_page' => $reviews->perPage(),
+                                    'total' => $reviews->total(),
+                                    'last_page' => $reviews->lastPage(),
+                                ] : new \stdClass()
                             ]
                         ], 200);
                     }
