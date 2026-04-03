@@ -16,6 +16,10 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\PaymentController;
 
+Route::get('/sentry-test', function () {
+    throw new Exception("Sentry test error!");
+});
+
 Route::get('payment', [PaymentController::class, 'showPaymentForm']);
 Route::post('payment', [PaymentController::class, 'storePayment'])->name('payment.store');
 Route::get('payment/success', [PaymentController::class, 'success'])->name('payment.success');
