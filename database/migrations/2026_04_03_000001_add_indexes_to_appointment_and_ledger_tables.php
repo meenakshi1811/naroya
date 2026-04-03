@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -138,9 +139,18 @@ return new class extends Migration
 
     private function indexExists(string $table, string $indexName): bool
     {
-        $schemaManager = Schema::getConnection()->getDoctrineSchemaManager();
-        $indexes = $schemaManager->listTableIndexes($table);
+        $databaseName = Schema::getConnection()->getDatabaseName();
 
-        return array_key_exists(strtolower($indexName), $indexes);
+        if (empty($databaseName)) {
+            return false;
+        }
+
+        $result = DB::table('information_schema.statistics')
+            ->where('table_schema', $databaseName)
+            ->where('table_name', $table)
+            ->whereRaw('LOWER(index_name) = ?', [strtolower($indexName)])
+            ->exists();
+
+        return $result;
     }
 };
