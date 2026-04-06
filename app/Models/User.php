@@ -122,4 +122,29 @@ class User extends Authenticatable
             $doctors->setCollection($doctorCollection);
         }
     }
+
+    public function speciality()
+    {
+        return $this->belongsTo(DrCategory::class, 'category');
+    }
+
+    public function countryRel()
+    {
+        return $this->belongsTo(CountryMaster::class, 'country');
+    }
+
+    public function stateRel()
+    {
+        return $this->belongsTo(State::class, 'state');
+    }
+
+    public function paymentLogs()
+    {
+        return $this->hasMany(PaymentLog::class, 'dr_id');
+    }
+
+    public function doctorCredit()
+    {
+        return $this->hasOne(DoctorCredit::class, 'dr_id');
+    }
 }

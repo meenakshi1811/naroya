@@ -28,33 +28,66 @@ class AppointmentController extends Controller
 
     private function getAppointments(Request $request = null)
     {
-        $query = Appointment::select('appointment.*', 'patients.name as patient','patients.lastname as lastname', 'users.name as doctor','users.surname as surname','dr_category.title as speciality','dr_category.id as speciality_id','country_master.countryname as country','states.name as state')
-            ->join('patients', 'patient_id', 'patients.id')
-            ->join('users', 'dr_id', 'users.id')
-            ->join('dr_category', 'users.category', 'dr_category.id')
-            ->join('country_master', 'users.country', 'country_master.id')
-            ->join('states', 'users.state', 'states.id');
+        $query = Appointment::with([
+            'patient:id,name,lastname',
+            'doctor:id,name,surname,category,country,state',
+            'doctor.speciality:id,title',
+            'doctor.countryRel:id,countryname',
+            'doctor.stateRel:id,name'
+        ]);
 
-        // Apply filters based on user input
+        // Filters
         if ($request) {
             if ($request->date) {
                 $query->whereDate('varAppointment', $request->date);
             }
+
             if ($request->doctor) {
-                $query->whereRaw("CONCAT(users.name, ' ', users.surname) LIKE ?", ["%{$request->doctor}%"]);
+                $query->whereHas('doctor', function ($q) use ($request) {
+                    $q->whereRaw("CONCAT(name, ' ', surname) LIKE ?", ["%{$request->doctor}%"]);
+                });
             }
+
             if ($request->speciality) {
-                $query->where('dr_category.id', $request->speciality);
+                $query->whereHas('doctor.speciality', function ($q) use ($request) {
+                    $q->where('id', $request->speciality);
+                });
             }
+
             if ($request->country) {
-                $query->where('country_master.countryname', 'like', '%' . $request->country . '%');
+                $query->whereHas('doctor.countryRel', function ($q) use ($request) {
+                    $q->where('countryname', 'like', '%' . $request->country . '%');
+                });
             }
+
             if ($request->state) {
-                $query->where('states.name', 'like', '%' . $request->state . '%');
+                $query->whereHas('doctor.stateRel', function ($q) use ($request) {
+                    $q->where('name', 'like', '%' . $request->state . '%');
+                });
             }
         }
 
-        return $query->get();
+        $appointments = $query->get();
+
+        
+        return $appointments->map(function ($item) {
+            return (object)[
+                'id' => $item->id,
+                'patient' => $item->patient->name ?? null,
+                'lastname' => $item->patient->lastname ?? null,
+                'doctor' => $item->doctor->name ?? null,
+                'surname' => $item->doctor->surname ?? null,
+                'speciality' => $item->doctor->speciality->title ?? null,
+                'speciality_id' => $item->doctor->speciality->id ?? null,
+                'country' => $item->doctor->countryRel->countryname ?? null,
+                'state' => $item->doctor->stateRel->name ?? null,
+
+                // include all appointment fields
+                'varAppointment' => $item->varAppointment,
+                'created_at' => $item->created_at,
+                'updated_at' => $item->updated_at,
+            ];
+        });
     }
 
   

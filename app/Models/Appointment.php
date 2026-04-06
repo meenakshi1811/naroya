@@ -156,4 +156,14 @@ class Appointment extends Model
 
         return $response;
     }
+
+    public function patient()
+    {
+        return $this->belongsTo(Patients::class, 'patient_id');
+    }
+
+    public function doctor()
+    {
+        return $this->belongsTo(User::class, 'dr_id');
+    }
 }
