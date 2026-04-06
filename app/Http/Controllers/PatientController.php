@@ -28,8 +28,7 @@ class PatientController extends Controller
         $patients = Patients::get();
         return view('admin.patients', compact(['patients']));
     }
-
-    public function deletePatient($id)
+ public function deletePatient($id)
     {
         try {
             // Find the patient record by ID
@@ -132,7 +131,7 @@ class PatientController extends Controller
         }
     }
     
-    public function logout(Request $request)
+     public function logout(Request $request)
     {
         try {
             // Extract patient ID from the token
@@ -604,8 +603,8 @@ class PatientController extends Controller
                 if (!empty($tokenData['id'])) {
                     $patient = Patients::find($tokenData['id']);
                     if (!empty($patient)) {
-                        // $limit = !empty($request->pageSize) ? $request->pageSize : 5;
-                        // $page = !empty($request->pageNumber) ? $request->pageNumber : 1;
+                        $limit = !empty($request->pageSize) ? $request->pageSize : 5;
+                        $page = !empty($request->pageNumber) ? $request->pageNumber : 1;
                         $topDoctorPageSize = max(1, min((int) $request->input('topDoctorPageSize', $request->input('pageSize', 5)), 100));
                         $topDoctorPage = max(1, (int) $request->input('topDoctorPageNumber', $request->input('pageNumber', 1)));
 
