@@ -29,7 +29,7 @@ Route::post('/forget-password',[App\Http\Controllers\ForgetPasswordController::c
 Route::get('/state/{countryId}',[App\Http\Controllers\AuthController::class, 'stateList']);
 
 Route::get('/speciality', [App\Http\Controllers\AuthController::class, 'speciality']);
-Route::post('/refund', [App\Http\Controllers\PaymentController::class, 'processRefund']);
+Route::post('/refund', [App\Http\Controllers\PaymentController::class, 'processRefund'])->middleware('throttle:payment');
 Route::post('/generate-agora-details', [App\Http\Controllers\AgoraController::class, 'generateAgoraDetails']);
 
 Route::middleware('auth:api')->group(function () {
@@ -59,15 +59,14 @@ Route::post('/patient/viewall',[App\Http\Controllers\PatientController::class, '
 Route::post('/patient/favourite',[App\Http\Controllers\PatientController::class, 'Favourite']);
 Route::post('/patient/search',[App\Http\Controllers\PatientController::class, 'Search']);
 Route::post('/patient/timeslot',[App\Http\Controllers\PatientController::class, 'getTimeSlots']);
-Route::post('/patient/send-request',[App\Http\Controllers\PatientController::class, 'sendRequest']);
-
+Route::post('/patient/send-request',[App\Http\Controllers\PatientController::class, 'sendRequest'])->middleware('throttle:booking');
 Route::get('/patient-details',[App\Http\Controllers\PatientController::class, 'patientDetails']);
 Route::post('/patient-update-profile',[App\Http\Controllers\PatientController::class, 'updateData']);
 Route::post('/patient/doctor-profile',[App\Http\Controllers\PatientController::class, 'getDoctorData']);
 Route::post('/patient/doctor-profile',[App\Http\Controllers\PatientController::class, 'getDoctorData']);
 Route::post('/patient/feedback',[App\Http\Controllers\PatientController::class, 'handleFeedback']);
 Route::post('/patient/cancel-appointment', [App\Http\Controllers\AppointmentController::class, 'cancelAppointment']);
-Route::post('/patient/process-payment', [App\Http\Controllers\PaymentController::class, 'ProcessPayment']);
+Route::post('/patient/process-payment', [App\Http\Controllers\PaymentController::class, 'ProcessPayment'])->middleware('throttle:payment');
 Route::get('/patient/my-appointment', [App\Http\Controllers\AppointmentController::class, 'getAppointmentData']);
 Route::post('patient/logout', [App\Http\Controllers\PatientController::class, 'logout']);
 });
