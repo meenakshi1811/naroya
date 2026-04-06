@@ -104,14 +104,12 @@ class AppointmentController extends Controller
     public function getAppointmentData(Request $request)
     {
         $tokenData = $this->getTokenData($request);
-
         if (!$tokenData) {
             return $this->unauthorized();
         }
 
         try {
             $patient = Patients::find($tokenData['id']);
-
             $today = Carbon::today();
             $currentDateTime = now();
 
@@ -169,6 +167,7 @@ class AppointmentController extends Controller
             ], 200);
 
         } catch (\Exception $e) {
+            echo'<pre>';print_r($e->getMessage());exit();
             return $this->errorResponse();
         }
     }
@@ -178,7 +177,7 @@ class AppointmentController extends Controller
     private function getTokenData($request)
     {
         try {
-            $header = $request->header('Authorization');
+            $header = $request->header('Authorization');            
             $token = explode('Bearer ', $header)[1] ?? null;
             return $token ? decrypt($token) : null;
         } catch (\Exception $e) {
@@ -216,10 +215,14 @@ class AppointmentController extends Controller
                 'sympton' => $a->varSympton,
                 'sympton_description' => $a->varSymptondesc,
                 'IsPaid' => $a->charIsPaid,
-                'DoctorName' => $doctor->name . ' ' . $doctor->surname,
-                'category' => $doctor->categoryRel->title ?? null,
-                'amount' => $doctor->varFees,
-                'profile_picture' => config('app.url') . 'api/docterprofile/' . $doctor->varProfile,
+
+                //  SAFE doctor handling
+                'DoctorName' => $doctor ? ($doctor->name . ' ' . $doctor->surname) : null,
+                'category' => $doctor && $doctor->categoryRel ? $doctor->categoryRel->title : null,
+                'amount' => $doctor->varFees ?? null,
+                'profile_picture' => $doctor && $doctor->varProfile
+                    ? config('app.url') . 'api/docterprofile/' . $doctor->varProfile
+                    : 'null',
             ];
 
             if ($includePrescription) {
