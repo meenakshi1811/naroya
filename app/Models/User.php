@@ -157,4 +157,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(OrgExperience::class, 'user_id');
     }
+
+
+    public function blocks()
+    {
+        return $this->hasMany(Block::class, 'dr_id');
+    }
 }
