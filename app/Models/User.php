@@ -147,4 +147,14 @@ class User extends Authenticatable
     {
         return $this->hasOne(DoctorCredit::class, 'dr_id');
     }
+
+    public function categoryRel()
+    {
+        return $this->belongsTo(DrCategory::class, 'category');
+    }
+
+    public function experiences()
+    {
+        return $this->hasMany(OrgExperience::class, 'user_id');
+    }
 }
