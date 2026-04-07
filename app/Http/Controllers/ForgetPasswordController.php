@@ -94,7 +94,7 @@ class ForgetPasswordController extends Controller
 
 
     public function SendEmail($email,$flag,$token){
-        Mail::to($email)->send(new ForgotPassword($email,$flag,$token));
+        Mail::to($email)->queue(new ForgotPassword($email,$flag,$token));
         return response(['sucsess' => "Email Sent"]);
     }
 }
