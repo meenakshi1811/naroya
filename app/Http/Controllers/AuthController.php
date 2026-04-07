@@ -25,7 +25,7 @@ use Laravel\Passport\Token;
 
 class AuthController extends Controller
 {
-      public function login(Request $request)
+    public function login(Request $request)
     {
         try {
             $request->validate([
@@ -140,7 +140,7 @@ class AuthController extends Controller
             );
         }
 
-$user->varProfile = config('app.url') . 'api/docterprofile/' . $user->varProfile;
+            $user->varProfile = config('app.url') . 'api/docterprofile/' . $user->varProfile;
             return response()->json([
                 'message' => 'Login successful!',
                 'data' => [
