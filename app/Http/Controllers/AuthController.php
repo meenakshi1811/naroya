@@ -655,7 +655,7 @@ class AuthController extends Controller
             }
               
 
-            Mail::to($user->email)->send(new UserOnboardingMail($user, $accountLink->url));
+            Mail::to($user->email)->queue(new UserOnboardingMail($user, $accountLink->url));
 
             return response()->json([
                 'message' => 'Your request has been sent successfully for approval!',

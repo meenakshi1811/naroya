@@ -155,7 +155,7 @@ class DoctorController extends Controller
     private function sendEmail($doctor)
     {
         Mail::to($doctor->email)
-            ->send(new SendApproval(
+            ->queue(new SendApproval(
                 $doctor->email,
                 $doctor->name,
                 $doctor->surname
