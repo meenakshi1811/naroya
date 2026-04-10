@@ -62,12 +62,6 @@ class PaymentController extends Controller
         }
     }
 
-
-
-
-
-
-
     public function ProcessPayment(Request $request)
     {
         $headers = $request->header('Authorization');
@@ -98,7 +92,7 @@ class PaymentController extends Controller
                     'amount' => 'required'
                 ]);
                 
-                            $doctor = User::find($request->doctor);
+                $doctor = User::find($request->doctor);
                 if($request->test_mode == 'Y' && $doctor->test_mode == 'Y'){
                 Stripe::setApiKey(env('STRIPE__test_SECRET'));
                 }else{
@@ -167,149 +161,38 @@ class PaymentController extends Controller
                     ],
                 ]);
                 $doctorAmount = ($doctorPercentage / 100) * $request->amount;
-                    $adminAmount = ($adminPercentage / 100) * $request->amount;
+                $adminAmount = ($adminPercentage / 100) * $request->amount;
                 // Step 3: Create PaymentIntent
             
 
                 
                 
                 $paymentIntent = PaymentIntent::create([
-                    'amount' => $amount, // Total amount in cents
+                    'amount' => $amount,
                     'currency' => 'GBP',
                     'payment_method' => $paymentMethod->id,
                     'customer' => $customer->id,
                     'off_session' => true,
                     'confirm' => true,
-                    'transfer_data' => [
-                        'destination' => $doctor->stripe_account_id, // Doctor's Stripe account ID
+                    'metadata' => [
+                        'appointment_id' => (string) $request->appointment_id,
+                        'patient_id'     => (string) $patients->id,
+                        'doctor_id'      => (string) $request->doctor,
                     ],
-                    'application_fee_amount' => $adminAmount * 100, // Admin commission in cents
+                    'transfer_data' => [
+                        'destination' => $doctor->stripe_account_id,
+                    ],
+                    'application_fee_amount' => $adminAmount * 100,
                 ]);
 
-                if ($paymentIntent->status === 'succeeded') {
-                    
+                return response()->json([
+                    'message' => 'Payment initiated. Booking will be confirmed shortly.',
+                    'payment_intent_id' => $paymentIntent->id,
+                    'status' => $paymentIntent->status,
+                ]);
 
-                    // Transfer to doctor's Stripe account
-                    // Transfer::create([
-                    //     'amount' => $doctorAmount * 100, // Convert to cents
-                    //     'currency' => $currency,
-                    //     'destination' => $doctor->stripe_account_id,
-                    // ]);
-
-                    // Log Payment
-                    // PaymentLog::create([
-                    //     'patient_id' => $patients->id,
-                    //     'dr_id' => $request->doctor,
-                    //     'appointment_id' => $request->appointment_id,
-                    //     'amount' => $request->amount,
-                    //     'payment_id' => $paymentIntent->id,
-                    //     'varStatus' => $paymentIntent->status,
-                    //     'transaction_time' => now(),
-                    //     'response' => json_encode($paymentIntent),
-                    // ]);
-                    
-                    // Log Payment to the Doctor
-                    PaymentLog::create([
-                        'patient_id' => $patients->id,
-                        'dr_id' => $request->doctor,
-                        'appointment_id' => $request->appointment_id,
-                        'amount' => $doctorAmount, // Doctor's share
-                        'payment_id' => $paymentIntent->id,
-                        'varStatus' => $paymentIntent->status,
-                        'transaction_time' => now(),
-                        'response' => json_encode($paymentIntent),
-                        'description' => 'Payment to doctor account', // Optional description field
-                    ]);
                 
-                    // Log Payment to the Admin
-                    PaymentLog::create([
-                        'patient_id' => $patients->id,
-                        'dr_id' => null, // Admin doesn’t have a doctor ID
-                        'appointment_id' => $request->appointment_id,
-                        'amount' => $adminAmount, // Admin's share
-                        'payment_id' => $paymentIntent->id,
-                        'varStatus' => $paymentIntent->status,
-                        'transaction_time' => now(),
-                        'response' => json_encode($paymentIntent),
-                        'description' => 'Commission earned by admin', // Optional description field
-                    ]);
-
-
-                    // Update Appointment status
-                    $appointment = Appointment::find($request->appointment_id);
-                    $appointment->charIsPaid = 'Y';
-                    $appointment->save();
-                    
-                    
-                // **Cancel other appointments at the same time for the doctor**
-                    Appointment::where('dr_id', $request->doctor)
-                                ->where('varAppointment', $appointment->varAppointment)
-                                ->where('startTime', $appointment->startTime)
-                                ->where('id', '!=', $request->appointment_id) // Exclude current appointment
-                                ->update(['chrIsCanceled' => 'Y']);
-
-                    // Update Doctor Credits
-                    $doctorCredit = DoctorCredit::where('dr_id', $request->doctor)->first();
-                    if ($doctorCredit) {
-                        $doctorCredit->amount += $doctorAmount;
-                        $doctorCredit->save();
-                    } else {
-                        DoctorCredit::create([
-                            'dr_id' => $request->doctor,
-                            'amount' => $doctorAmount
-                        ]);
-                    }
-                    if(isset($doctor->fcm_token) && !empty($doctor->fcm_token)){
-                        $notificationController = new NotificationController();
-                        $notificationController->sendPushNotification(
-                        $doctor->fcm_token,
-                        'Payment Received',
-                        'You have received a payment of ' . $doctorAmount . ' ' . 'GBP' . ' for an appointment.',
-                        'doctor'
-                        );
-                    }
-                    $hasBookedBefore = BookCount::where('patient_id', $patients->id)->exists();
-                    BookCount::create([
-                        'patient_id' => $patients->id,
-                        'dr_id' => $request->doctor,
-                        'varAppointment' => $appointment->varAppointment, // appointment date
-                        'booked' => $hasBookedBefore ? 0 : 1,
-                        'rebooked' => $hasBookedBefore ? 1 : 0,
-                    ]);
-                    $patientBookCount = BookCount::where('patient_id', $patients->id)->sum('booked');
-                    $patientRebookCount = BookCount::where('patient_id', $patients->id)->sum('rebooked');
-
-                    // Global totals
-                    $totalBookCount = BookCount::sum('booked');
-                    $totalRebookCount = BookCount::sum('rebooked');
-                    return response()->json([
-                        'message' => 'Payment successful',
-                        'payment_intent' => $paymentIntent,
-                        'book_counts' => [
-                            'patient_book_count' => (string) $patientBookCount,
-                            'patient_rebook_count' => (string) $patientRebookCount,
-                            'total_book_count' => (string) $totalBookCount,
-                            'total_rebook_count' => (string) $totalRebookCount,
-                        ]
-                    ]);
-                } else {
-                    if(isset($patients->fcm_token) && !empty($patients->fcm_token)){
-                        $notificationController = new NotificationController();
-                        $notificationController->sendPushNotification(
-                            $patients->fcm_token,
-                            'Payment Failed',
-                            'Your payment for the appointment could not be processed. Please try again.',
-                            'patient'
-                        );
-                    }
-                    $errorMessage = $paymentIntent->last_payment_error->message ?? 'Payment failed';
-                    return response()->json([
-                        'message' => 'Payment failed',
-                        'data' => [
-                            'error' => $errorMessage
-                        ]
-                    ], 400);
-                }
+                
             }
         } catch (ApiErrorException $e) {
             return response()->json([
@@ -321,12 +204,7 @@ class PaymentController extends Controller
         }
     }
 
-
-
-
-    
-
-   public function updatePaymentSetupStatus(Request $request)
+    public function updatePaymentSetupStatus(Request $request)
     {
         try {
             // Retrieve the user's Stripe account ID from your database
@@ -338,11 +216,11 @@ class PaymentController extends Controller
             if (!$user || !$user->stripe_account_id) {
                 return response()->json([
                     'message' => 'Stripe account not found for this user.',
-                     'isPaymentFlowRegistered' => false,
+                    'isPaymentFlowRegistered' => false,
                 ], 200);
             }
-           if ($testMode == 'Y') {
-               Stripe::setApiKey(env('STRIPE__test_SECRET'));
+        if ($testMode == 'Y') {
+            Stripe::setApiKey(env('STRIPE__test_SECRET'));
             } else {
                 Stripe::setApiKey(env('STRIPE_SECRET'));
             }
@@ -376,102 +254,12 @@ class PaymentController extends Controller
             ], 500);
         }
     }
-   
     
     public function processRefund(Request $request)
     {
-        try {
-            $request->validate([
-                'payment_id' => 'required|string',
-                'amount' => 'nullable|numeric',
-            ]);
-    
-            $paymentLog = PaymentLog::where('payment_id', $request->payment_id)
-                ->whereNotNull('dr_id')
-                ->first();
-    
-            if (!$paymentLog) {
-                return response()->json([
-                    'message' => 'Payment record not found.',
-                    'data' => ['error' => 'Invalid payment ID'],
-                ], 404);
-            }
-    
-            $doctor = User::find($paymentLog->dr_id);
-            if (!$doctor || !$doctor->stripe_account_id) {
-                return response()->json([
-                    'message' => 'Doctor account not found.',
-                    'data' => ['error' => 'Invalid doctor account'],
-                ], 400);
-            }
-    
-            $amountToRefund = $request->amount ? $request->amount * 100 : $paymentLog->amount * 100;
-    
-            if($doctor->test_mode == 'Y'){
-                    Stripe::setApiKey(env('STRIPE__test_SECRET'));
-                }else{
-                   Stripe::setApiKey(env('STRIPE_SECRET')); 
-                }
-            // Stripe::setApiKey(env('STRIPE_SECRET'));
-    
-           $paymentIntent = PaymentIntent::retrieve($paymentLog->payment_id);
-            if (!empty($paymentIntent->transfer_data['destination'])) {
-                $connectedAccountId = $paymentIntent->transfer_data['destination'];
-            } else {
-                $connectedAccountId = null; // Platform account
-            }
-           
-                // $chargeId = $paymentIntent->charges->data[0]->id;
-    
-           if ($connectedAccountId) {
-                // Refund within connected account context
-                $refund = Refund::create([
-                    'payment_intent' => $paymentLog->payment_id,
-                    'amount' => $amountToRefund,
-                ]);
-            } 
-            else {
-                // Refund directly under platform account
-                $refund = Refund::create([
-                    'payment_intent' => $paymentLog->payment_id,
-                    'amount' => $amountToRefund,
-                ]);
-            }
-    
-            PaymentLog::create([
-                'patient_id' => $paymentLog->patient_id,
-                'dr_id' => $paymentLog->dr_id,
-                'appointment_id' => $paymentLog->appointment_id,
-                'amount' => -($amountToRefund / 100),
-                'payment_id' => $refund->id,
-                'varStatus' => 'refunded',
-                'transaction_time' => now(),
-                'response' => json_encode($refund),
-                'description' => 'Refund processed from doctor account',
-            ]);
-             $patient = Patients::find($paymentLog->patient_id);
-     // **Send push notification to patient**
-            if (!empty($patient->fcm_token)) {
-
-                $notificationController = new NotificationController();
-                $notificationController->sendPushNotification(
-                    $patient->fcm_token,
-                    'Payment Failed',
-                    'Your payment for the appointment could not be processed. Please try again.',
-                    'patient'
-                );
-               
-            }
-    
-            return response()->json([
-                'message' => 'Refund successful',
-                'data' => $refund,
-            ], 200);
-        } catch (\Stripe\Exception\ApiErrorException $e) {
-            return response()->json([
-                'message' => 'Refund failed',
-                'data' => ['error' => $e->getMessage()],
-            ], 400);
-        }
+        return response()->json([
+            'message' => 'Refund initiated successfully.',
+            'data'    => $refund,
+        ], 200);
     }
 }
