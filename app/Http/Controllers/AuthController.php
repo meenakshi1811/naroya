@@ -250,7 +250,10 @@ class AuthController extends Controller
         $TodaysAppointment = [];
         if($userData->chrApproval == 'Y'){
         $userId = $userData->id;
-        $today = Carbon::today();
+        $today = Carbon::today(); // keep it as Carbon
+        $current = $today->format('Y-m-d');
+        // echo'<pre>';print_r($current);exit();
+
         $currentDateTime = now();
         $user = User::select('id','name as first_name','surname','category','country','state','email','gmc_registration_no','indemnity_insurance_provider','policy_no','india_registration_no','dha_reg','reg_no','chrSmartcard','varProfile as profile_picture','varSpeciality as speciality','varExperience as total_experience','varPostGraduation as post_graduation','varPostGraduationYear as pg_year','varGraduation as graduation','varGraduationYear as graduation_year','varFees as Fees','varTimeDuration as Consaltation Time')->where('id',$userId)->first();
         $current_work_org = DB::table('org_experiance')->select('title as org_name','startYear as start_year','endYear as end_year','varDescription as description')->where('user_id',$userId)->get();
@@ -260,6 +263,7 @@ class AuthController extends Controller
             $user->profile_picture = config('app.url').'api/docterprofile/'.$user->profile_picture;
         }
         $RequestData = Appointment::select('appointment.id', 'appointment.patient_id as patient', 'appointment.dr_id as doctor', 'appointment.varAppointment as date', 'appointment.startTime as start time', 'appointment.endTime as end time', 'appointment.varSympton as sympton', 'appointment.varSymptondesc as description', 'appointment.chrIsAccepted as isAccepted', 'appointment.charIsPaid as isPaid','patients.name as first name','patients.lastname as last name','patients.varProfile')->join('patients','appointment.patient_id','patients.id')->where('dr_id',$userId)->where('chrIsAccepted','N')->where('chrIsRejected','N')->whereDate('appointment.varAppointment','>=',$today)->orderBy('appointment.varAppointment', 'asc')->orderBy('appointment.startTime', 'asc')->limit(5)->get();
+    //    echo'<pre>';print_r($RequestData);exit();
         $requestResponse = [];
         if (isset($RequestData) && count($RequestData) > 0) {
             foreach ($RequestData as $rd) {
@@ -1164,7 +1168,6 @@ public function refreshOnboarding(Request $request, $userId)
                     'status' => 200
                 ], 200);
         }catch(\Exception $e){
-            // dd($e);
             return response()->json([
                 'message' => 'Please Provide Valid details!',
                 'data' => [

@@ -1438,7 +1438,7 @@ class PatientController extends Controller
                             'message' => 'success',
                             'data' => [
                                 'doctor' => [$doctor],
-                                'reviews' => isset($reviewItems) && !empty($reviewItems) ? $reviewItems : new \stdClass(),
+                                'reviews' => isset($reviewItems) && !empty($reviewItems) ? $reviewItems : [],
                                 'reviewsPagination' => $shouldPaginateReviews ? [
                                     'current_page' => $reviews->currentPage(),
                                     'per_page' => $reviews->perPage(),

@@ -55,8 +55,8 @@ class Appointment extends Model
                             ->whereTime('appointment.startTime', '<=', $twelveHoursLater->toTimeString());  // Appointment start time within next 12 hours
                     });
             })
-            ->orderBy('appointment.varAppointment', 'desc')  // First, sort by date
-            ->orderBy('appointment.startTime', 'asc')
+            ->orderBy('appointment.id', 'desc')  // First, sort by date
+            // ->orderBy('appointment.startTime', 'asc')
             ->get();
 
         return $response;
