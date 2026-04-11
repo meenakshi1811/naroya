@@ -21,7 +21,8 @@ use Stripe\Refund;
 use App\Models\RefundLog;
 use App\Models\BookCount;
 use App\Http\Controllers\NotificationController;
-
+use Illuminate\Support\Facades\Log;
+use Termwind\Components\Li;
 
 class PaymentController extends Controller
 {
@@ -66,6 +67,7 @@ class PaymentController extends Controller
     {
         $headers = $request->header('Authorization');
         $headerArray = explode('Bearer ', $headers);
+
         if (!empty($headerArray[1])) {
             $tokenData = decrypt($headerArray[1]);
             if (!empty($tokenData['id'])) {
@@ -74,16 +76,13 @@ class PaymentController extends Controller
         } else {
             return response()->json([
                 'message' => 'Unauthorized request',
-                'data' => [
-                    'error' => 'Unauthorized request'
-                ]
+                'data' => ['error' => 'Unauthorized request']
             ], 401);
         }
 
-        
-
         try {
             if (!empty($patients)) {
+
                 $request->validate([
                     'doctor' => 'required',
                     'currency' => 'required',
@@ -91,14 +90,18 @@ class PaymentController extends Controller
                     'appointment_id' => 'required',
                     'amount' => 'required'
                 ]);
-                
+
                 $doctor = User::find($request->doctor);
-                if($request->test_mode == 'Y' && $doctor->test_mode == 'Y'){
-                Stripe::setApiKey(env('STRIPE__test_SECRET'));
-                }else{
-                    Stripe::setApiKey(env('STRIPE_SECRET'));
+
+                if ($request->test_mode == 'Y' && $doctor->test_mode == 'Y') {
+                    Log::info('Processing payment in test mode.');
+                    \Stripe\Stripe::setApiKey(env('STRIPE__test_SECRET'));
+                } else {
+                    Log::info('Processing payment in live mode.');
+                    \Stripe\Stripe::setApiKey(env('STRIPE_SECRET'));
                 }
-            // **Step 1: Retrieve Appointment Details**
+
+                // Appointment check
                 $appointment = Appointment::find($request->appointment_id);
                 if (!$appointment) {
                     return response()->json([
@@ -106,100 +109,91 @@ class PaymentController extends Controller
                         'data' => ['error' => 'Appointment not found']
                     ], 400);
                 }
-    
-                $appointmentDate = $appointment->varAppointment;
-                $appointmentTime = $appointment->startTime;
-    
-                // **Step 2: Check if another appointment exists at the same time**
+
                 $existingAppointment = Appointment::where('dr_id', $request->doctor)
-                    ->where('varAppointment', $appointmentDate)
-                    ->where('startTime', $appointmentTime)
-                    ->where('charIsPaid', 'Y') // Check if already paid
-                    ->where('id', '!=', $request->appointment_id) // Exclude current appointment
+                    ->where('varAppointment', $appointment->varAppointment)
+                    ->where('startTime', $appointment->startTime)
+                    ->where('charIsPaid', 'Y')
+                    ->where('id', '!=', $request->appointment_id)
                     ->first();
-    
+
                 if ($existingAppointment) {
                     return response()->json([
-                        'message' => 'This time slot is already booked. Please choose a different slot.',
-                        'data' => ['error' => 'Doctor is not available at this time.']
+                        'message' => 'This time slot is already booked.',
+                        'data' => ['error' => 'Doctor not available']
                     ], 400);
                 }
 
-                // Fetch admin percentage from general settings
+                // Percentages
                 $adminPercentage = GeneralSetting::where('field_name', 'percentage')->value('field_value');
                 $doctorPercentage = 100 - $adminPercentage;
 
                 if (!$doctor || !$doctor->stripe_account_id) {
                     return response()->json([
-                        'message' => 'Doctor does not have a connected Stripe account.',
-                        'data' => [
-                            'error' => 'Invalid doctor account'
-                        ]
+                        'message' => 'Doctor Stripe account missing.',
+                        'data' => ['error' => 'Invalid doctor']
                     ], 400);
                 }
 
-                // Step 1: Create a customer
-                $customer = Customer::create([
+                // Create Customer
+                $customer = \Stripe\Customer::create([
                     'name' => $patients->name . ' ' . $patients->lastname,
                     'email' => $patients->email,
-                    'metadata' => [
-                        'user_id' => $patients->id
-                    ],
                 ]);
 
-                // Step 2: Attach Payment Method
-                $paymentMethodId = $request->payment_method_id;
-                $amount = $request->amount * 100; // Convert to cents
-                $currency = $request->currency;
-
-                $paymentMethod = PaymentMethod::retrieve($paymentMethodId);
+                // Attach payment method
+                $paymentMethod = \Stripe\PaymentMethod::retrieve($request->payment_method_id);
                 $paymentMethod->attach(['customer' => $customer->id]);
 
-                Customer::update($customer->id, [
+                \Stripe\Customer::update($customer->id, [
                     'invoice_settings' => [
                         'default_payment_method' => $paymentMethod->id,
                     ],
                 ]);
-                $doctorAmount = ($doctorPercentage / 100) * $request->amount;
-                $adminAmount = ($adminPercentage / 100) * $request->amount;
-                // Step 3: Create PaymentIntent
-            
 
-                
-                
-                $paymentIntent = PaymentIntent::create([
+                $amount = $request->amount * 100;
+                $adminAmount = ($adminPercentage / 100) * $request->amount;
+
+                // ✅ Create PaymentIntent (metadata empty)
+                $paymentIntent = \Stripe\PaymentIntent::create([
                     'amount' => $amount,
                     'currency' => 'GBP',
                     'payment_method' => $paymentMethod->id,
                     'customer' => $customer->id,
                     'off_session' => true,
                     'confirm' => true,
-                    'metadata' => [
-                        'appointment_id' => (string) $request->appointment_id,
-                        'patient_id'     => (string) $patients->id,
-                        'doctor_id'      => (string) $request->doctor,
-                    ],
+                    'metadata' => [], // ✅ keep empty
                     'transfer_data' => [
                         'destination' => $doctor->stripe_account_id,
                     ],
                     'application_fee_amount' => $adminAmount * 100,
                 ]);
 
-                return response()->json([
-                    'message' => 'Payment initiated. Booking will be confirmed shortly.',
-                    'payment_intent_id' => $paymentIntent->id,
-                    'status' => $paymentIntent->status,
+                // ✅ Save mapping in DB
+                PaymentLog::create([
+                    'patient_id'     => $patients->id,
+                    'dr_id'          => $request->doctor,
+                    'appointment_id' => $request->appointment_id,
+                    'amount'         => $request->amount,
+                    'payment_id'     => $paymentIntent->id,
+                    'varStatus'      => 'pending',
+                    'transaction_time' => now(),
+                    'response'       => json_encode($paymentIntent),
+                    'description'    => 'Payment initiated',
                 ]);
 
-                
-                
+                // Mark appointment pending
+                $appointment->update(['charIsPaid' => 'P']);
+                Log::info('Payment processed successfully.', ['payment_intent' => $paymentIntent]);
+                return response()->json([
+                    'message' => 'Payment is in progress.',
+                    'payment_intent' => $paymentIntent,
+                ]);
             }
-        } catch (ApiErrorException $e) {
+        } catch (\Stripe\Exception\ApiErrorException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
-                'data' => [
-                    'error' => $e->getMessage()
-                ]
+                'data' => ['error' => $e->getMessage()]
             ], 400);
         }
     }

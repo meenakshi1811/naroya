@@ -27,7 +27,7 @@ class ProcessStripeWebhookEventJob implements ShouldQueue
     public function __construct(private readonly array $event) {}
 
     public function handle(): void
-    {
+    { Log::info('Processing Stripe webhook event.', ['type' => $this->event['type'] ?? 'unknown']);
         $eventType = $this->event['type'] ?? null;
         $object    = $this->event['data']['object'] ?? [];
 
@@ -52,122 +52,65 @@ class ProcessStripeWebhookEventJob implements ShouldQueue
         $paymentIntentId = $paymentIntent['id'] ?? null;
         if (! $paymentIntentId) return;
 
-        // Idempotency guard — skip if already fully processed
-        if (PaymentLog::where('payment_id', $paymentIntentId)
-                      ->where('varStatus', 'succeeded')
-                      ->exists()) {
-            Log::info('Webhook: payment_intent.succeeded already processed.', ['id' => $paymentIntentId]);
+        // ✅ Fetch from DB instead of metadata
+        $paymentLog = PaymentLog::where('payment_id', $paymentIntentId)->first();
+
+        if (! $paymentLog) {
+            Log::error('Webhook: payment log not found.', ['id' => $paymentIntentId]);
             return;
         }
 
-        $metadata      = $paymentIntent['metadata'] ?? [];
-        $appointmentId = $metadata['appointment_id'] ?? null;
-        $patientId     = $metadata['patient_id'] ?? null;
-        $doctorId      = $metadata['doctor_id'] ?? null;
-
-        if (! $appointmentId || ! $patientId || ! $doctorId) {
-            Log::error('Webhook: missing metadata on payment_intent.', ['id' => $paymentIntentId]);
+        // Idempotency
+        if ($paymentLog->varStatus === 'succeeded') {
+            Log::info('Already processed', ['id' => $paymentIntentId]);
             return;
         }
 
-        $appointment = Appointment::find($appointmentId);
-        $doctor      = User::find($doctorId);
-        $patient     = Patients::find($patientId);
+        $appointment = Appointment::find($paymentLog->appointment_id);
+        $doctor      = User::find($paymentLog->dr_id);
+        $patient     = Patients::find($paymentLog->patient_id);
 
         if (! $appointment || ! $doctor || ! $patient) {
-            Log::error('Webhook: appointment/doctor/patient not found.', compact('appointmentId', 'doctorId', 'patientId'));
+            Log::error('Data missing in DB mapping');
             return;
         }
 
-        // Pull split amounts from PaymentIntent
-        $totalAmount    = ($paymentIntent['amount'] ?? 0) / 100;
-        $adminFee       = ($paymentIntent['application_fee_amount'] ?? 0) / 100;
-        $doctorAmount   = $totalAmount - $adminFee;
-        $adminAmount    = $adminFee;
+        $totalAmount  = ($paymentIntent['amount'] ?? 0) / 100;
+        $adminFee     = ($paymentIntent['application_fee_amount'] ?? 0) / 100;
+        $doctorAmount = $totalAmount - $adminFee;
 
         DB::transaction(function () use (
-            $paymentIntentId, $paymentIntent, $appointment, $doctor, $patient,
-            $doctorAmount, $adminAmount, $doctorId, $patientId, $appointmentId
+            $paymentLog, $paymentIntent, $appointment, $doctor, $patient,
+            $doctorAmount, $adminFee
         ) {
-            // 1. Log payment — doctor share
+
+            // ✅ Update existing log
+            $paymentLog->update([
+                'varStatus' => 'succeeded',
+                'response'  => json_encode($paymentIntent),
+            ]);
+
+            // Admin log
             PaymentLog::create([
-                'patient_id'       => $patientId,
-                'dr_id'            => $doctorId,
-                'appointment_id'   => $appointmentId,
-                'amount'           => $doctorAmount,
-                'payment_id'       => $paymentIntentId,
-                'varStatus'        => 'succeeded',
+                'patient_id' => $paymentLog->patient_id,
+                'dr_id' => null,
+                'appointment_id' => $paymentLog->appointment_id,
+                'amount' => $adminFee,
+                'payment_id' => $paymentIntent['id'],
+                'varStatus' => 'succeeded',
                 'transaction_time' => now(),
-                'response'         => json_encode($paymentIntent),
-                'description'      => 'Payment to doctor account',
+                'description' => 'Admin commission',
             ]);
 
-            // 2. Log payment — admin share
-            PaymentLog::create([
-                'patient_id'       => $patientId,
-                'dr_id'            => null,
-                'appointment_id'   => $appointmentId,
-                'amount'           => $adminAmount,
-                'payment_id'       => $paymentIntentId,
-                'varStatus'        => 'succeeded',
-                'transaction_time' => now(),
-                'response'         => json_encode($paymentIntent),
-                'description'      => 'Commission earned by admin',
-            ]);
+            // Update appointment
+            $appointment->update(['charIsPaid' => 'Y']);
 
-            // 3. Mark appointment as paid
-            $appointment->charIsPaid = 'Y';
-            $appointment->save();
-
-            // 4. Cancel other appointments at the same slot
-            Appointment::where('dr_id', $doctorId)
-                ->where('varAppointment', $appointment->varAppointment)
-                ->where('startTime', $appointment->startTime)
-                ->where('id', '!=', $appointment->id)
-                ->update(['chrIsCanceled' => 'Y']);
-
-            // 5. Update DoctorCredit
-            $doctorCredit = DoctorCredit::where('dr_id', $doctorId)->first();
-            if ($doctorCredit) {
-                $doctorCredit->amount += $doctorAmount;
-                $doctorCredit->save();
-            } else {
-                DoctorCredit::create([
-                    'dr_id'  => $doctorId,
-                    'amount' => $doctorAmount,
-                ]);
-            }
-
-            // 6. BookCount
-            $hasBookedBefore = BookCount::where('patient_id', $patientId)->exists();
-            BookCount::create([
-                'patient_id'      => $patientId,
-                'dr_id'           => $doctorId,
-                'varAppointment'  => $appointment->varAppointment,
-                'booked'          => $hasBookedBefore ? 0 : 1,
-                'rebooked'        => $hasBookedBefore ? 1 : 0,
-            ]);
+            // Doctor credit
+            DoctorCredit::updateOrCreate(
+                ['dr_id' => $doctor->id],
+                ['amount' => DB::raw("amount + {$doctorAmount}")]
+            );
         });
-
-        // 7. Push notification to doctor
-        if (! empty($doctor->fcm_token)) {
-            (new NotificationController())->sendPushNotification(
-                $doctor->fcm_token,
-                'Payment Received',
-                'You have received a payment of ' . $doctorAmount . ' GBP for an appointment.',
-                'doctor'
-            );
-        }
-
-        // 8. Push notification to patient — booking confirmed
-        if (! empty($patient->fcm_token)) {
-            (new NotificationController())->sendPushNotification(
-                $patient->fcm_token,
-                'Booking Confirmed',
-                'Your appointment has been successfully booked.',
-                'patient'
-            );
-        }
     }
 
     // ─────────────────────────────────────────────
