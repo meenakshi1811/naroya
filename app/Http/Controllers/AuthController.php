@@ -593,7 +593,8 @@ class AuthController extends Controller
             $user->varPostGraduationYear = $request->pg_year;
             $user->varGraduation = $request->graduation;
             $user->varGraduationYear = $request->graduation_year;
-            $user->test_mode = $request->test_mode;
+            // $user->test_mode = $request->test_mode;
+            $user->test_mode = 'N';
             $user->save();
             if (isset($request->current_work_org) && !empty($request->current_work_org)) {
                 $array = json_decode($request->current_work_org, true);
@@ -601,7 +602,7 @@ class AuthController extends Controller
                     DB::table('org_experiance')->insert(['user_id' => $user->id, 'title' => $value['org_name'], 'startYear' => $value['start_year'], 'endYear' => $value['end_year'], 'varDescription' => $value['description'], 'isCurrentworkOrg' => $value['isCurrentworkOrg']]);
                 }
             }
-               if($request->test_mode == 'Y'){
+            if($user->test_mode == 'Y'){                
                 Stripe::setApiKey(env('STRIPE__test_SECRET'));
             }else{
                 Stripe::setApiKey(env('STRIPE_SECRET'));
@@ -618,7 +619,7 @@ class AuthController extends Controller
                 // Store the Stripe account ID in the user's record
                 $user->stripe_account_id = $account->id;
                 $user->save();
- $refreshUrl = route('stripe.refresh', ['userId' => $user->id]);
+                $refreshUrl = route('stripe.refresh', ['userId' => $user->id]);
 
 
                 // Generate the onboarding link for the doctor to complete their setup
@@ -669,6 +670,7 @@ class AuthController extends Controller
                 ]
             ], 200);
         } catch (\Exception $e) {
+
             //   dd($e);
             if ($e instanceof \Illuminate\Validation\ValidationException) {
                 // Check for the specific error on the email field

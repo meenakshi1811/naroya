@@ -84,28 +84,42 @@ class ProcessStripeWebhookEventJob implements ShouldQueue
             $doctorAmount, $adminFee
         ) {
 
-            // ✅ Update existing log
+            // ✅ Update initial log → mark as succeeded
             $paymentLog->update([
                 'varStatus' => 'succeeded',
                 'response'  => json_encode($paymentIntent),
             ]);
 
-            // Admin log
+            // ✅ Doctor payment log (NEW — THIS WAS MISSING)
             PaymentLog::create([
-                'patient_id' => $paymentLog->patient_id,
-                'dr_id' => null,
-                'appointment_id' => $paymentLog->appointment_id,
-                'amount' => $adminFee,
-                'payment_id' => $paymentIntent['id'],
-                'varStatus' => 'succeeded',
+                'patient_id'       => $paymentLog->patient_id,
+                'dr_id'            => $paymentLog->dr_id,
+                'appointment_id'   => $paymentLog->appointment_id,
+                'amount'           => $doctorAmount,
+                'payment_id'       => $paymentIntent['id'],
+                'varStatus'        => 'succeeded',
                 'transaction_time' => now(),
-                'description' => 'Admin commission',
+                'response'         => json_encode($paymentIntent),
+                'description'      => 'Payment to doctor account',
             ]);
 
-            // Update appointment
+            // ✅ Admin commission log
+            PaymentLog::create([
+                'patient_id'       => $paymentLog->patient_id,
+                'dr_id'            => null,
+                'appointment_id'   => $paymentLog->appointment_id,
+                'amount'           => $adminFee,
+                'payment_id'       => $paymentIntent['id'],
+                'varStatus'        => 'succeeded',
+                'transaction_time' => now(),
+                'response'         => json_encode($paymentIntent),
+                'description'      => 'Commission earned by admin',
+            ]);
+
+            // ✅ Update appointment
             $appointment->update(['charIsPaid' => 'Y']);
 
-            // Doctor credit
+            // ✅ Doctor credit
             DoctorCredit::updateOrCreate(
                 ['dr_id' => $doctor->id],
                 ['amount' => DB::raw("amount + {$doctorAmount}")]

@@ -22,39 +22,48 @@ use App\Models\RefundLog;
 use App\Models\BookCount;
 use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Log;
-use Termwind\Components\Li;
+
 
 class PaymentController extends Controller
 {
 
+    /**
+     * Helper to set the correct Stripe API key based on test_mode.
+     */
+    private function setStripeKey($testMode = 'N', $doctorTestMode = 'N')
+    {
+        if ($testMode === 'Y' && $doctorTestMode === 'Y') {
+            Stripe::setApiKey(env('STRIPE__test_SECRET'));
+        } else {
+            Stripe::setApiKey(env('STRIPE_SECRET'));
+        }
+    }
 
     public function showPaymentForm()
     {
-        return view('payment');  // This should point to the Blade view you created earlier
+        return view('payment');
     }
 
     public function createPaymentMethod(Request $request)
     {
-        // Set Stripe API key
-        Stripe::setApiKey(env('STRIPE_SECRET'));
-        // Replace with your secret Stripe key
+        // Use test_mode from request if provided
+        $testMode = $request->input('test_mode', 'N');
+        $this->setStripeKey($testMode, $testMode); // both sides must agree
 
         try {
-            // Create a Payment Method (card) using the test card details
             $paymentMethod = PaymentMethod::create([
                 'type' => 'card',
                 'card' => [
-                    'number' => '4242424242424242',  // Visa test card number
-                    'exp_month' => 12,               // Expiry month (12 = December)
-                    'exp_year' => 2025,              // Expiry year (2025)
-                    'cvc' => '123',                  // CVC code
+                    'number'    => '4242424242424242',
+                    'exp_month' => 12,
+                    'exp_year'  => 2025,
+                    'cvc'       => '123',
                 ],
             ]);
 
-            // You can return the Payment Method ID as part of the response
             return response()->json([
                 'payment_method_id' => $paymentMethod->id,
-                'message' => 'Payment method created successfully.',
+                'message'           => 'Payment method created successfully.',
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -65,7 +74,8 @@ class PaymentController extends Controller
 
     public function ProcessPayment(Request $request)
     {
-        $headers = $request->header('Authorization');
+        // ── Auth ────────────────────────────────────────────────────────────
+        $headers     = $request->header('Authorization');
         $headerArray = explode('Bearer ', $headers);
 
         if (!empty($headerArray[1])) {
@@ -76,124 +86,177 @@ class PaymentController extends Controller
         } else {
             return response()->json([
                 'message' => 'Unauthorized request',
-                'data' => ['error' => 'Unauthorized request']
+                'data'    => ['error' => 'Unauthorized request'],
             ], 401);
         }
 
         try {
             if (!empty($patients)) {
-
+                Log::info('request data', ['request' => $request->all()]);
+                // ── Validation ───────────────────────────────────────────────
                 $request->validate([
-                    'doctor' => 'required',
-                    'currency' => 'required',
+                    'doctor'            => 'required',
+                    'currency'          => 'required',
                     'payment_method_id' => 'required',
-                    'appointment_id' => 'required',
-                    'amount' => 'required'
+                    'appointment_id'    => 'required',
+                    'amount'            => 'required|numeric|min:0.01',
                 ]);
 
-                $doctor = User::find($request->doctor);
+                $doctor   = User::find($request->doctor);
+                $testMode = $request->input('test_mode', 'N');
 
-                if ($request->test_mode == 'Y' && $doctor->test_mode == 'Y') {
-                    Log::info('Processing payment in test mode.');
-                    \Stripe\Stripe::setApiKey(env('STRIPE__test_SECRET'));
-                } else {
-                    Log::info('Processing payment in live mode.');
-                    \Stripe\Stripe::setApiKey(env('STRIPE_SECRET'));
+                // ── Set correct Stripe key ───────────────────────────────────
+                // Both the request AND the doctor record must have test_mode = Y
+                $this->setStripeKey($testMode, $doctor->test_mode ?? 'N');
+
+                // ── Validate Doctor ──────────────────────────────────────────
+                if (!$doctor || !$doctor->stripe_account_id) {
+                    return response()->json([
+                        'message' => 'Doctor does not have a connected Stripe account.',
+                        'data'    => ['error' => 'Invalid doctor account'],
+                    ], 400);
                 }
 
-                // Appointment check
+                // ── Validate Appointment ─────────────────────────────────────
                 $appointment = Appointment::find($request->appointment_id);
                 if (!$appointment) {
                     return response()->json([
                         'message' => 'Invalid appointment ID.',
-                        'data' => ['error' => 'Appointment not found']
+                        'data'    => ['error' => 'Appointment not found'],
                     ], 400);
                 }
 
+                $appointmentDate = $appointment->varAppointment;
+                $appointmentTime = $appointment->startTime;
+
+                // Check if another appointment already occupies this slot
                 $existingAppointment = Appointment::where('dr_id', $request->doctor)
-                    ->where('varAppointment', $appointment->varAppointment)
-                    ->where('startTime', $appointment->startTime)
+                    ->where('varAppointment', $appointmentDate)
+                    ->where('startTime', $appointmentTime)
                     ->where('charIsPaid', 'Y')
                     ->where('id', '!=', $request->appointment_id)
                     ->first();
 
                 if ($existingAppointment) {
                     return response()->json([
-                        'message' => 'This time slot is already booked.',
-                        'data' => ['error' => 'Doctor not available']
+                        'message' => 'This time slot is already booked. Please choose a different slot.',
+                        'data'    => ['error' => 'Doctor is not available at this time.'],
                     ], 400);
                 }
 
-                // Percentages
-                $adminPercentage = GeneralSetting::where('field_name', 'percentage')->value('field_value');
+                // ── Fee Calculations ─────────────────────────────────────────
+                $adminPercentage  = GeneralSetting::where('field_name', 'percentage')->value('field_value');
                 $doctorPercentage = 100 - $adminPercentage;
 
-                if (!$doctor || !$doctor->stripe_account_id) {
-                    return response()->json([
-                        'message' => 'Doctor Stripe account missing.',
-                        'data' => ['error' => 'Invalid doctor']
-                    ], 400);
-                }
+                // Work in pence/cents from the start to avoid rounding issues
+                $currency           = strtolower($request->currency); // e.g. 'gbp' or 'eur'
+                $amountInCents      = (int) round($request->amount * 100);
+                $adminAmountInCents = (int) round(($adminPercentage / 100) * $amountInCents);
 
-                // Create Customer
-                $customer = \Stripe\Customer::create([
-                    'name' => $patients->name . ' ' . $patients->lastname,
-                    'email' => $patients->email,
+                // ── Book Counts ──────────────────────────────────────────────
+                $patientBookCount   = BookCount::where('patient_id', $patients->id)->sum('booked');
+                $patientRebookCount = BookCount::where('patient_id', $patients->id)->sum('rebooked');
+                $totalBookCount     = BookCount::sum('booked');
+                $totalRebookCount   = BookCount::sum('rebooked');
+
+                // ── Step 1: Create Customer on Platform Account ──────────────
+                $customer = Customer::create([
+                    'name'     => $patients->name . ' ' . $patients->lastname,
+                    'email'    => $patients->email,
+                    'metadata' => ['user_id' => $patients->id],
                 ]);
 
-                // Attach payment method
-                $paymentMethod = \Stripe\PaymentMethod::retrieve($request->payment_method_id);
+                // ── Step 2: Attach Payment Method to Platform Customer ───────
+                // The PaymentMethod MUST stay on the platform account (not the
+                // connected account) when using transfer_data + on_behalf_of.
+                $paymentMethod = PaymentMethod::retrieve($request->payment_method_id);
                 $paymentMethod->attach(['customer' => $customer->id]);
 
-                \Stripe\Customer::update($customer->id, [
+                Customer::update($customer->id, [
                     'invoice_settings' => [
                         'default_payment_method' => $paymentMethod->id,
                     ],
                 ]);
 
-                $amount = $request->amount * 100;
-                $adminAmount = ($adminPercentage / 100) * $request->amount;
-
-                // ✅ Create PaymentIntent (metadata empty)
-                $paymentIntent = \Stripe\PaymentIntent::create([
-                    'amount' => $amount,
-                    'currency' => 'GBP',
-                    'payment_method' => $paymentMethod->id,
-                    'customer' => $customer->id,
-                    'off_session' => true,
-                    'confirm' => true,
-                    'metadata' => [], // ✅ keep empty
-                    'transfer_data' => [
+                // ── Step 3: Create PaymentIntent on Platform ─────────────────
+                // FIX: Added `on_behalf_of` so Stripe resolves the PaymentMethod
+                //      against the platform account (where it was created), not
+                //      the connected account — eliminating the "No such
+                //      PaymentMethod" error.
+                $paymentIntent = PaymentIntent::create([
+                    'amount'                 => $amountInCents,
+                    'currency'               => $currency, // from request formdata (e.g. 'gbp' or 'eur')
+                    'payment_method'         => $paymentMethod->id,
+                    'customer'               => $customer->id,
+                    'off_session'            => true,
+                    'confirm'                => true,
+                    // on_behalf_of makes the connected account the merchant of
+                    // record for the payment (statement descriptor, card fees)
+                    // while the PaymentMethod itself stays on the platform.
+                    'on_behalf_of'           => $doctor->stripe_account_id,
+                    'transfer_data'          => [
                         'destination' => $doctor->stripe_account_id,
                     ],
-                    'application_fee_amount' => $adminAmount * 100,
+                    // FIX: was previously $adminAmount * 100, which double-
+                    //      converted dollars→cents. Now computed directly in cents.
+                    'application_fee_amount' => $adminAmountInCents,
+                    'metadata'               => [
+                        'appointment_id' => $request->appointment_id,
+                        'patient_id'     => $patients->id,
+                        'test_mode'      => $testMode,
+                    ],
                 ]);
 
-                // ✅ Save mapping in DB
+                Log::info('PaymentIntent created successfully.', [
+                    'payment_intent_id' => $paymentIntent->id,
+                    'status'            => $paymentIntent->status,
+                    'test_mode'         => $testMode,
+                ]);
+
+                // ── Step 4: Update Appointment to Pending ────────────────────
+                Appointment::where('id', $request->appointment_id)
+                    ->update(['charIsPaid' => 'P']);
+
+                // Cancel any other appointment for the same slot
+                Appointment::where('dr_id', $request->doctor)
+                    ->where('varAppointment', $appointment->varAppointment)
+                    ->where('startTime', $appointment->startTime)
+                    ->where('id', '!=', $request->appointment_id)
+                    ->update(['chrIsCanceled' => 'Y']);
+
+                // ── Step 5: Log Payment ──────────────────────────────────────
                 PaymentLog::create([
-                    'patient_id'     => $patients->id,
-                    'dr_id'          => $request->doctor,
-                    'appointment_id' => $request->appointment_id,
-                    'amount'         => $request->amount,
-                    'payment_id'     => $paymentIntent->id,
-                    'varStatus'      => 'pending',
+                    'patient_id'       => $patients->id,
+                    'dr_id'            => $request->doctor,
+                    'appointment_id'   => $request->appointment_id,
+                    'amount'           => $request->amount,
+                    'payment_id'       => $paymentIntent->id,
+                    'varStatus'        => 'pending',
                     'transaction_time' => now(),
-                    'response'       => json_encode($paymentIntent),
-                    'description'    => 'Payment initiated',
+                    'response'         => json_encode($paymentIntent),
+                    'description'      => 'Payment initiated' . ($testMode === 'Y' ? ' (test mode)' : ''),
                 ]);
 
-                // Mark appointment pending
-                $appointment->update(['charIsPaid' => 'P']);
-                Log::info('Payment processed successfully.', ['payment_intent' => $paymentIntent]);
                 return response()->json([
-                    'message' => 'Payment is in progress.',
+                    'message'        => 'Payment is in progress.',
                     'payment_intent' => $paymentIntent,
+                    'test_mode'      => $testMode,
+                    'book_counts'    => [
+                        'patient_book_count'   => (string) $patientBookCount,
+                        'patient_rebook_count' => (string) $patientRebookCount,
+                        'total_book_count'     => (string) $totalBookCount,
+                        'total_rebook_count'   => (string) $totalRebookCount,
+                    ],
                 ]);
             }
-        } catch (\Stripe\Exception\ApiErrorException $e) {
+        } catch (ApiErrorException $e) {
+            Log::error('Stripe API error during payment processing.', [
+                'error'     => $e->getMessage(),
+                'test_mode' => $request->input('test_mode', 'N'),
+            ]);
             return response()->json([
                 'message' => $e->getMessage(),
-                'data' => ['error' => $e->getMessage()]
+                'data'    => ['error' => $e->getMessage()],
             ], 400);
         }
     }
@@ -201,54 +264,51 @@ class PaymentController extends Controller
     public function updatePaymentSetupStatus(Request $request)
     {
         try {
-            // Retrieve the user's Stripe account ID from your database
             $userData = $request->user();
-            $userId = $userData->id;
+            $userId   = $userData->id;
             $testMode = $request->input('test_mode', 'N');
-            // Retrieve user from the database
+
             $user = User::findOrFail($userId);
+
             if (!$user || !$user->stripe_account_id) {
                 return response()->json([
-                    'message' => 'Stripe account not found for this user.',
+                    'message'                => 'Stripe account not found for this user.',
                     'isPaymentFlowRegistered' => false,
                 ], 200);
             }
-        if ($testMode == 'Y') {
-            Stripe::setApiKey(env('STRIPE__test_SECRET'));
-            } else {
-                Stripe::setApiKey(env('STRIPE_SECRET'));
-            }
-            // Retrieve the connected account details using the Stripe API
+
+            // ── Set correct Stripe key ───────────────────────────────────────
+            $this->setStripeKey($testMode, $testMode);
+
             $account = Account::retrieve($user->stripe_account_id);
-    
-            // Check if the bank account is set up and payments are enabled
+
             if ($account->charges_enabled && $account->payouts_enabled) {
-                // Update the user's payment setup status
                 $user->isPaymentFlowRegistered = true;
                 $user->save();
-    
+
                 return response()->json([
-                    'message' => 'Payment setup completed successfully.',
+                    'message'                => 'Payment setup completed successfully.',
                     'isPaymentFlowRegistered' => true,
+                    'test_mode'              => $testMode,
                 ]);
             } else {
-                // If not fully set up, ensure the status remains false
                 $user->isPaymentFlowRegistered = false;
                 $user->save();
-    
+
                 return response()->json([
-                    'message' => 'Payment setup is incomplete or not enabled.',
+                    'message'                => 'Payment setup is incomplete or not enabled.',
                     'isPaymentFlowRegistered' => false,
+                    'test_mode'              => $testMode,
                 ]);
             }
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error retrieving Stripe account status.',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
-    
+
     public function processRefund(Request $request)
     {
         return response()->json([
