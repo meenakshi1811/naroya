@@ -19,6 +19,8 @@ use App\Http\Controllers\NotificationController;
 use App\Models\OrgExperience;
 use Laravel\Passport\RefreshToken;
 use Laravel\Passport\Token;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\DoctorRegistrationReceivedMail;
 
 class AuthController extends Controller
 {
@@ -649,7 +651,8 @@ class AuthController extends Controller
                     'doctor'
                 );
             }
-              
+
+            Mail::to($user->email)->queue(new DoctorRegistrationReceivedMail($user));
 
             return response()->json([
                 'message' => 'Your request has been sent successfully for approval!',
@@ -1134,19 +1137,21 @@ class AuthController extends Controller
 
     private function getCurrentWorkOrg(int $userId, bool $withCurrentWorkFlag = false)
     {
-        $query = OrgExperience::where('user_id', $userId)
-            ->select(
+        $user = User::with(['experiences' => function ($query) use ($withCurrentWorkFlag) {
+            $query->select(
+                'user_id',
                 'title as org_name',
                 'startYear as start_year',
                 'endYear as end_year',
                 'varDescription as description'
             );
 
-        if ($withCurrentWorkFlag) {
-            $query->addSelect('isCurrentworkOrg');
-        }
+            if ($withCurrentWorkFlag) {
+                $query->addSelect('isCurrentworkOrg');
+            }
+        }])->select('id')->find($userId);
 
-        return $query->get();
+        return $user?->experiences ?? collect();
     }
 
     private function replaceCurrentWorkOrg(int $userId, $currentWorkOrg): void
