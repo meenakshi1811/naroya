@@ -14,6 +14,7 @@ use Storage;
 use Carbon\Carbon;
 use App\Models\GeneralSetting;
 use App\Models\Patients;
+use App\Models\Language;
 use Stripe\Stripe;
 use Stripe\Account;
 use Stripe\AccountLink;
@@ -217,6 +218,22 @@ class AuthController extends Controller
         }
     }
      
+
+
+    public function languages()
+    {
+        $languages = Language::select('id', 'language_name')
+            ->where('chrPublish', 'Y')
+            ->orderBy('language_name', 'asc')
+            ->get();
+
+        return response()->json([
+            'message' => 'successful!',
+            'data' => [
+                'languages' => $languages,
+            ],
+        ], 200);
+    }
 
     public function getUserData(Request $request){
         $userData = $request->user();

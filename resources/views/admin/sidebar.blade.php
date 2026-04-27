@@ -23,6 +23,9 @@
                         <li class="nav-item"> <a href="{{ url('/admin/country') }}" class="nav-link {{ (Request::segment('2') == 'country') ? 'active': ''}}"> <i class="nav-icon bi bi-circle"></i>
                                 <p>Country</p>
                             </a> </li>
+                        <li class="nav-item"> <a href="{{ url('/admin/language') }}" class="nav-link {{ (Request::segment('2') == 'language') ? 'active': ''}}"> <i class="nav-icon bi bi-circle"></i>
+                                <p>Language</p>
+                            </a> </li>
                         <li class="nav-item"> <a href="{{ url('/admin/speciality') }}" class="nav-link {{ (Request::segment('2') == 'speciality') ? 'active': ''}}"> <i class="nav-icon bi bi-circle"></i>
                             <p>Speciality</p>
                         </a> </li>

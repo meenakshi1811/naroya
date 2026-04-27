@@ -80,6 +80,15 @@ Route::delete('/admin/delete-patient/{id}', [App\Http\Controllers\PatientControl
     Route::put('/admin/country/{id}', [App\Http\Controllers\Admin\CountryController::class,  'update'])->name('admin.country.update');
     Route::delete('/admin/country/{id}', [App\Http\Controllers\Admin\CountryController::class,  'Delete'])->name('admin.country.delete');
 
+
+    //Languages
+    Route::get('/admin/language',[App\Http\Controllers\Admin\LanguageController::class, 'listData'])->name('admin.language');
+    Route::get('/admin/language/add', [App\Http\Controllers\Admin\LanguageController::class, 'create'])->name('admin.language.add');
+    Route::post('/admin/language', [App\Http\Controllers\Admin\LanguageController::class, 'store'])->name('admin.language.store');
+    Route::get('/admin/language/{id}/edit', [App\Http\Controllers\Admin\LanguageController::class,  'edit'])->name('admin.language.edit');
+    Route::put('/admin/language/{id}', [App\Http\Controllers\Admin\LanguageController::class,  'update'])->name('admin.language.update');
+    Route::delete('/admin/language/{id}', [App\Http\Controllers\Admin\LanguageController::class,  'Delete'])->name('admin.language.delete');
+
     //Speciality Admin
     Route::get('/admin/speciality',[App\Http\Controllers\Admin\SpecialityController::class, 'listData'])->name('admin.speciality');
     Route::get('/admin/speciality/add', [App\Http\Controllers\Admin\SpecialityController::class, 'create'])->name('admin.speciality.add');
