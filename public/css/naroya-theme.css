@@ -1,0 +1,66 @@
+:root,
+[data-bs-theme="light"] {
+  --bs-primary: #109014;
+  --bs-primary-rgb: 16, 144, 20;
+  --bs-link-color: #109014;
+  --bs-link-color-rgb: 16, 144, 20;
+  --bs-link-hover-color: #0d7811;
+  --bs-link-hover-color-rgb: 13, 120, 17;
+  --bs-focus-ring-color: rgba(16, 144, 20, 0.25);
+}
+
+.app-main {
+  padding: 1rem;
+}
+
+.sidebar-brand {
+  border-bottom: 1px solid rgba(16, 144, 20, 0.25);
+}
+
+.sidebar-brand .brand-link {
+  padding: 0.85rem 0.75rem;
+}
+
+.app-sidebar .nav-link.active {
+  background-color: rgba(16, 144, 20, 0.2) !important;
+  color: #ffffff !important;
+}
+
+.app-sidebar .nav-link.active .nav-icon {
+  color: #ffffff !important;
+}
+
+.btn-primary,
+.bg-primary,
+.text-bg-primary,
+.badge.text-bg-primary {
+  background-color: #109014 !important;
+  border-color: #109014 !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+  background-color: #0d7811 !important;
+  border-color: #0d7811 !important;
+}
+
+a,
+.link-primary,
+.text-primary {
+  color: #109014 !important;
+}
+
+.table thead th {
+  background-color: #109014;
+  color: #ffffff;
+  border-color: #0d7811;
+}
+
+.table-bordered > :not(caption) > * > * {
+  border-color: rgba(16, 144, 20, 0.2);
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+  --bs-table-accent-bg: rgba(16, 144, 20, 0.06);
+}
