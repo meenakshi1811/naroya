@@ -36,7 +36,7 @@
         }
 
         .content h2 {
-            color: #28a745;
+            color: #109014;
         }
 
         .content p {
@@ -45,7 +45,7 @@
         }
 
         .button {
-            background-color: #007bff;
+            background-color: #109014;
             color: white;
             padding: 12px 25px;
             text-decoration: none;
@@ -67,17 +67,17 @@
 <body>
     <div class="email-container">
         <div class="header">
-            <img src="{{ asset('img/logo.png') }}" alt="{{ config('app.name') }}" title="{{ config('app.name') }}">
+            <img src="{{ asset('assets/img/logo.png') }}" alt="{{ config('app.name') }}" title="{{ config('app.name') }}">
         </div>
         <div class="content">
             <h1>Dear {{ $user->name }},</h1>
             <p>Your registration request has been sent for approval!</p>
-            <p>To complete your setup, please set up your bank details to receive your fees and keep track of all your earnings through Wellora. Click the link below to proceed:</p>
+            <p>To complete your setup, please set up your bank details to receive your fees and keep track of all your earnings through Naroya. Click the link below to proceed:</p>
             <p><a href="{{ $onboardingUrl }}">Bank Setup</a></p>
             <p>For detailed, step-by-step instructions, please refer to the attached Bank Set up Guide</p>
             <p>If you have any questions or need assistance, feel free to contact our support team at <a href="mailto:hiwellora@gmail.com">hiwellora@gmail.com</a>.</p>
             <p>Regards,</p></br>
-            <p>Wellora Team</p>
+            <p>Naroya Team</p>
         </div>
         <div class="footer">
             <p>&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>

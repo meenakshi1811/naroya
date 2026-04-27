@@ -36,7 +36,7 @@
         }
 
         .content h2 {
-            color: #28a745;
+            color: #109014;
         }
 
         .content p {
@@ -44,7 +44,7 @@
         }
 
         .button {
-            background-color: #007bff;
+            background-color: #109014;
             color: white;
             padding: 12px 25px;
             text-decoration: none;
@@ -65,14 +65,14 @@
 <body>
     <div class="email-container">
         <div class="header">
-            <img src="{{ asset('img/logo.png') }}" alt="{{ config('app.name') }}" title="{{ config('app.name') }}">
+            <img src="{{ asset('assets/img/logo.png') }}" alt="{{ config('app.name') }}" title="{{ config('app.name') }}">
         </div>
 
         <div class="content">
             <h2>Dear Dr. {{ $name }} {{ $surname }},</h2>
 
-            <p>Your registration with Wellora has been approved!</p>
-            <p>As part of your setup, you will receive an email invitation from SignatureRx which will allow you to create online prescriptions for your patients. Please follow the instructions in the invitation email to enable prescribing through Wellora.</p>
+            <p>Your registration with Naroya has been approved!</p>
+            <p>As part of your setup, you will receive an email invitation from SignatureRx which will allow you to create online prescriptions for your patients. Please follow the instructions in the invitation email to enable prescribing through Naroya.</p>
 
             <p>To assist you, we’ve attached a <strong>Issuing prescription guide</strong>, which provides step-by-step instructions for prescribing medication through SignatureRx dashboard.</p>
             <!-- <p><a href="https://signaturerx.co.uk/">https://signaturerx.co.uk/</a></p> -->
