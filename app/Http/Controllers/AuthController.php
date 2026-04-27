@@ -642,8 +642,6 @@ class AuthController extends Controller
             $user->varGraduation = $request->graduation;
             $user->varGraduationYear = $request->graduation_year;
             $user->language_ids = !empty($languageIds) ? json_encode($languageIds) : null;
-            // $user->test_mode = $request->test_mode;
-            $user->test_mode = 'N';
             $user->save();
             if (isset($request->current_work_org) && !empty($request->current_work_org)) {
                 $array = json_decode($request->current_work_org, true);
@@ -651,36 +649,11 @@ class AuthController extends Controller
                     DB::table('org_experiance')->insert(['user_id' => $user->id, 'title' => $value['org_name'], 'startYear' => $value['start_year'], 'endYear' => $value['end_year'], 'varDescription' => $value['description'], 'isCurrentworkOrg' => $value['isCurrentworkOrg']]);
                 }
             }
-            if($user->test_mode == 'Y'){                
-                Stripe::setApiKey(env('STRIPE__test_SECRET'));
-            }else{
-                Stripe::setApiKey(env('STRIPE_SECRET'));
-            }
 
-            // Create the Stripe connected account
-                // Stripe::setApiKey(env('STRIPE_SECRET'));
-                $account = Account::create([
-                    'type' => 'standard', // or 'express' or 'custom'
-                    'country' => 'GB', // Update based on doctor's country
-                    'email' => $request->email, // Doctor's email
-                ]);
-
-                // Store the Stripe account ID in the user's record
-                $user->stripe_account_id = $account->id;
-                $user->save();
-                $refreshUrl = route('stripe.refresh', ['userId' => $user->id]);
+                
 
 
-                // Generate the onboarding link for the doctor to complete their setup
-                $accountLink = AccountLink::create([
-                    'account' => $account->id,
-                    'refresh_url' => $refreshUrl,  // URL to return to when refreshing
-                    'return_url' => env('STRIPE_RETURN_URL'), 
-                    'type' => 'account_onboarding',
-                ]);
-
-                $user->onboarding_url = $accountLink->url;
-                $user->save();
+              
 
 
             if (isset($request->current_work_org) && !empty($request->current_work_org)) {
@@ -753,37 +726,7 @@ class AuthController extends Controller
     }
 
 
-public function refreshOnboarding(Request $request, $userId)
-{
-    try {
-        $user = User::findOrFail($userId);
 
-        // Regenerate onboarding link
-        if($user->test_mode == 'Y'){
-            Stripe::setApiKey(env('STRIPE__test_SECRET'));
-        }else{
-            Stripe::setApiKey(env('STRIPE_SECRET'));
-        }
-        //   Stripe::setApiKey(env('STRIPE_SECRET'));
-        $accountLink = \Stripe\AccountLink::create([
-            'account' => $user->stripe_account_id,
-            'refresh_url' => route('stripe.refresh', ['userId' => $user->id]),
-            'return_url' => env('STRIPE_RETURN_URL'),
-            'type' => 'account_onboarding',
-        ]);
-
-        // Redirect to the new onboarding link
-        return redirect($accountLink->url);
-    } catch (\Exception $e) {
-        // dd($e);
-         return response()->json([
-                'message' => 'Unable to refresh onboarding link!',
-                 'data' => [
-                'error' => 'User Not Found!',
-            ]], 400);
-        // return response()->json(['error' => 'Unable to refresh onboarding link'], 400);
-    }
-}
     public function update(Request $request){
         $userId = $request->user()->id;
         if(isset($userId) && !empty($userId)){      
