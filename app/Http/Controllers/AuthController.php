@@ -15,12 +15,8 @@ use Carbon\Carbon;
 use App\Models\GeneralSetting;
 use App\Models\Patients;
 use App\Models\Language;
-use Stripe\Stripe;
-use Stripe\Account;
-use Stripe\AccountLink;
-use App\Mail\UserOnboardingMail;
-use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\NotificationController;
+use App\Models\OrgExperience;
 use Laravel\Passport\RefreshToken;
 use Laravel\Passport\Token;
 
@@ -76,30 +72,6 @@ class AuthController extends Controller
             ]);
     
             $tokenData = json_decode((string) $response->getBody(), true);
-                $testMode = $request->test_mode ? $request->test_mode : 'N';
-            // Call the update-payment-setup API
-            $paymentStatusResponse = $http->post(config('app.url') . 'api/update-payment-setup', [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $tokenData['access_token']
-                ],
-                'form_params' => [
-                    'test_mode' => $testMode
-                ]
-            ]);
-    
-            $paymentStatus = json_decode((string) $paymentStatusResponse->getBody(), true);
-            // Add bank detail message if necessary
-            $bankSetupMessage = null;
-           
-            if (!$paymentStatus['isPaymentFlowRegistered']) {
-                $bankSetupMessage = 'Bank details are not set up. Please complete your payment setup.';
-                return response()->json([
-                    'message' => $bankSetupMessage,
-                    'data' => [
-                        'error' => $bankSetupMessage, // Include message in response
-                    ]
-                ], 400);
-            }
     
             // Send Push Notification
             // if ($user->fcm_token) {
@@ -240,7 +212,7 @@ class AuthController extends Controller
         if($userData->chrApproval == 'Y'){
         $userId = $userData->id;
         $user = User::select('id','name as first_name','surname','category','country','state','email','gmc_registration_no','indemnity_insurance_provider','policy_no','india_registration_no','dha_reg','reg_no','chrSmartcard','varProfile as profile_picture','varSpeciality as speciality','varExperience as total_experience','varPostGraduation as post_graduation','varPostGraduationYear as pg_year','varGraduation as graduation','varGraduationYear as graduation_year','varFees as fees','varTimeDuration as consultation_time')->where('id',$userId)->first();
-        $current_work_org = DB::table('org_experiance')->select('title as org_name','startYear as start_year','endYear as end_year','varDescription as description','isCurrentworkOrg')->where('user_id',$userId)->get();
+        $current_work_org = $this->getCurrentWorkOrg($userId, true);
         $current_work_org = json_encode($current_work_org);
         $user->current_work_org = $current_work_org;
         if(!empty($user->profile_picture)){
@@ -273,7 +245,7 @@ class AuthController extends Controller
 
         $currentDateTime = now();
         $user = User::select('id','name as first_name','surname','category','country','state','email','gmc_registration_no','indemnity_insurance_provider','policy_no','india_registration_no','dha_reg','reg_no','chrSmartcard','varProfile as profile_picture','varSpeciality as speciality','varExperience as total_experience','varPostGraduation as post_graduation','varPostGraduationYear as pg_year','varGraduation as graduation','varGraduationYear as graduation_year','varFees as Fees','varTimeDuration as Consaltation Time')->where('id',$userId)->first();
-        $current_work_org = DB::table('org_experiance')->select('title as org_name','startYear as start_year','endYear as end_year','varDescription as description')->where('user_id',$userId)->get();
+        $current_work_org = $this->getCurrentWorkOrg($userId);
         $current_work_org = json_encode($current_work_org);
         $user->current_work_org = $current_work_org;
         if(!empty($user->profile_picture)){
@@ -386,7 +358,7 @@ class AuthController extends Controller
         $today = Carbon::today();
         $currentDateTime = now();
         $user = User::select('id','name as first_name','surname','category','country','state','email','gmc_registration_no','indemnity_insurance_provider','policy_no','india_registration_no','dha_reg','reg_no','chrSmartcard','varProfile as profile_picture','varSpeciality as speciality','varExperience as total_experience','varPostGraduation as post_graduation','varPostGraduationYear as pg_year','varGraduation as graduation','varGraduationYear as graduation_year')->where('id',$userId)->first();
-        $current_work_org = DB::table('org_experiance')->select('title as org_name','startYear as start_year','endYear as end_year','varDescription as description')->where('user_id',$userId)->get();
+        $current_work_org = $this->getCurrentWorkOrg($userId);
         $current_work_org = json_encode($current_work_org);
         $user->current_work_org = $current_work_org;
         if(!empty($user->profile_picture)){
@@ -435,7 +407,7 @@ class AuthController extends Controller
         if($userData->chrApproval == 'Y'){
         $userId = $userData->id;
         $user = User::select('id','name as first_name','surname','category','country','state','email','gmc_registration_no','indemnity_insurance_provider','policy_no','india_registration_no','dha_reg','reg_no','chrSmartcard','varProfile as profile_picture','varSpeciality as speciality','varExperience as total_experience','varPostGraduation as post_graduation','varPostGraduationYear as pg_year','varGraduation as graduation','varGraduationYear as graduation_year')->where('id',$userId)->first();
-        $current_work_org = DB::table('org_experiance')->select('title as org_name','startYear as start_year','endYear as end_year','varDescription as description')->where('user_id',$userId)->get();
+        $current_work_org = $this->getCurrentWorkOrg($userId);
         $current_work_org = json_encode($current_work_org);
         $user->current_work_org = $current_work_org;
         if(!empty($user->profile_picture)){
@@ -506,7 +478,7 @@ class AuthController extends Controller
         if($userData->chrApproval == 'Y'){
         $userId = $userData->id;
         $user = User::select('id','name as first_name','surname','category','country','state','email','gmc_registration_no','indemnity_insurance_provider','policy_no','india_registration_no','dha_reg','reg_no','chrSmartcard','varProfile as profile_picture','varSpeciality as speciality','varExperience as total_experience','varPostGraduation as post_graduation','varPostGraduationYear as pg_year','varGraduation as graduation','varGraduationYear as graduation_year')->where('id',$userId)->first();
-        $current_work_org = DB::table('org_experiance')->select('title as org_name','startYear as start_year','endYear as end_year','varDescription as description')->where('user_id',$userId)->get();
+        $current_work_org = $this->getCurrentWorkOrg($userId);
         $current_work_org = json_encode($current_work_org);
         $user->current_work_org = $current_work_org;
         if(!empty($user->profile_picture)){
@@ -644,10 +616,7 @@ class AuthController extends Controller
             $user->language_ids = !empty($languageIds) ? json_encode($languageIds) : null;
             $user->save();
             if (isset($request->current_work_org) && !empty($request->current_work_org)) {
-                $array = json_decode($request->current_work_org, true);
-                foreach ($array as $key => $value) {
-                    DB::table('org_experiance')->insert(['user_id' => $user->id, 'title' => $value['org_name'], 'startYear' => $value['start_year'], 'endYear' => $value['end_year'], 'varDescription' => $value['description'], 'isCurrentworkOrg' => $value['isCurrentworkOrg']]);
-                }
+                $this->replaceCurrentWorkOrg($user->id, $request->current_work_org);
             }
 
                 
@@ -657,7 +626,7 @@ class AuthController extends Controller
 
 
             if (isset($request->current_work_org) && !empty($request->current_work_org)) {
-                $current_work_org = DB::table('org_experiance')->select('title as org_name', 'startYear as start_year', 'endYear as end_year', 'varDescription as description', 'isCurrentworkOrg')->where('user_id', $user->id)->get();
+                $current_work_org = $this->getCurrentWorkOrg($user->id, true);
                 $current_work_org = json_encode($current_work_org);
                 $user->current_work_org = $current_work_org;
             } else {
@@ -682,13 +651,10 @@ class AuthController extends Controller
             }
               
 
-            Mail::to($user->email)->queue(new UserOnboardingMail($user, $accountLink->url));
-
             return response()->json([
                 'message' => 'Your request has been sent successfully for approval!',
                 'data' => [
-                    'user' => $user,
-                    'onboarding_url' => $accountLink->url
+                    'user' => $user
                 ]
             ], 200);
         } catch (\Exception $e) {
@@ -763,17 +729,11 @@ class AuthController extends Controller
             $user->varGraduationYear = $request->graduation_year; 
             $user->save();
             if(isset($request->current_work_org) && !empty($request->current_work_org)){
-                DB::table('org_experiance')->where('user_id',$userId)->delete();
-                $array = json_decode($request->current_work_org, true);
-                foreach ($array as $key => $value) {
-                    DB::table('org_experiance')->insert(['user_id' => $user->id,'title' =>$value['org_name'] ,'startYear' => $value['start_year'],'endYear' => $value['end_year'],'varDescription'=>$value['description'],'isCurrentworkOrg' => $value['isCurrentworkOrg']   
-                ]);
-                }
-               
+                $this->replaceCurrentWorkOrg($userId, $request->current_work_org);
             }
 
              if(isset($request->current_work_org) && !empty($request->current_work_org)){
-            $current_work_org = DB::table('org_experiance')->select('title as org_name','startYear as start_year','endYear as end_year','varDescription as description','isCurrentworkOrg')->where('user_id',$userId)->get();
+            $current_work_org = $this->getCurrentWorkOrg($userId, true);
             $current_work_org = json_encode($current_work_org);
             $user->current_work_org = $current_work_org;
             }else{
@@ -1118,7 +1078,7 @@ class AuthController extends Controller
             if($userData->chrApproval == 'Y'){
             $userId = $userData->id;
             $user = User::select('id','name as first_name','surname','category','country','state','email','gmc_registration_no','indemnity_insurance_provider','policy_no','india_registration_no','dha_reg','reg_no','chrSmartcard','varProfile as profile_picture','varSpeciality as speciality','varExperience as total_experience','varPostGraduation as post_graduation','varPostGraduationYear as pg_year','varGraduation as graduation','varGraduationYear as graduation_year','varFees as fees','varTimeDuration as consultation_time')->where('id',$userId)->first();
-            $current_work_org = DB::table('org_experiance')->select('title as org_name','startYear as start_year','endYear as end_year','varDescription as description','isCurrentworkOrg')->where('user_id',$userId)->get();
+            $current_work_org = $this->getCurrentWorkOrg($userId, true);
             $current_work_org = json_encode($current_work_org);
             $user->current_work_org = $current_work_org;
             if(!empty($user->profile_picture)){
@@ -1172,6 +1132,43 @@ class AuthController extends Controller
         
     }
 
+    private function getCurrentWorkOrg(int $userId, bool $withCurrentWorkFlag = false)
+    {
+        $query = OrgExperience::where('user_id', $userId)
+            ->select(
+                'title as org_name',
+                'startYear as start_year',
+                'endYear as end_year',
+                'varDescription as description'
+            );
+
+        if ($withCurrentWorkFlag) {
+            $query->addSelect('isCurrentworkOrg');
+        }
+
+        return $query->get();
+    }
+
+    private function replaceCurrentWorkOrg(int $userId, $currentWorkOrg): void
+    {
+        OrgExperience::where('user_id', $userId)->delete();
+
+        $entries = is_array($currentWorkOrg) ? $currentWorkOrg : json_decode($currentWorkOrg, true);
+        if (!is_array($entries)) {
+            return;
+        }
+
+        foreach ($entries as $entry) {
+            OrgExperience::create([
+                'user_id' => $userId,
+                'title' => $entry['org_name'] ?? null,
+                'startYear' => $entry['start_year'] ?? null,
+                'endYear' => $entry['end_year'] ?? null,
+                'varDescription' => $entry['description'] ?? null,
+                'isCurrentworkOrg' => $entry['isCurrentworkOrg'] ?? 'N',
+            ]);
+        }
+    }
 
 
 }
