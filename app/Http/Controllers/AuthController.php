@@ -577,8 +577,39 @@ class AuthController extends Controller
                 'first_name' => 'required|string',
                 'email' => 'required|string|email|unique:users|valid_email_domain',
                 'password' => 'required|string',
+                'language_ids' => 'nullable',
                 // 'fcm_token' => 'required|string',
             ]);
+
+            $languageIds = [];
+            if ($request->has('language_ids') && !is_null($request->language_ids) && $request->language_ids !== '') {
+                if (is_array($request->language_ids)) {
+                    $languageIds = $request->language_ids;
+                } else {
+                    $decodedLanguageIds = json_decode($request->language_ids, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decodedLanguageIds)) {
+                        $languageIds = $decodedLanguageIds;
+                    } else {
+                        $languageIds = array_map('trim', explode(',', (string) $request->language_ids));
+                    }
+                }
+
+                $languageIds = array_values(array_unique(array_filter($languageIds, function ($id) {
+                    return is_numeric($id) && (int) $id > 0;
+                })));
+
+                if (!empty($languageIds)) {
+                    $languageCount = Language::whereIn('id', $languageIds)->count();
+                    if ($languageCount !== count($languageIds)) {
+                        return response()->json([
+                            'message' => 'Please Provide Valid details!',
+                            'data' => [
+                                'error' => 'One or more language_ids are invalid.',
+                            ]
+                        ], 400);
+                    }
+                }
+            }
             $time_range = GeneralSetting::select('field_value')->where('field_name', 'time_duration')->first();
             $user = new User();
             $user->name = $request->first_name;
@@ -610,6 +641,7 @@ class AuthController extends Controller
             $user->varPostGraduationYear = $request->pg_year;
             $user->varGraduation = $request->graduation;
             $user->varGraduationYear = $request->graduation_year;
+            $user->language_ids = !empty($languageIds) ? json_encode($languageIds) : null;
             // $user->test_mode = $request->test_mode;
             $user->test_mode = 'N';
             $user->save();
