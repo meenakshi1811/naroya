@@ -10,14 +10,74 @@
 <!-- DataTables CSS -->
 <link href="https://cdn.datatables.net/1.11.3/css/jquery.dataTables.min.css" rel="stylesheet">
 <!-- jQuery and Bootstrap JS -->
+<style>
+    .pending-doctors-card .card-body {
+        overflow-x: auto;
+    }
+
+    .pending-doctors-table {
+        width: 100% !important;
+        min-width: 1300px;
+    }
+
+    .pending-doctors-table td,
+    .pending-doctors-table th {
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    .doctor-avatar {
+        border-radius: 8px;
+        object-fit: cover;
+        border: 1px solid #e9ecef;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .action-buttons .btn {
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .modal-details-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 20px;
+        row-gap: 10px;
+    }
+
+    .detail-label {
+        color: #6c757d;
+        font-size: 12px;
+        margin-bottom: 2px;
+    }
+
+    .detail-value {
+        font-weight: 600;
+        word-break: break-word;
+    }
+
+    @media (max-width: 767px) {
+        .modal-details-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
 <div class="row">
     <div class="col-md-12">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h3 class="card-title">Doctors</h3>
+        <div class="card mb-4 pending-doctors-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0">Doctors</h3>
+                <small class="text-muted">Scroll horizontally to view all columns</small>
             </div>
             <div class="card-body">
-                <table id="doctorsTable" class="table table-bordered">
+                <table id="doctorsTable" class="table table-bordered table-hover pending-doctors-table">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -46,9 +106,9 @@
                             <td>{{ $data->countryRel->countryname ?? '-' }}</td>
                             <td>
                                 @if(!empty($data->varProfile))
-                                <img src="{{ config('app.url').'api/docterprofile/'.$data->varProfile }}" alt="{{ $data->name }}" height="100px" width="100px" />
+                                <img src="{{ config('app.url').'api/docterprofile/'.$data->varProfile }}" alt="{{ $data->name }}" width="64" height="64" class="doctor-avatar" />
                                 @else
-                                N/A
+                                <span class="text-muted">N/A</span>
                                 @endif
                             </td>
                             @php
@@ -93,21 +153,23 @@
                             {{--<td>
                                 <button class="btn btn-warning" onclick="openUpdatePaymentModal({{ $data->id }}, {{ $data->remaining_payment }})">Update Payment</button>
                             </td> --}}
-                          <td class="d-flex gap-2">
-                                <button
-                                    type="button"
-                                    class="btn btn-info"
-                                    data-toggle="modal"
-                                    data-target="#userModal"
-                                    onclick='openModal(@json($modalData))'
-                                >View Details</button>
-                                <button type="button" class="btn btn-danger" onclick="deleteDoctor({{ $data->id }})">Delete</button>
+                          <td>
+                                <div class="action-buttons">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-info"
+                                        data-toggle="modal"
+                                        data-target="#userModal"
+                                        onclick='openModal(@json($modalData))'
+                                    >View Details</button>
+                                    <button type="button" class="btn btn-outline-danger" onclick="deleteDoctor({{ $data->id }})">Delete</button>
+                                </div>
                             </td>
                         </tr>
                         @endforeach
                         @else
                         <tr>
-                            <td colspan="7" class="text-center">No records found</td>
+                            <td colspan="10" class="text-center">No records found</td>
                         </tr>
                         @endif
                     </tbody>
@@ -118,73 +180,39 @@
 </div> <!-- /.row -->
 <!-- Modal Structure -->
 <div class="modal fade" id="userModal" tabindex="-1" role="dialog" aria-labelledby="userModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+    <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="userModalLabel">User Details</h5>
+                <h5 class="modal-title" id="userModalLabel">Doctor Details</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
-                <div>
-                    <strong>Name:</strong> <span id="modalName"></span>
-                </div>
-                <div>
-                    <strong>Email:</strong> <span id="modalEmail"></span>
-                </div>
-                <div>
-                    <strong>Surname:</strong> <span id="modalSurname"></span>
-                </div>
-                <div>
-                    <strong>Category:</strong> <span id="modalCategory"></span>
-                </div>
-                <div>
-                    <strong>Country:</strong> <span id="modalCountry"></span>
-                </div>
-                <div>
-                    <strong>GMC Registration No:</strong> <span id="modalGMCRegistrationNo"></span>
-                </div>
-                <div>
-                    <strong>Indemnity Insurance Provider:</strong> <span id="modalIndemnityInsuranceProvider"></span>
-                </div>
-                <div>
-                    <strong>Policy No:</strong> <span id="modalPolicyNo"></span>
-                </div>
-                <div>
-                    <strong>India Registration No:</strong> <span id="modalIndiaRegistrationNo"></span>
-                </div>
-                <div>
-                    <strong>DHA Reg:</strong> <span id="modalDhaReg"></span>
-                </div>
-                <div>
-                    <strong>Reg No:</strong> <span id="modalRegNo"></span>
-                </div>
-                <div>
-                    <strong>Smartcard:</strong> <span id="modalChrSmartcard"></span>
-                </div>
-                <div>
-                    <strong>Speciality:</strong> <span id="modalSpeciality"></span>
-                </div>
-                <div>
-                    <strong>Experience:</strong> <span id="modalExperience"></span>
-                </div>
-                <div>
-                    <strong>Post Graduation:</strong> <span id="modalPostGraduation"></span>
-                </div>
-                <div>
-                    <strong>Post Graduation Year:</strong> <span id="modalPostGraduationYear"></span>
-                </div>
-                <div>
-                    <strong>Graduation:</strong> <span id="modalGraduation"></span>
-                </div>
-                <div>
-                    <strong>Graduation Year:</strong> <span id="modalGraduationYear"></span>
+                <div class="modal-details-grid">
+                    <div><div class="detail-label">Name</div><div class="detail-value" id="modalName">-</div></div>
+                    <div><div class="detail-label">Email</div><div class="detail-value" id="modalEmail">-</div></div>
+                    <div><div class="detail-label">Surname</div><div class="detail-value" id="modalSurname">-</div></div>
+                    <div><div class="detail-label">Category</div><div class="detail-value" id="modalCategory">-</div></div>
+                    <div><div class="detail-label">Country</div><div class="detail-value" id="modalCountry">-</div></div>
+                    <div><div class="detail-label">GMC Registration No</div><div class="detail-value" id="modalGMCRegistrationNo">-</div></div>
+                    <div><div class="detail-label">Indemnity Insurance Provider</div><div class="detail-value" id="modalIndemnityInsuranceProvider">-</div></div>
+                    <div><div class="detail-label">Policy No</div><div class="detail-value" id="modalPolicyNo">-</div></div>
+                    <div><div class="detail-label">India Registration No</div><div class="detail-value" id="modalIndiaRegistrationNo">-</div></div>
+                    <div><div class="detail-label">DHA Reg</div><div class="detail-value" id="modalDhaReg">-</div></div>
+                    <div><div class="detail-label">Reg No</div><div class="detail-value" id="modalRegNo">-</div></div>
+                    <div><div class="detail-label">Smartcard</div><div class="detail-value" id="modalChrSmartcard">-</div></div>
+                    <div><div class="detail-label">Speciality</div><div class="detail-value" id="modalSpeciality">-</div></div>
+                    <div><div class="detail-label">Experience</div><div class="detail-value" id="modalExperience">-</div></div>
+                    <div><div class="detail-label">Post Graduation</div><div class="detail-value" id="modalPostGraduation">-</div></div>
+                    <div><div class="detail-label">Post Graduation Year</div><div class="detail-value" id="modalPostGraduationYear">-</div></div>
+                    <div><div class="detail-label">Graduation</div><div class="detail-value" id="modalGraduation">-</div></div>
+                    <div><div class="detail-label">Graduation Year</div><div class="detail-value" id="modalGraduationYear">-</div></div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-primary" id="chrapproval" onclick="Aprroval()">Approved</button>
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="chrapproval" onclick="Aprroval()">Approve Doctor</button>
+                <button type="button" class="btn btn-light" data-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -301,9 +329,11 @@
             "info": true,           // Enable info text (e.g., "Showing 1 to 10 of 50 entries")
             "lengthChange": true,   // Allow changing the number of rows per page
             "autoWidth": false,     // Disable automatic column width calculation
+            "responsive": false,
+            "scrollX": true,
             "columnDefs": [
                 {
-                    "targets": [0],  // Disable sorting for the ID column (optional)
+                    "targets": [9],
                     "orderable": false
                 }
             ]
