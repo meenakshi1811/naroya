@@ -25,10 +25,8 @@ Route::post('payment', [PaymentController::class, 'storePayment'])->name('paymen
 Route::get('payment/success', [PaymentController::class, 'success'])->name('payment.success');
 Route::get('payment/failure', [PaymentController::class, 'failure'])->name('payment.failure');
 
+Route::get('/', [App\Http\Controllers\AdminAuthController::class, 'showLoginForm']);
 
-Route::get('/', function () {
-    return view('welcome');
-});
 Route::get('/privacy-policy', function () {
     return view('privacy-policy');
 });
