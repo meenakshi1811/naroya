@@ -1,7 +1,7 @@
 <footer class="app-footer"> <!--begin::To the end-->
     <strong>
         Copyright &copy; {{ date('Y')}}&nbsp;
-        <a href="{{url('/')}}" class="text-decoration-none">Naroya</a>.
+        <a href="{{url('/')}}" class="text-decoration-none">Noraya</a>.
     </strong>
         All rights reserved.
         <!--end::Copyright-->

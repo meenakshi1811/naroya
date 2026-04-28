@@ -72,8 +72,8 @@
         <div class="content">
             <h2>Dear Dr. {{ $name }} {{ $surname }},</h2>
 
-            <p>Your registration with Naroya has been approved!</p>
-            <p>As part of your setup, you will receive an email invitation from SignatureRx which will allow you to create online prescriptions for your patients. Please follow the instructions in the invitation email to enable prescribing through Naroya.</p>
+            <p>Your registration with Noraya has been approved!</p>
+            <p>As part of your setup, you will receive an email invitation from SignatureRx which will allow you to create online prescriptions for your patients. Please follow the instructions in the invitation email to enable prescribing through Noraya.</p>
 
             <p>To assist you, we’ve attached a <strong>Issuing prescription guide</strong>, which provides step-by-step instructions for prescribing medication through SignatureRx dashboard.</p>
             <!-- <p><a href="https://signaturerx.co.uk/">https://signaturerx.co.uk/</a></p> -->

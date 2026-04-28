@@ -73,12 +73,12 @@
         <div class="content">
             <h1>Dear {{ $user->name }},</h1>
             <p>Your registration request has been sent for approval!</p>
-            <p>To complete your setup, please set up your bank details to receive your fees and keep track of all your earnings through Naroya. Click the link below to proceed:</p>
+            <p>To complete your setup, please set up your bank details to receive your fees and keep track of all your earnings through Noraya. Click the link below to proceed:</p>
             <p><a href="{{ $onboardingUrl }}">Bank Setup</a></p>
             <p>For detailed, step-by-step instructions, please refer to the attached Bank Set up Guide</p>
             <p>If you have any questions or need assistance, feel free to contact our support team at <a href="mailto:hiwellora@gmail.com">hiwellora@gmail.com</a>.</p>
             <p>Regards,</p></br>
-            <p>Naroya Team</p>
+            <p>Noraya Team</p>
         </div>
         <div class="footer">
             <p>&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
