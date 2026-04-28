@@ -138,28 +138,7 @@
                                         class="btn btn-outline-info"
                                         data-toggle="modal"
                                         data-target="#userModal"
-                                        onclick='openModal(@json([
-                                            "id" => $data->id,
-                                            "name" => $data->name,
-                                            "email" => $data->email,
-                                            "surname" => $data->surname,
-                                            "category" => $data->categoryRel->title ?? "-",
-                                            "country" => $data->countryRel->countryname ?? "-",
-                                            "gmc_registration_no" => $data->gmc_registration_no,
-                                            "indemnity_insurance_provider" => $data->indemnity_insurance_provider,
-                                            "policy_no" => $data->policy_no,
-                                            "india_registration_no" => $data->india_registration_no,
-                                            "dha_reg" => $data->dha_reg,
-                                            "reg_no" => $data->reg_no,
-                                            "chrSmartcard" => $data->chrSmartcard,
-                                            "varSpeciality" => $data->varSpeciality,
-                                            "varExperience" => $data->varExperience,
-                                            "varPostGraduation" => $data->varPostGraduation,
-                                            "varPostGraduationYear" => $data->varPostGraduationYear,
-                                            "varGraduation" => $data->varGraduation,
-                                            "varGraduationYear" => $data->varGraduationYear,
-                                            "chrApproval" => $data->chrApproval,
-                                        ]))'>
+                                        onclick='openModal(@json($modalData))'>
                                         View Details
                                     </button>
                                     <button type="button" class="btn btn-outline-danger" onclick="confirmDelete({{ $data->id }})">Delete</button>
