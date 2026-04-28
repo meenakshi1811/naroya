@@ -101,6 +101,7 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @php($modalData = [])
                         @if(isset($doctors) && count($doctors) > 0)
                         @foreach($doctors as $data)
                         @php
@@ -109,6 +110,28 @@
                             $recentPayment = (float)($data->recent_payment_amount ?? 0);
                             $status = ($data->chrApproval === 'Y') ? 'Approved' : 'Pending';
                             $statusClass = ($data->chrApproval === 'Y') ? 'badge-success' : 'badge-warning';
+                            $modalData = [
+                                'id' => $data->id,
+                                'name' => $data->name,
+                                'email' => $data->email,
+                                'surname' => $data->surname,
+                                'category' => optional($data->categoryRel)->title ?? '-',
+                                'country' => optional($data->countryRel)->countryname ?? '-',
+                                'gmc_registration_no' => $data->gmc_registration_no,
+                                'indemnity_insurance_provider' => $data->indemnity_insurance_provider,
+                                'policy_no' => $data->policy_no,
+                                'india_registration_no' => $data->india_registration_no,
+                                'dha_reg' => $data->dha_reg,
+                                'reg_no' => $data->reg_no,
+                                'chrSmartcard' => $data->chrSmartcard,
+                                'varSpeciality' => $data->varSpeciality,
+                                'varExperience' => $data->varExperience,
+                                'varPostGraduation' => $data->varPostGraduation,
+                                'varPostGraduationYear' => $data->varPostGraduationYear,
+                                'varGraduation' => $data->varGraduation,
+                                'varGraduationYear' => $data->varGraduationYear,
+                                'chrApproval' => $data->chrApproval,
+                            ];
                         @endphp
                         <tr>
                             <td>{{ $data->id }}</td>

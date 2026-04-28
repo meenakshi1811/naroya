@@ -33,6 +33,7 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @php($modalData = [])
                         @if(isset($doctors) && count($doctors) > 0)
                         @foreach($doctors as $key=>$data)
                         <tr class="align-middle">
