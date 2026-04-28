@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\DoctorCredit;
 use App\Models\GeneralSetting;
+use App\Models\Language;
 use App\Mail\SendApproval;
 use Illuminate\Support\Facades\Mail;
 use Stripe\Stripe;
@@ -30,16 +31,17 @@ class DoctorController extends Controller
     private function getDoctors($approval)
     {
         $cutPercentage = $this->getCutPercentage();
+        $languageNameMap = Language::pluck('language_name', 'id');
 
         $doctors = User::where('chrApproval', $approval)
-            ->with(['categoryRel:id,title', 'countryRel:id,countryname'])
+            ->with(['categoryRel:id,title', 'countryRel:id,countryname', 'stateRel:id,name'])
             ->withSum('paymentLogs as total_payment', 'amount')
             ->with(['paymentLogs' => function ($q) {
                 $q->latest()->limit(1);
             }])
             ->get();
 
-        return $doctors->map(function ($doctor) use ($cutPercentage) {
+        return $doctors->map(function ($doctor) use ($cutPercentage, $languageNameMap) {
 
             $totalAmount = $doctor->total_payment ?? 0;
 
@@ -51,6 +53,14 @@ class DoctorController extends Controller
             $doctor->recent_payment_date = $recentPayment->created_at ?? null;
 
             $doctor->total_payment = $totalAmount;
+            $doctor->language_names = collect($doctor->language_ids ?? [])
+                ->filter()
+                ->map(function ($languageId) use ($languageNameMap) {
+                    return $languageNameMap[(int) $languageId] ?? null;
+                })
+                ->filter()
+                ->values()
+                ->all();
 
             return $doctor;
         });

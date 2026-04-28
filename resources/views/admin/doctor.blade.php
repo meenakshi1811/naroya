@@ -72,6 +72,8 @@
                                 'surname' => $data->surname,
                                 'category' => optional($data->categoryRel)->title ?? '-',
                                 'country' => optional($data->countryRel)->countryname ?? '-',
+                                'state' => optional($data->stateRel)->name ?? '-',
+                                'languages' => $data->language_names ?? [],
                                 'gmc_registration_no' => $data->gmc_registration_no,
                                 'indemnity_insurance_provider' => $data->indemnity_insurance_provider,
                                 'policy_no' => $data->policy_no,
@@ -136,6 +138,8 @@
                     <div><div class="detail-label">Surname</div><div class="detail-value" id="modalSurname">-</div></div>
                     <div><div class="detail-label">Category</div><div class="detail-value" id="modalCategory">-</div></div>
                     <div><div class="detail-label">Country</div><div class="detail-value" id="modalCountry">-</div></div>
+                    <div><div class="detail-label">State</div><div class="detail-value" id="modalState">-</div></div>
+                    <div><div class="detail-label">Languages</div><div class="detail-value" id="modalLanguages">-</div></div>
                     <div><div class="detail-label">GMC Registration No</div><div class="detail-value" id="modalGMCRegistrationNo">-</div></div>
                     <div><div class="detail-label">Indemnity Insurance Provider</div><div class="detail-value" id="modalIndemnityInsuranceProvider">-</div></div>
                     <div><div class="detail-label">Policy No</div><div class="detail-value" id="modalPolicyNo">-</div></div>
@@ -194,6 +198,8 @@
         document.getElementById('modalSurname').innerText = data.surname || '-';
         document.getElementById('modalCategory').innerText = data.category || '-';
         document.getElementById('modalCountry').innerText = data.country || '-';
+        document.getElementById('modalState').innerText = data.state || '-';
+        renderBadgeList('modalLanguages', data.languages || []);
         document.getElementById('modalGMCRegistrationNo').innerText = data.gmc_registration_no || '-';
         document.getElementById('modalIndemnityInsuranceProvider').innerText = data.indemnity_insurance_provider || '-';
         document.getElementById('modalPolicyNo').innerText = data.policy_no || '-';
@@ -211,6 +217,29 @@
             document.getElementById('chrapproval').style.display = "none";
         } else {
             document.getElementById('chrapproval').style.display = "block";
+        }
+    }
+
+    function renderBadgeList(elementId, items) {
+        var container = document.getElementById(elementId);
+        if (!container) return;
+
+        if (!Array.isArray(items) || items.length === 0) {
+            container.innerText = '-';
+            return;
+        }
+
+        container.innerHTML = '';
+        items.forEach(function (item) {
+            if (!item) return;
+            var badge = document.createElement('span');
+            badge.className = 'badge badge-info mr-1 mb-1';
+            badge.textContent = item;
+            container.appendChild(badge);
+        });
+
+        if (!container.children.length) {
+            container.innerText = '-';
         }
     }
 
