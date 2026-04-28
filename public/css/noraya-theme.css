@@ -138,16 +138,18 @@ a:hover {
 
 .action-buttons {
   display: flex;
-  gap: 8px;
-  align-items: center;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
   justify-content: center;
 }
 
 .action-buttons .btn {
   border-radius: 6px;
-  padding: 6px 10px;
+  padding: 6px 12px;
   font-size: 13px;
   font-weight: 600;
+  width: 110px;
 }
 
 .status-badge {
