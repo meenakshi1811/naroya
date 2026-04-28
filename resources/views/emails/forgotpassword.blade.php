@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <link rel="icon" type="image/png" href="{{ asset('assets/img/fav.png') }}">
     <style>
         body { font-family: Arial, sans-serif; color: #333; background-color: #f4f4f4; margin: 0; padding: 0; }
         .email-container { width: 100%; max-width: 600px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,.1); }
@@ -15,7 +16,7 @@
 <body>
     <div class="email-container">
         <div class="header">
-            <img src="{{ asset('assets/img/logo.png') }}" alt="{{ config('app.name') }}" title="{{ config('app.name') }}">
+            <img src="{{ asset('assets/img/noraya-logo.png') }}" alt="{{ config('app.name') }}" title="{{ config('app.name') }}">
         </div>
         <div class="content">
             <h2>Password Reset Request</h2>

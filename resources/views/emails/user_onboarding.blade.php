@@ -1,6 +1,7 @@
 <html>
 
 <head>
+    <link rel="icon" type="image/png" href="{{ asset('assets/img/fav.png') }}">
     <style>
         /* General Email Styles */
         body {
@@ -67,7 +68,7 @@
 <body>
     <div class="email-container">
         <div class="header">
-            <img src="{{ asset('assets/img/logo.png') }}" alt="{{ config('app.name') }}" title="{{ config('app.name') }}">
+            <img src="{{ asset('assets/img/noraya-logo.png') }}" alt="{{ config('app.name') }}" title="{{ config('app.name') }}">
         </div>
         <div class="content">
             <h1>Dear {{ $user->name }},</h1>

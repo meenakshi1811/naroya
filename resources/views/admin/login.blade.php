@@ -2,6 +2,7 @@
 <html lang="en"> <!--begin::Head-->
 
 <head>
+    <link rel="icon" type="image/png" href="{{ asset('assets/img/fav.png') }}">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Admin Login Page </title><!--begin::Primary Meta Tags-->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

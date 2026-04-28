@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <link rel="icon" type="image/png" href="{{ asset('assets/img/fav.png') }}">
     <meta charset="UTF-8">
     <title>Application Received</title>
 </head>
