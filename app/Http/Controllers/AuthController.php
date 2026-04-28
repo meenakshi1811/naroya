@@ -561,12 +561,15 @@ class AuthController extends Controller
                 if (is_array($request->language_ids)) {
                     $languageIds = $request->language_ids;
                 } else {
-                    $decodedLanguageIds = json_decode($request->language_ids, true);
+                    $rawLanguageIds = trim((string) $request->language_ids);
+                    $decodedLanguageIds = json_decode($rawLanguageIds, true);
 
                     if (json_last_error() === JSON_ERROR_NONE && is_array($decodedLanguageIds)) {
                         $languageIds = $decodedLanguageIds;
                     } else {
-                        $languageIds = array_map('trim', explode(',', (string) $request->language_ids));
+                        // Handle values like "[1, 2]" or multiline bracketed input safely.
+                        $normalizedLanguageIds = trim($rawLanguageIds, "[] \t\n\r\0\x0B");
+                        $languageIds = array_map('trim', explode(',', $normalizedLanguageIds));
                     }
                 }
 
