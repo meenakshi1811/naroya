@@ -46,6 +46,7 @@
             padding: 30px;
             font-size: 15px;
             line-height: 1.7;
+            margin-right: 20px;
         }
 
         .content p {
@@ -68,7 +69,6 @@
 
         .closing {
             margin-top: 24px;
-            margin-bottom: 0;
         }
 
         .footer {
@@ -78,11 +78,10 @@
             color: #6b7280;
             font-size: 12px;
             border-top: 1px solid #edf2f7;
-            line-height: 1.6;
         }
 
         .support-link {
-            color: #109014;
+            color: #109014 !important;
             text-decoration: none;
             font-weight: 600;
         }

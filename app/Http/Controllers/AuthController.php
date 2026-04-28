@@ -544,7 +544,7 @@ class AuthController extends Controller
 
 
 
-     public function register(Request $request)
+    public function register(Request $request)
     {
         try {
             $request->validate([
@@ -556,11 +556,13 @@ class AuthController extends Controller
             ]);
 
             $languageIds = [];
+
             if ($request->has('language_ids') && !is_null($request->language_ids) && $request->language_ids !== '') {
                 if (is_array($request->language_ids)) {
                     $languageIds = $request->language_ids;
                 } else {
                     $decodedLanguageIds = json_decode($request->language_ids, true);
+
                     if (json_last_error() === JSON_ERROR_NONE && is_array($decodedLanguageIds)) {
                         $languageIds = $decodedLanguageIds;
                     } else {
@@ -568,9 +570,10 @@ class AuthController extends Controller
                     }
                 }
 
-                $languageIds = array_values(array_unique(array_filter($languageIds, function ($id) {
+                $languageIds = array_values(array_unique(array_map('intval', array_filter($languageIds, function ($id) {
                     return is_numeric($id) && (int) $id > 0;
-                })));
+                }))));
+            
 
                 if (!empty($languageIds)) {
                     $languageCount = Language::whereIn('id', $languageIds)->count();
@@ -615,7 +618,7 @@ class AuthController extends Controller
             $user->varPostGraduationYear = $request->pg_year;
             $user->varGraduation = $request->graduation;
             $user->varGraduationYear = $request->graduation_year;
-            $user->language_ids = !empty($languageIds) ? json_encode($languageIds) : null;
+            $user->language_ids = !empty($languageIds) ? $languageIds : null;
             $user->save();
             if (isset($request->current_work_org) && !empty($request->current_work_org)) {
                 $this->replaceCurrentWorkOrg($user->id, $request->current_work_org);
