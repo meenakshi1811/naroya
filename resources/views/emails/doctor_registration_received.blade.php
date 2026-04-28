@@ -31,7 +31,7 @@
         }
 
         .header {
-            background: linear-gradient(135deg, #109014 0%, #0b6f0e 100%);
+            background: #f8fafc;
             text-align: center;
             padding: 28px 20px;
         }
@@ -111,7 +111,7 @@
 
             <div class="footer">
                 Need help? Contact us at
-                <a class="support-link" href="mailto:hiwellora@gmail.com">hiwellora@gmail.com</a><br>
+                <a class="support-link" href="mailto:contactnoraya@gmail.com">contactnoraya@gmail.com</a><br>
                 &copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.
             </div>
         </div>
