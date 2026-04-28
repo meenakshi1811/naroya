@@ -652,7 +652,7 @@ class AuthController extends Controller
                 );
             }
 
-            Mail::to($user->email)->queue(new DoctorRegistrationReceivedMail($user));
+            Mail::to($user->email)->send(new DoctorRegistrationReceivedMail($user));
 
             return response()->json([
                 'message' => 'Your request has been sent successfully for approval!',
