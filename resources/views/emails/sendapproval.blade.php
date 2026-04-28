@@ -46,11 +46,6 @@
             padding: 30px;
             font-size: 15px;
             line-height: 1.7;
-            margin-right: 20px;
-        }
-
-        .content p {
-            margin: 0 0 14px;
         }
 
         .title {
@@ -81,7 +76,7 @@
         }
 
         .support-link {
-            color: #109014 !important;
+            color: #109014;
             text-decoration: none;
             font-weight: 600;
         }
@@ -108,7 +103,9 @@
 
                 <p>To assist you, we’ve attached an <strong>Issuing Prescription Guide</strong> with step-by-step instructions for prescribing medication through the SignatureRx dashboard.</p>
 
-                <p>If you have any questions or need support, feel free to contact us at <a class="support-link" href="mailto:contactnoraya@gmail.com">contactnoraya@gmail.com</a>.</p>
+                <p>If you have any questions or need support, feel free to contact us at
+                    <a class="support-link" href="mailto:contactnoraya@gmail.com">contactnoraya@gmail.com</a>.
+                </p>
 
                 <p class="closing">
                     Regards,<br>
