@@ -109,8 +109,15 @@ class DoctorController extends Controller
 
         $this->sendEmail($doctor);
 
-        return redirect()->route('admin.doctor')
-            ->with('success', 'Email Sent.');
+        if ($request->ajax()) {
+            return response()->json([
+                'message' => 'Doctor approved successfully.',
+                'redirect_url' => url('/admin/doctor'),
+            ]);
+        }
+
+        return redirect('/admin/doctor')
+            ->with('success', 'Doctor approved successfully.');
     }
 
   

@@ -253,7 +253,15 @@
                         modalBackdrop.remove();
                     }
                 }
-                location.reload();
+
+                var redirectUrl = (response && response.redirect_url)
+                    ? response.redirect_url
+                    : "{{ url('/admin/doctor') }}";
+                var successMessage = (response && response.message)
+                    ? response.message
+                    : 'Doctor approved successfully.';
+
+                window.location.href = redirectUrl + '?success=' + encodeURIComponent(successMessage);
             }
         });
     }

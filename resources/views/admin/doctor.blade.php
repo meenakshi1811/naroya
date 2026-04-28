@@ -1,8 +1,8 @@
 @extends('admin.admin')
 @section('content')
-@if (session('success'))
+@if (session('success') || request('success'))
 <div class="alert alert-success">
-    {{ session('success') }}
+    {{ session('success') ?? request('success') }}
 </div>
 @endif
 <!-- Bootstrap CSS -->
