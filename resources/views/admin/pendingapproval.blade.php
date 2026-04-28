@@ -5,19 +5,86 @@
     {{ session('success') }}
 </div>
 @endif
-<!-- Bootstrap CSS -->
+
 <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-<!-- DataTables CSS -->
 <link href="https://cdn.datatables.net/1.11.3/css/jquery.dataTables.min.css" rel="stylesheet">
-<!-- jQuery and Bootstrap JS -->
+
+<style>
+    .pending-doctors-card .card-body {
+        overflow-x: auto;
+    }
+
+    .pending-doctors-table {
+        width: 100% !important;
+        min-width: 1300px;
+    }
+
+    .pending-doctors-table td,
+    .pending-doctors-table th {
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    .doctor-avatar {
+        border-radius: 8px;
+        object-fit: cover;
+        border: 1px solid #e9ecef;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .action-buttons .btn {
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .status-badge {
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 999px;
+        padding: 4px 10px;
+    }
+
+    .modal-details-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 20px;
+        row-gap: 10px;
+    }
+
+    .detail-label {
+        color: #6c757d;
+        font-size: 12px;
+        margin-bottom: 2px;
+    }
+
+    .detail-value {
+        font-weight: 600;
+        word-break: break-word;
+    }
+
+    @media (max-width: 767px) {
+        .modal-details-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
 <div class="row">
     <div class="col-md-12">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h3 class="card-title">Pending Approval Doctors</h3>
+        <div class="card mb-4 pending-doctors-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0">Pending Approval Doctors</h3>
+                <small class="text-muted">Scroll horizontally to view all columns</small>
             </div>
             <div class="card-body">
-                <table id="doctorsTable" class="table table-bordered">
+                <table id="doctorsTable" class="table table-bordered table-hover pending-doctors-table">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -26,6 +93,7 @@
                             <th>Category</th>
                             <th>Country</th>
                             <th>Profile</th>
+                            <th>Status</th>
                             <th>Bank Setup</th>
                             <th>Total Payment</th>
                             <th>Recent Payment</th>
@@ -33,134 +101,132 @@
                         </tr>
                     </thead>
                     <tbody>
-                         
+                        @php
+                            $modalData = [];
+                        @endphp
                         @if(isset($doctors) && count($doctors) > 0)
-                        @foreach($doctors as $key=>$data)
-                        <tr class="align-middle">
+                        @foreach($doctors as $data)
+                        @php
+                            $isSetup = $data->isPaymentFlowRegistered == 1 ? 'Yes' : 'No';
+                            $totalPayment = max(0, (float)($data->total_payment ?? 0));
+                            $recentPayment = (float)($data->recent_payment_amount ?? 0);
+                            $status = ($data->chrApproval === 'Y') ? 'Approved' : 'Pending';
+                            $statusClass = ($data->chrApproval === 'Y') ? 'badge-success' : 'badge-warning';
+                            $modalData = [
+                                'id' => $data->id,
+                                'name' => $data->name,
+                                'email' => $data->email,
+                                'surname' => $data->surname,
+                                'category' => optional($data->categoryRel)->title ?? '-',
+                                'country' => optional($data->countryRel)->countryname ?? '-',
+                                'gmc_registration_no' => $data->gmc_registration_no,
+                                'indemnity_insurance_provider' => $data->indemnity_insurance_provider,
+                                'policy_no' => $data->policy_no,
+                                'india_registration_no' => $data->india_registration_no,
+                                'dha_reg' => $data->dha_reg,
+                                'reg_no' => $data->reg_no,
+                                'chrSmartcard' => $data->chrSmartcard,
+                                'varSpeciality' => $data->varSpeciality,
+                                'varExperience' => $data->varExperience,
+                                'varPostGraduation' => $data->varPostGraduation,
+                                'varPostGraduationYear' => $data->varPostGraduationYear,
+                                'varGraduation' => $data->varGraduation,
+                                'varGraduationYear' => $data->varGraduationYear,
+                                'chrApproval' => $data->chrApproval,
+                            ];
+                        @endphp
+                        <tr>
                             <td>{{ $data->id }}</td>
-                           <td>{{ $data->name . ' '. $data->surname }}</td>
-                            <td>{{ $data->email }}</td>
-                            <td>{{ !empty($data->category) ? \DB::table('dr_category')->find($data->category)->title : '-' }}</td>
-                            <td>{{ !empty($data->country) ? \DB::table('country_master')->find($data->country)->countryname : '-' }}</td>
+                            <td>{{ trim(($data->name ?? '') . ' ' . ($data->surname ?? '')) ?: '-' }}</td>
+                            <td>{{ $data->email ?? '-' }}</td>
+                            <td>{{ $data->categoryRel->title ?? '-' }}</td>
+                            <td>{{ $data->countryRel->countryname ?? '-' }}</td>
                             <td>
                                 @if(!empty($data->varProfile))
-                                <img src="{{ config('app.url').'api/docterprofile/'.$data->varProfile }}" alt="{{ $data->name }}" height="100px" width="100px" />
+                                <img src="{{ config('app.url').'api/docterprofile/'.$data->varProfile }}" alt="{{ $data->name }}" width="64" height="64" class="doctor-avatar" />
                                 @else
-                                N/A
+                                <span class="text-muted">N/A</span>
                                 @endif
                             </td>
-                            @php
-                            if($data->isPaymentFlowRegistered == 1){
-                                $issetup = 'Yes';
-                            }else{
-                                $issetup = 'No';
-                            }
-                             if($data->total_payment < 0){
-                                $data->total_payment = 0.00;
-                            }
-                            if ($data->remaining_payment < 0) {
-                                $remainingPaymentss = abs($data->remaining_payment);
-                                $remainingPayment = '+' . $remainingPaymentss;  
-                            }
-                            @endphp
-                            <td class="text-center">{{ $issetup }}</td>
-                            <td>{{ number_format($data->total_payment, 2) }}</td>
-                            <td id="remainingPayment_{{ $data->id }}">{{ ($data->recent_payment_amount >= 0) ? number_format($data->recent_payment_amount, 2) : '+'.number_format($data->recent_payment_amount, 2)}}</td>
-                            {{--<td>
-                                <button class="btn btn-warning" onclick="openUpdatePaymentModal({{ $data->id }}, {{ $data->remaining_payment }})">Update Payment</button>
-                            </td> --}}
-                            <td class="d-flex gap-2">
-                                <button type="button" class="btn btn-info" data-toggle="modal" data-target="#userModal" onclick="openModal({{ json_encode($data) }})">View Details</button>
-                                <button type="button" class="btn btn-danger" onclick="confirmDelete({{ $data->id }})">Delete</button>
+                            <td>
+                                <span class="badge status-badge {{ $statusClass }}">{{ $status }}</span>
+                            </td>
+                            <td class="text-center">{{ $isSetup }}</td>
+                            <td>{{ number_format($totalPayment, 2) }}</td>
+                            <td id="remainingPayment_{{ $data->id }}">
+                                {{ $recentPayment >= 0 ? number_format($recentPayment, 2) : '+' . number_format(abs($recentPayment), 2) }}
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-info"
+                                        data-toggle="modal"
+                                        data-target="#userModal"
+                                        onclick='openModal(@json($modalData))'>
+                                        View Details
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger" onclick="confirmDelete({{ $data->id }})">Delete</button>
+                                </div>
                             </td>
                         </tr>
                         @endforeach
                         @else
                         <tr>
-                            <td colspan="10" class="text-center">No records found</td>
+                            <td colspan="11" class="text-center">No records found</td>
                         </tr>
                         @endif
                     </tbody>
                 </table>
-            </div> <!-- /.card-body -->
-        </div> <!-- /.card -->
-    </div> <!-- /.col -->
-</div> <!-- /.row -->
-<!-- Modal Structure -->
-<div class="modal fade" id="userModal" tabindex="-1" role="dialog" aria-labelledby="userModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="userModalLabel">User Details</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div>
-                    <strong>Name:</strong> <span id="modalName"></span>
-                </div>
-                <div>
-                    <strong>Email:</strong> <span id="modalEmail"></span>
-                </div>
-                <div>
-                    <strong>Surname:</strong> <span id="modalSurname"></span>
-                </div>
-                <div>
-                    <strong>Category:</strong> <span id="modalCategory"></span>
-                </div>
-                <div>
-                    <strong>Country:</strong> <span id="modalCountry"></span>
-                </div>
-                <div>
-                    <strong>GMC Registration No:</strong> <span id="modalGMCRegistrationNo"></span>
-                </div>
-                <div>
-                    <strong>Indemnity Insurance Provider:</strong> <span id="modalIndemnityInsuranceProvider"></span>
-                </div>
-                <div>
-                    <strong>Policy No:</strong> <span id="modalPolicyNo"></span>
-                </div>
-                <div>
-                    <strong>India Registration No:</strong> <span id="modalIndiaRegistrationNo"></span>
-                </div>
-                <div>
-                    <strong>DHA Reg:</strong> <span id="modalDhaReg"></span>
-                </div>
-                <div>
-                    <strong>Reg No:</strong> <span id="modalRegNo"></span>
-                </div>
-                <div>
-                    <strong>Smartcard:</strong> <span id="modalChrSmartcard"></span>
-                </div>
-                <div>
-                    <strong>Speciality:</strong> <span id="modalSpeciality"></span>
-                </div>
-                <div>
-                    <strong>Experience:</strong> <span id="modalExperience"></span>
-                </div>
-                <div>
-                    <strong>Post Graduation:</strong> <span id="modalPostGraduation"></span>
-                </div>
-                <div>
-                    <strong>Post Graduation Year:</strong> <span id="modalPostGraduationYear"></span>
-                </div>
-                <div>
-                    <strong>Graduation:</strong> <span id="modalGraduation"></span>
-                </div>
-                <div>
-                    <strong>Graduation Year:</strong> <span id="modalGraduationYear"></span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" id="chrapproval" onclick="Aprroval()">Approved</button>
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Update Payment Modal -->
+<div class="modal fade" id="userModal" tabindex="-1" role="dialog" aria-labelledby="userModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="userModalLabel">Doctor Details</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">Profile Information</h6>
+                    <span id="modalStatusBadge" class="badge status-badge badge-warning">Pending</span>
+                </div>
+
+                <div class="modal-details-grid">
+                    <div><div class="detail-label">Name</div><div class="detail-value" id="modalName">-</div></div>
+                    <div><div class="detail-label">Email</div><div class="detail-value" id="modalEmail">-</div></div>
+                    <div><div class="detail-label">Surname</div><div class="detail-value" id="modalSurname">-</div></div>
+                    <div><div class="detail-label">Category</div><div class="detail-value" id="modalCategory">-</div></div>
+                    <div><div class="detail-label">Country</div><div class="detail-value" id="modalCountry">-</div></div>
+                    <div><div class="detail-label">GMC Registration No</div><div class="detail-value" id="modalGMCRegistrationNo">-</div></div>
+                    <div><div class="detail-label">Indemnity Insurance Provider</div><div class="detail-value" id="modalIndemnityInsuranceProvider">-</div></div>
+                    <div><div class="detail-label">Policy No</div><div class="detail-value" id="modalPolicyNo">-</div></div>
+                    <div><div class="detail-label">India Registration No</div><div class="detail-value" id="modalIndiaRegistrationNo">-</div></div>
+                    <div><div class="detail-label">DHA Reg</div><div class="detail-value" id="modalDhaReg">-</div></div>
+                    <div><div class="detail-label">Reg No</div><div class="detail-value" id="modalRegNo">-</div></div>
+                    <div><div class="detail-label">Smartcard</div><div class="detail-value" id="modalChrSmartcard">-</div></div>
+                    <div><div class="detail-label">Speciality</div><div class="detail-value" id="modalSpeciality">-</div></div>
+                    <div><div class="detail-label">Experience</div><div class="detail-value" id="modalExperience">-</div></div>
+                    <div><div class="detail-label">Post Graduation</div><div class="detail-value" id="modalPostGraduation">-</div></div>
+                    <div><div class="detail-label">Post Graduation Year</div><div class="detail-value" id="modalPostGraduationYear">-</div></div>
+                    <div><div class="detail-label">Graduation</div><div class="detail-value" id="modalGraduation">-</div></div>
+                    <div><div class="detail-label">Graduation Year</div><div class="detail-value" id="modalGraduationYear">-</div></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" id="chrapproval" onclick="Aprroval()">Approve Doctor</button>
+                <button type="button" class="btn btn-light" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="updatePaymentModal" tabindex="-1" role="dialog" aria-labelledby="updatePaymentModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -185,34 +251,22 @@
     </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
 <script type="text/javascript">
     var id;
-  
+
     function openModal(data) {
         id = data.id;
-        if(data.category) {
-            <?php 
-            $category = '';
-            if(isset($data)){
-                $category = \DB::table('dr_category')->find($data->category)->title;
-            }
-            ?>
-        } 
-        if(data.country) {
-            <?php 
-             $country = '';
-             if(isset($data)){
-            $country = \DB::table('country_master')->find($data->country)->countryname;
-             }
-            ?>
-        } 
-        var category = "<?php echo  $category ?>";
-        var country = "<?php echo  $country ?>";
+
         document.getElementById('modalName').innerText = data.name || '-';
         document.getElementById('modalEmail').innerText = data.email || '-';
         document.getElementById('modalSurname').innerText = data.surname || '-';
-        document.getElementById('modalCategory').innerText = category || '-';
-        document.getElementById('modalCountry').innerText = country || '-';
+        document.getElementById('modalCategory').innerText = data.category || '-';
+        document.getElementById('modalCountry').innerText = data.country || '-';
         document.getElementById('modalGMCRegistrationNo').innerText = data.gmc_registration_no || '-';
         document.getElementById('modalIndemnityInsuranceProvider').innerText = data.indemnity_insurance_provider || '-';
         document.getElementById('modalPolicyNo').innerText = data.policy_no || '-';
@@ -226,10 +280,21 @@
         document.getElementById('modalPostGraduationYear').innerText = data.varPostGraduationYear || '-';
         document.getElementById('modalGraduation').innerText = data.varGraduation || '-';
         document.getElementById('modalGraduationYear').innerText = data.varGraduationYear || '-';
-        if (data.chrApproval && data.chrApproval == 'Y') {
-            document.getElementById('chrapproval').style.display = "none";
+
+        var isApproved = (data.chrApproval === 'Y');
+        var approvalButton = document.getElementById('chrapproval');
+        var statusBadge = document.getElementById('modalStatusBadge');
+
+        if (isApproved) {
+            approvalButton.style.display = 'none';
+            statusBadge.innerText = 'Approved';
+            statusBadge.classList.remove('badge-warning');
+            statusBadge.classList.add('badge-success');
         } else {
-            document.getElementById('chrapproval').style.display = "block";
+            approvalButton.style.display = 'inline-block';
+            statusBadge.innerText = 'Pending';
+            statusBadge.classList.remove('badge-success');
+            statusBadge.classList.add('badge-warning');
         }
     }
 
@@ -247,21 +312,19 @@
             success: function(response) {
                 var modal = document.getElementById('userModal');
                 if (modal) {
-                    modal.classList.remove('show'); // Hide modal
-                    modal.style.display = 'none'; // Set display to none
-                    document.body.classList.remove('modal-open'); // Remove open class
-                    var modalBackdrop = document.querySelector('.modal-backdrop'); // Find backdrop
+                    modal.classList.remove('show');
+                    modal.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                    var modalBackdrop = document.querySelector('.modal-backdrop');
                     if (modalBackdrop) {
-                        modalBackdrop.remove(); // Remove backdrop
+                        modalBackdrop.remove();
                     }
                 }
-                // Reload the page
-                location.reload(); // Reload the page
+                location.reload();
             }
         });
     }
-</script>
-<script>
+
     function confirmDelete(doctorId) {
         if (confirm('Are you sure you want to delete this doctor? This will also delete their connected Stripe account.')) {
             $.ajax({
@@ -271,12 +334,8 @@
                     _token: "{{ csrf_token() }}"
                 },
                 success: function(response) {
-                    if (response.success) {
-                        alert('Doctor deleted successfully');
-                        location.reload();
-                    } else {
-                        alert('Failed to delete doctor');
-                    }
+                    alert('Doctor deleted successfully');
+                    location.reload();
                 },
                 error: function(xhr) {
                     alert('An error occurred while deleting the doctor.');
@@ -284,81 +343,69 @@
             });
         }
     }
-</script>
-<script type="text/javascript">
+
     $(document).ready(function() {
-        // Initialize DataTable
         $('#doctorsTable').DataTable({
-            "paging": true,         // Enable pagination
-            "searching": true,      // Enable search
-            "ordering": true,       // Enable sorting
-            "info": true,           // Enable info text (e.g., "Showing 1 to 10 of 50 entries")
-            "lengthChange": true,   // Allow changing the number of rows per page
-            "autoWidth": false,     // Disable automatic column width calculation
-            "columnDefs": [
+            paging: true,
+            searching: true,
+            ordering: true,
+            info: true,
+            lengthChange: true,
+            autoWidth: false,
+            responsive: false,
+            scrollX: true,
+            columnDefs: [
                 {
-                    "targets": [0],  // Disable sorting for the ID column (optional)
-                    "orderable": false
+                    targets: [10],
+                    orderable: false
                 }
             ]
         });
     });
 
     function openUpdatePaymentModal(doctorId, remainingPayment) {
-    $('#doctor_id').val(doctorId);  // Set doctor ID
-    $('#paymentAmount').val('');  // Clear the payment amount field
-    $('#updatePaymentModal').modal('show'); // Open the modal
-}
-
-// Update Payment using AJAX
-$('#updatePaymentBtn').on('click', function() {
-    var doctorId = $('#doctor_id').val();
-    var appUrl = "{{ env('APP_URL') }}";
-    var paymentAmount = parseFloat($('#paymentAmount').val());
-
-    if (!paymentAmount || paymentAmount <= 0) {
-        alert('Please enter a valid payment amount');
-        return;
+        $('#doctor_id').val(doctorId);
+        $('#paymentAmount').val('');
+        $('#updatePaymentModal').modal('show');
     }
 
-    // Send AJAX request to update remaining payment
-    $.ajax({
-        url: appUrl +'admin/update-payment',  // Your update payment route
-        method: 'POST',
-        data: {
-            _token: '{{ csrf_token() }}',
-            doctor_id: doctorId,
-            payment_amount: paymentAmount
-        },
-        success: function(response) {
-            if (response.success) {
-                // Update the remaining payment in the table
-                var updatedRemainingPayment = response.updated_remaining_payment;
-                if (updatedRemainingPayment < 0) {
-                    updatedRemainingPayment = Math.abs(updatedRemainingPayment);
-                }
-                $('#remainingPayment_' + doctorId).text(updatedRemainingPayment.toFixed(2));
+    $('#updatePaymentBtn').on('click', function() {
+        var doctorId = $('#doctor_id').val();
+        var appUrl = "{{ env('APP_URL') }}";
+        var paymentAmount = parseFloat($('#paymentAmount').val());
 
-                // Optionally, add a "+" sign if the payment is more than the remaining
-                if (updatedRemainingPayment < 0) {
-                    $('#remainingPayment_' + doctorId).prepend('+');
-                }
-
-                // Close the modal
-                $('#updatePaymentModal').modal('hide');
-            } else {
-                alert('Error updating payment');
-                 // Close the modal
-                 $('#updatePaymentModal').modal('hide');
-            }
+        if (!paymentAmount || paymentAmount <= 0) {
+            alert('Please enter a valid payment amount');
+            return;
         }
-       
-    });
-});
 
+        $.ajax({
+            url: appUrl + 'admin/update-payment',
+            method: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                doctor_id: doctorId,
+                payment_amount: paymentAmount
+            },
+            success: function(response) {
+                if (response.success) {
+                    var updatedRemainingPayment = response.updated_remaining_payment;
+                    if (updatedRemainingPayment < 0) {
+                        updatedRemainingPayment = Math.abs(updatedRemainingPayment);
+                    }
+                    $('#remainingPayment_' + doctorId).text(updatedRemainingPayment.toFixed(2));
+
+                    if (updatedRemainingPayment < 0) {
+                        $('#remainingPayment_' + doctorId).prepend('+');
+                    }
+
+                    $('#updatePaymentModal').modal('hide');
+                } else {
+                    alert('Error updating payment');
+                    $('#updatePaymentModal').modal('hide');
+                }
+            }
+        });
+    });
 </script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 @endsection

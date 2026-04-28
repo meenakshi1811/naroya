@@ -32,6 +32,7 @@ class DoctorController extends Controller
         $cutPercentage = $this->getCutPercentage();
 
         $doctors = User::where('chrApproval', $approval)
+            ->with(['categoryRel:id,title', 'countryRel:id,countryname'])
             ->withSum('paymentLogs as total_payment', 'amount')
             ->with(['paymentLogs' => function ($q) {
                 $q->latest()->limit(1);
@@ -155,7 +156,7 @@ class DoctorController extends Controller
     private function sendEmail($doctor)
     {
         Mail::to($doctor->email)
-            ->queue(new SendApproval(
+            ->send(new SendApproval(
                 $doctor->email,
                 $doctor->name,
                 $doctor->surname
