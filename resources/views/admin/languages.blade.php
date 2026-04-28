@@ -5,17 +5,19 @@
     {{ session('success') }}
 </div>
 @endif
+
 <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.datatables.net/1.11.3/css/jquery.dataTables.min.css" rel="stylesheet">
+
 <div class="row">
     <div class="col-md-12">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h2 class="card-title">Language</h2>
-                <a href="{{ route('admin.language.add') }}" class="btn btn-primary float-end">Add Language</a>
+        <div class="card mb-4 pending-doctors-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0">Languages</h3>
+                <a href="{{ route('admin.language.add') }}" class="btn btn-primary">Add Language</a>
             </div>
             <div class="card-body">
-                <table id="datatable" class="table table-bordered">
+                <table id="datatable" class="table table-bordered table-hover pending-doctors-table">
                     <thead>
                         <tr>
                             <th style="width: 10px">#</th>
@@ -27,17 +29,26 @@
                     <tbody>
                         @if(isset($languages) && count($languages) > 0)
                         @foreach($languages as $language)
+                        @php
+                            $isPublished = $language->chrPublish === 'Y';
+                        @endphp
                         <tr class="align-middle">
                             <td>{{ $language->id }}</td>
                             <td>{{ $language->language_name }}</td>
-                            <td>{{ $language->chrPublish === 'Y' ? 'Yes' : 'No' }}</td>
+                            <td>
+                                <span class="badge status-badge {{ $isPublished ? 'badge-success' : 'badge-secondary' }}">
+                                    {{ $isPublished ? 'Yes' : 'No' }}
+                                </span>
+                            </td>
                             <td class="text-center">
-                                <a href="{{ url('/admin/language/' . $language->id . '/edit') }}" type="button" class="btn btn-info">edit</a>
-                                <form action="{{ route('admin.language.delete', $language->id) }}" method="POST" style="display:inline;">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this language?');">Delete</button>
-                                </form>
+                                <div class="action-buttons">
+                                    <a href="{{ url('/admin/language/' . $language->id . '/edit') }}" type="button" class="btn btn-outline-info">edit</a>
+                                    <form action="{{ route('admin.language.delete', $language->id) }}" method="POST" style="display:inline;">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to delete this language?');">Delete</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         @endforeach
@@ -52,6 +63,7 @@
         </div>
     </div>
 </div>
+
 <script type="text/javascript">
     $(document).ready(function() {
         $('#datatable').DataTable({
