@@ -131,7 +131,7 @@ class User extends Authenticatable
 
     public function countryRel()
     {
-        return $this->belongsTo(CountryMaster::class, 'country');
+        return $this->belongsTo(Country::class, 'country');
     }
 
     public function stateRel()
