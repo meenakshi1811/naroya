@@ -101,7 +101,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @php($modalData = [])
+                        @php
+                            $modalData = [];
+                        @endphp
                         @if(isset($doctors) && count($doctors) > 0)
                         @foreach($doctors as $data)
                         @php
