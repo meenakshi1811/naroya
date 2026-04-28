@@ -10,65 +10,6 @@
 <!-- DataTables CSS -->
 <link href="https://cdn.datatables.net/1.11.3/css/jquery.dataTables.min.css" rel="stylesheet">
 <!-- jQuery and Bootstrap JS -->
-<style>
-    .pending-doctors-card .card-body {
-        overflow-x: auto;
-    }
-
-    .pending-doctors-table {
-        width: 100% !important;
-        min-width: 1300px;
-    }
-
-    .pending-doctors-table td,
-    .pending-doctors-table th {
-        vertical-align: middle;
-        white-space: nowrap;
-    }
-
-    .doctor-avatar {
-        border-radius: 8px;
-        object-fit: cover;
-        border: 1px solid #e9ecef;
-    }
-
-    .action-buttons {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
-
-    .action-buttons .btn {
-        border-radius: 6px;
-        padding: 6px 10px;
-        font-size: 13px;
-        font-weight: 600;
-    }
-
-    .modal-details-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        column-gap: 20px;
-        row-gap: 10px;
-    }
-
-    .detail-label {
-        color: #6c757d;
-        font-size: 12px;
-        margin-bottom: 2px;
-    }
-
-    .detail-value {
-        font-weight: 600;
-        word-break: break-word;
-    }
-
-    @media (max-width: 767px) {
-        .modal-details-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-</style>
 <div class="row">
     <div class="col-md-12">
         <div class="card mb-4 pending-doctors-card">

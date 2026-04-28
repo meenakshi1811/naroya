@@ -156,3 +156,48 @@ a:hover {
   border-radius: 999px;
   padding: 4px 10px;
 }
+
+.doctor-avatar {
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid #e9ecef;
+}
+
+.modal-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 20px;
+  row-gap: 10px;
+}
+
+.detail-label {
+  color: #6c757d;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.detail-value {
+  font-weight: 600;
+  word-break: break-word;
+}
+
+@media (max-width: 767px) {
+  .modal-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Apply pending-doctors table layout across admin tables */
+.app-main .card .card-body {
+  overflow-x: auto;
+}
+
+.app-main .card .card-body .table {
+  width: 100% !important;
+  min-width: 900px;
+}
+
+.app-main .card .card-body .table td,
+.app-main .card .card-body .table th {
+  white-space: nowrap;
+}
