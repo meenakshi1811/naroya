@@ -43,15 +43,20 @@
         }
 
         .content {
-            padding: 30px;
+            padding: 40px;
             font-size: 15px;
             line-height: 1.7;
         }
 
+        .content p {
+            padding-left: 20px;
+        }
         .title {
             margin: 0 0 18px;
             font-size: 22px;
             color: #109014;
+            padding-left: 20px;
+
         }
 
         .info-card {
