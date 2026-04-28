@@ -1,88 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <link rel="icon" type="image/png" href="{{ asset('assets/img/fav.png') }}">
-<style>
-        /* General Email Styles */
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration Approved</title>
+    <style>
         body {
-            font-family: Arial, sans-serif;
-            color: #333;
-            background-color: #f4f4f4;
             margin: 0;
             padding: 0;
+            background-color: #f4f7f9;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #2f3b4a;
+        }
+
+        .email-wrapper {
+            width: 100%;
+            padding: 28px 12px;
+            box-sizing: border-box;
         }
 
         .email-container {
-            width: 100%;
-            max-width: 600px;
+            max-width: 620px;
             margin: 0 auto;
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            background: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e7edf2;
+            box-shadow: 0 8px 26px rgba(16, 144, 20, 0.08);
         }
 
         .header {
+            background: #f8fafc;
             text-align: center;
-            padding-bottom: 20px;
+            padding: 28px 20px;
         }
 
         .header img {
-            max-width: 150px;
+            max-width: 170px;
+            width: 100%;
+            height: auto;
         }
 
         .content {
-            padding: 20px;
-            text-align: left;
+            padding: 30px;
+            font-size: 15px;
+            line-height: 1.7;
         }
 
-        .content h2 {
+        .title {
+            margin: 0 0 18px;
+            font-size: 22px;
             color: #109014;
         }
 
-        .content p {
-            line-height: 1.6;
+        .info-card {
+            margin: 22px 0;
+            padding: 16px 18px;
+            background-color: #f2fbf3;
+            border-left: 4px solid #109014;
+            border-radius: 8px;
         }
 
-        .button {
-            background-color: #109014;
-            color: white;
-            padding: 12px 25px;
-            text-decoration: none;
-            border-radius: 5px;
-            display: inline-block;
-            margin-top: 20px;
+        .closing {
+            margin-top: 24px;
         }
 
         .footer {
+            padding: 18px 24px;
+            background: #f8fafc;
             text-align: center;
-            padding: 20px;
-            background-color: #f8f9fa;
+            color: #6b7280;
             font-size: 12px;
-            color: #777;
+            border-top: 1px solid #edf2f7;
+        }
+
+        .support-link {
+            color: #109014;
+            text-decoration: none;
+            font-weight: 600;
         }
     </style>
 </head>
+
 <body>
-    <div class="email-container">
-        <div class="header">
-            <img src="{{ asset('assets/img/noraya-logo.png') }}" alt="{{ config('app.name') }}" title="{{ config('app.name') }}">
-        </div>
+    <div class="email-wrapper">
+        <div class="email-container">
+            <div class="header">
+                <img src="{{ asset('assets/img/noraya-logo.png') }}" alt="{{ config('app.name') }}" title="{{ config('app.name') }}">
+            </div>
 
-        <div class="content">
-            <h2>Dear Dr. {{ $name }} {{ $surname }},</h2>
+            <div class="content">
+                <h1 class="title">Registration Approved</h1>
 
-            <p>Your registration with Noraya has been approved!</p>
-            <p>As part of your setup, you will receive an email invitation from SignatureRx which will allow you to create online prescriptions for your patients. Please follow the instructions in the invitation email to enable prescribing through Noraya.</p>
+                <p>Dear Dr. {{ $name }} {{ $surname }},</p>
 
-            <p>To assist you, we’ve attached a <strong>Issuing prescription guide</strong>, which provides step-by-step instructions for prescribing medication through SignatureRx dashboard.</p>
-            <!-- <p><a href="https://signaturerx.co.uk/">https://signaturerx.co.uk/</a></p> -->
-            <p>If you have any questions or need support, feel free to contact us at <a href="mailto:hiwellora@gmail.com">hiwellora@gmail.com</a>.</p>
-        </div>
+                <p>Your registration with {{ config('app.name') }} has been approved.</p>
 
-        <div class="footer">
-            <p>&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
+                <div class="info-card">
+                    As part of your setup, you will receive an email invitation from SignatureRx to create online prescriptions for your patients. Please follow the instructions in that invitation to enable prescribing through {{ config('app.name') }}.
+                </div>
+
+                <p>To assist you, we’ve attached an <strong>Issuing Prescription Guide</strong> with step-by-step instructions for prescribing medication through the SignatureRx dashboard.</p>
+
+                <p>If you have any questions or need support, feel free to contact us at <a class="support-link" href="mailto:contactnoraya@gmail.com">contactnoraya@gmail.com</a>.</p>
+
+                <p class="closing">
+                    Regards,<br>
+                    <strong>{{ config('app.name') }} Team</strong>
+                </p>
+            </div>
+
+            <div class="footer">
+                Need help? Contact us at
+                <a class="support-link" href="mailto:contactnoraya@gmail.com">contactnoraya@gmail.com</a><br>
+                &copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.
+            </div>
         </div>
     </div>
 </body>
+
 </html>
