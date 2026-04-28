@@ -52,7 +52,7 @@
                                 'surname' => $data->surname,
                                 'category' => optional($data->categoryRel)->title ?? '-',
                                 'country' => optional($data->countryRel)->countryname ?? '-',
-                                'state' => optional($data->stateRel)->name ?? '-',
+                                'state' => optional($data->stateRel)->name ?? ($data->state ?? '-'),
                                 'languages' => $data->language_names ?? [],
                                 'gmc_registration_no' => $data->gmc_registration_no,
                                 'indemnity_insurance_provider' => $data->indemnity_insurance_provider,
