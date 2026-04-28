@@ -33,14 +33,15 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @php($modalData = [])
                         @if(isset($doctors) && count($doctors) > 0)
                         @foreach($doctors as $key=>$data)
                         <tr class="align-middle">
                             <td>{{ $data->id }}</td>
                             <td>{{ $data->name . ' '. $data->surname }}</td>
                             <td>{{ $data->email }}</td>
-                            <td>{{ !empty($data->category) ? \DB::table('dr_category')->find($data->category)->title : '-' }}</td>
-                            <td>{{ !empty($data->country) ? \DB::table('country_master')->find($data->country)->countryname : '-' }}</td>
+                            <td>{{ $data->categoryRel->title ?? '-' }}</td>
+                            <td>{{ $data->countryRel->countryname ?? '-' }}</td>
                             <td>
                                 @if(!empty($data->varProfile))
                                 <img src="{{ config('app.url').'api/docterprofile/'.$data->varProfile }}" alt="{{ $data->name }}" height="100px" width="100px" />
@@ -61,6 +62,28 @@
                                 $remainingPaymentss = abs($data->remaining_payment);
                                 $remainingPayment = '+' . $remainingPaymentss;  
                             }
+                            $modalData = [
+                                'id' => $data->id,
+                                'name' => $data->name,
+                                'email' => $data->email,
+                                'surname' => $data->surname,
+                                'category' => optional($data->categoryRel)->title ?? '-',
+                                'country' => optional($data->countryRel)->countryname ?? '-',
+                                'gmc_registration_no' => $data->gmc_registration_no,
+                                'indemnity_insurance_provider' => $data->indemnity_insurance_provider,
+                                'policy_no' => $data->policy_no,
+                                'india_registration_no' => $data->india_registration_no,
+                                'dha_reg' => $data->dha_reg,
+                                'reg_no' => $data->reg_no,
+                                'chrSmartcard' => $data->chrSmartcard,
+                                'varSpeciality' => $data->varSpeciality,
+                                'varExperience' => $data->varExperience,
+                                'varPostGraduation' => $data->varPostGraduation,
+                                'varPostGraduationYear' => $data->varPostGraduationYear,
+                                'varGraduation' => $data->varGraduation,
+                                'varGraduationYear' => $data->varGraduationYear,
+                                'chrApproval' => $data->chrApproval,
+                            ];
                             @endphp
                             <td class="text-center">{{ $issetup }}</td>
                             <td>{{ number_format($data->total_payment, 2) }}</td>
@@ -69,7 +92,13 @@
                                 <button class="btn btn-warning" onclick="openUpdatePaymentModal({{ $data->id }}, {{ $data->remaining_payment }})">Update Payment</button>
                             </td> --}}
                           <td class="d-flex gap-2">
-                                <button type="button" class="btn btn-info" data-toggle="modal" data-target="#userModal" onclick="openModal({{ json_encode($data) }})">View Details</button>
+                                <button
+                                    type="button"
+                                    class="btn btn-info"
+                                    data-toggle="modal"
+                                    data-target="#userModal"
+                                    onclick='openModal(@json($modalData))'
+                                >View Details</button>
                                 <button type="button" class="btn btn-danger" onclick="deleteDoctor({{ $data->id }})">Delete</button>
                             </td>
                         </tr>
@@ -189,23 +218,11 @@
   
     function openModal(data) {
         id = data.id;
-        if(data.category) {
-            <?php 
-            $category = \DB::table('dr_category')->find($data->category)->title;
-            ?>
-        } 
-        if(data.country) {
-            <?php 
-            $country = \DB::table('country_master')->find($data->country)->countryname;
-            ?>
-        } 
-        var category = "<?php echo  $category ?>";
-        var country = "<?php echo  $country ?>";
         document.getElementById('modalName').innerText = data.name || '-';
         document.getElementById('modalEmail').innerText = data.email || '-';
         document.getElementById('modalSurname').innerText = data.surname || '-';
-        document.getElementById('modalCategory').innerText = category || '-';
-        document.getElementById('modalCountry').innerText = country || '-';
+        document.getElementById('modalCategory').innerText = data.category || '-';
+        document.getElementById('modalCountry').innerText = data.country || '-';
         document.getElementById('modalGMCRegistrationNo').innerText = data.gmc_registration_no || '-';
         document.getElementById('modalIndemnityInsuranceProvider').innerText = data.indemnity_insurance_provider || '-';
         document.getElementById('modalPolicyNo').innerText = data.policy_no || '-';
