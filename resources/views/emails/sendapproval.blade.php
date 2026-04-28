@@ -48,6 +48,10 @@
             line-height: 1.7;
         }
 
+        .content p {
+            margin: 0 0 14px;
+        }
+
         .title {
             margin: 0 0 18px;
             font-size: 22px;
@@ -64,6 +68,7 @@
 
         .closing {
             margin-top: 24px;
+            margin-bottom: 0;
         }
 
         .footer {
@@ -73,6 +78,7 @@
             color: #6b7280;
             font-size: 12px;
             border-top: 1px solid #edf2f7;
+            line-height: 1.6;
         }
 
         .support-link {
@@ -93,7 +99,7 @@
             <div class="content">
                 <h1 class="title">Registration Approved</h1>
 
-                <p>Dear Dr. {{ $name }} {{ $surname }},</p>
+                <p>Dear Dr. {{ trim($name . ' ' . $surname) }},</p>
 
                 <p>Your registration with {{ config('app.name') }} has been approved.</p>
 
