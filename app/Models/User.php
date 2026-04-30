@@ -160,6 +160,17 @@ class User extends Authenticatable
     }
 
 
+
+    public function languageDetails()
+    {
+        $languageIds = is_array($this->language_ids) ? $this->language_ids : [];
+
+        return Language::query()
+            ->select('id', 'language_name')
+            ->whereIn('id', $languageIds)
+            ->get();
+    }
+
     public function blocks()
     {
         return $this->hasMany(Block::class, 'dr_id');
