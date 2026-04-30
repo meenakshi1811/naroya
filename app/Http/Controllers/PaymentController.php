@@ -44,6 +44,57 @@ class PaymentController extends Controller
         return view('payment');
     }
 
+    public function storePayment(Request $request)
+    {
+        $validated = $request->validate([
+            'patient_id' => 'required|integer',
+            'dr_id' => 'required|integer',
+            'appointment_id' => 'required|integer',
+            'amount' => 'required|numeric|min:0.01',
+            'currency' => 'required|string|max:10',
+            'razorpay_payment_id' => 'required|string|max:255',
+            'razorpay_order_id' => 'nullable|string|max:255',
+            'razorpay_signature' => 'nullable|string|max:255',
+            'status' => 'nullable|string|max:50',
+            'description' => 'nullable|string|max:500',
+            'response_payload' => 'nullable|string',
+        ]);
+
+        $paymentLog = PaymentLog::create([
+            'patient_id' => $validated['patient_id'],
+            'dr_id' => $validated['dr_id'],
+            'appointment_id' => $validated['appointment_id'],
+            'payment_id' => $validated['razorpay_payment_id'],
+            'varStatus' => $validated['status'] ?? 'captured',
+            'amount' => $validated['amount'],
+            'transaction_time' => now(),
+            'response' => $validated['response_payload'] ?? json_encode([
+                'gateway' => 'razorpay',
+                'order_id' => $validated['razorpay_order_id'] ?? null,
+                'signature' => $validated['razorpay_signature'] ?? null,
+            ]),
+            'description' => $validated['description'] ?? 'Dummy Razorpay frontend payment',
+        ]);
+
+        return redirect()->route('payment.success')->with('payment_log_id', $paymentLog->id);
+    }
+
+    public function success()
+    {
+        return view('payment', [
+            'paymentStatus' => 'success',
+            'paymentLogId' => session('payment_log_id'),
+        ]);
+    }
+
+    public function failure()
+    {
+        return view('payment', [
+            'paymentStatus' => 'failed',
+            'paymentLogId' => null,
+        ]);
+    }
+
     public function createPaymentMethod(Request $request)
     {
         // Use test_mode from request if provided
