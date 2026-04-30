@@ -1413,13 +1413,15 @@ class PatientController extends Controller
 
 
 
-                    $current_work_org = DB::table('org_experiance')->select('title as org_name', 'startYear as start_year', 'endYear as end_year', 'varDescription as description', 'isCurrentworkOrg')->where('user_id', $request->doctor)->get();
-                    $current_work_org = json_encode($current_work_org);
-                    $doctor->current_work_org = $current_work_org;
+                    $doctorModel = User::find($request->doctor);
+                    $current_work_org = $doctorModel?->experiences()
+                        ->select('title as org_name', 'startYear as start_year', 'endYear as end_year', 'varDescription as description', 'isCurrentworkOrg')
+                        ->get() ?? collect();
+                    $doctor->current_work_org = $current_work_org->toJson();
+                    $doctor->language = $doctorModel?->languageDetails() ?? collect();
                     if (!empty($doctor)) {
                         $doctor->profile_picture =  !empty($doctor->profile_picture) ? config('app.url') . 'api/docterprofile/' . $doctor->profile_picture : 'null';
                         $doctor->biography =  !empty($doctor->biography) ? $doctor->biography : 'null';
-                        $doctor->language =  !empty($doctor->language) ? $doctor->language : 'null';
 
                         $reviewQuery = Rating::select('rating', 'varShortTitle as title', 'varReview as review','ratings.created_at as date' , 'patients.name', 'patients.lastname', 'patients.varProfile')
                             ->join('patients', 'ratings.patinet_id', 'patients.id')
