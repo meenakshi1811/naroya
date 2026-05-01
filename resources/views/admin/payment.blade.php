@@ -11,6 +11,12 @@
             <div class="card-header">
                 <h3 class="card-title">Payment
                 </h3>
+                @if(isset($selectedDoctor) && $selectedDoctor)
+                    <p class="mb-0 mt-2 text-muted">
+                        Showing records for Dr. {{ $selectedDoctor->name }} {{ $selectedDoctor->surname }} ({{ $selectedDoctor->email }})
+                        - <a href="{{ route('admin.payment-log') }}">View all payments</a>
+                    </p>
+                @endif
             </div> <!-- /.card-header -->
             <div class="card-body">
                 <table id="patientTable" class="table table-bordered">

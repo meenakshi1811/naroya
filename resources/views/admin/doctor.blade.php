@@ -28,6 +28,7 @@
                             <th>Profile</th>
                             <th>Total Payment</th>
                             <th>Recent Payment</th>
+                            <th>Payment Ledger</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -85,6 +86,11 @@
                             @endphp
                             <td>{{ number_format($data->total_payment, 2) }}</td>
                             <td id="remainingPayment_{{ $data->id }}">{{ ($data->recent_payment_amount >= 0) ? number_format($data->recent_payment_amount, 2) : '+'.number_format($data->recent_payment_amount, 2)}}</td>
+                            <td>
+                                <a href="{{ route('admin.payment-ledger', $data->id) }}" class="btn btn-outline-primary btn-sm">
+                                    View Ledger
+                                </a>
+                            </td>
                             {{--<td>
                                 <button class="btn btn-warning" onclick="openUpdatePaymentModal({{ $data->id }}, {{ $data->remaining_payment }})">Update Payment</button>
                             </td> --}}
@@ -104,7 +110,7 @@
                         @endforeach
                         @else
                         <tr>
-                            <td colspan="10" class="text-center">No records found</td>
+                            <td colspan="11" class="text-center">No records found</td>
                         </tr>
                         @endif
                     </tbody>
@@ -293,7 +299,7 @@
             "scrollX": true,
             "columnDefs": [
                 {
-                    "targets": [9],
+                    "targets": [10],
                     "orderable": false
                 }
             ]
