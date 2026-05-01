@@ -106,6 +106,7 @@ Route::delete('/admin/delete-patient/{id}', [App\Http\Controllers\PatientControl
     
     //PaymentLogs
     Route::get('/admin/payment-log',[App\Http\Controllers\Admin\PaymentLogController::class, 'showPaymentLogs'])->name('admin.payment-log');
+    Route::get('/admin/payment-ledger/{id}',[App\Http\Controllers\Admin\PaymentLogController::class, 'showDoctorPaymentLedger'])->name('admin.payment-ledger');
     Route::post('/admin/refund', [PaymentController::class, 'processRefund']);
 
     

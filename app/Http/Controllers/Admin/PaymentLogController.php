@@ -10,6 +10,15 @@ use App\Models\User;
 class PaymentLogController extends Controller
 {
 
+    public function showDoctorPaymentLedger($id)
+    {
+        $query = PaymentLog::query()->where('dr_id', (int) $id);
+        $paymentLogs = $query->get();
+        $selectedDoctor = User::select('id', 'name', 'surname', 'email')->find($id);
+
+        return view('admin.payment', compact('paymentLogs', 'selectedDoctor'));
+    }
+
     public function showPaymentLogs(Request $request)
     {
         $query = PaymentLog::query();

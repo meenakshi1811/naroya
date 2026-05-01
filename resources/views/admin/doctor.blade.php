@@ -87,7 +87,7 @@
                             <td>{{ number_format($data->total_payment, 2) }}</td>
                             <td id="remainingPayment_{{ $data->id }}">{{ ($data->recent_payment_amount >= 0) ? number_format($data->recent_payment_amount, 2) : '+'.number_format($data->recent_payment_amount, 2)}}</td>
                             <td>
-                                <a href="{{ route('admin.payment-log', ['doctor_id' => $data->id]) }}" class="btn btn-outline-primary btn-sm">
+                                <a href="{{ route('admin.payment-ledger', $data->id) }}" class="btn btn-outline-primary btn-sm">
                                     View Ledger
                                 </a>
                             </td>
