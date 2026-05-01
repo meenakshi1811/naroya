@@ -11,7 +11,6 @@ use Stripe\Customer;
 use Stripe\Exception\ApiErrorException;
 use App\Models\Patients;
 use App\Models\Appointment;
-use App\Models\PaymentLog;
 use App\Models\DoctorCredit;
 use Stripe\Account;
 use App\Models\User;
@@ -20,8 +19,10 @@ use Stripe\Token;
 use Stripe\Refund;
 use App\Models\RefundLog;
 use App\Models\BookCount;
+use App\Models\Payment;
 use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 
 
 class PaymentController extends Controller
@@ -74,188 +75,108 @@ class PaymentController extends Controller
 
     public function ProcessPayment(Request $request)
     {
-        // ── Auth ────────────────────────────────────────────────────────────
         $headers     = $request->header('Authorization');
         $headerArray = explode('Bearer ', $headers);
 
-        if (!empty($headerArray[1])) {
-            $tokenData = decrypt($headerArray[1]);
-            if (!empty($tokenData['id'])) {
-                $patients = Patients::find($tokenData['id']);
-            }
-        } else {
+        if (empty($headerArray[1])) {
             return response()->json([
                 'message' => 'Unauthorized request',
                 'data'    => ['error' => 'Unauthorized request'],
             ], 401);
         }
 
+        $tokenData = decrypt($headerArray[1]);
+        $patients  = !empty($tokenData['id']) ? Patients::find($tokenData['id']) : null;
+
+        if (empty($patients)) {
+            return response()->json([
+                'message' => 'Unauthorized request',
+                'data'    => ['error' => 'Unauthorized request'],
+            ], 401);
+        }
+
+        $request->validate([
+            'doctor'            => 'required',
+            'payment_method_id' => 'required', // Razorpay payment id
+            'appointment_id'    => 'required',
+            'amount'            => 'required|numeric|min:0.01',
+        ]);
+
+        $doctor = User::find($request->doctor);
+        if (!$doctor) {
+            return response()->json([
+                'message' => 'Doctor not found.',
+                'data'    => ['error' => 'Invalid doctor'],
+            ], 400);
+        }
+
+        $appointment = Appointment::find($request->appointment_id);
+        if (!$appointment) {
+            return response()->json([
+                'message' => 'Invalid appointment ID.',
+                'data'    => ['error' => 'Appointment not found'],
+            ], 400);
+        }
+
         try {
-            if (!empty($patients)) {
-                Log::info('request data', ['request' => $request->all()]);
-                // ── Validation ───────────────────────────────────────────────
-                $request->validate([
-                    'doctor'            => 'required',
-                    'currency'          => 'required',
-                    'payment_method_id' => 'required',
-                    'appointment_id'    => 'required',
-                    'amount'            => 'required|numeric|min:0.01',
-                ]);
+            $razorpayKey    = env('RAZORPAY_KEY_ID');
+            $razorpaySecret = env('RAZORPAY_KEY_SECRET');
 
-                $doctor   = User::find($request->doctor);
-                $testMode = $request->input('test_mode', 'N');
+            $razorpayResponse = Http::withBasicAuth($razorpayKey, $razorpaySecret)
+                ->get('https://api.razorpay.com/v1/payments/' . $request->payment_method_id);
 
-                // ── Set correct Stripe key ───────────────────────────────────
-                // Both the request AND the doctor record must have test_mode = Y
-                $this->setStripeKey($testMode, $doctor->test_mode ?? 'N');
-
-                // ── Validate Doctor ──────────────────────────────────────────
-                if (!$doctor || !$doctor->stripe_account_id) {
-                    return response()->json([
-                        'message' => 'Doctor does not have a connected Stripe account.',
-                        'data'    => ['error' => 'Invalid doctor account'],
-                    ], 400);
-                }
-
-                // ── Validate Appointment ─────────────────────────────────────
-                $appointment = Appointment::find($request->appointment_id);
-                if (!$appointment) {
-                    return response()->json([
-                        'message' => 'Invalid appointment ID.',
-                        'data'    => ['error' => 'Appointment not found'],
-                    ], 400);
-                }
-
-                $appointmentDate = $appointment->varAppointment;
-                $appointmentTime = $appointment->startTime;
-
-                // Check if another appointment already occupies this slot
-                $existingAppointment = Appointment::where('dr_id', $request->doctor)
-                    ->where('varAppointment', $appointmentDate)
-                    ->where('startTime', $appointmentTime)
-                    ->where('charIsPaid', 'Y')
-                    ->where('id', '!=', $request->appointment_id)
-                    ->first();
-
-                if ($existingAppointment) {
-                    return response()->json([
-                        'message' => 'This time slot is already booked. Please choose a different slot.',
-                        'data'    => ['error' => 'Doctor is not available at this time.'],
-                    ], 400);
-                }
-
-                // ── Fee Calculations ─────────────────────────────────────────
-                $adminPercentage  = GeneralSetting::where('field_name', 'percentage')->value('field_value');
-                $doctorPercentage = 100 - $adminPercentage;
-
-                // Work in pence/cents from the start to avoid rounding issues
-                $currency           = strtolower($request->currency); // e.g. 'gbp' or 'eur'
-                $amountInCents      = (int) round($request->amount * 100);
-                $adminAmountInCents = (int) round(($adminPercentage / 100) * $amountInCents);
-
-                // ── Book Counts ──────────────────────────────────────────────
-                $patientBookCount   = BookCount::where('patient_id', $patients->id)->sum('booked');
-                $patientRebookCount = BookCount::where('patient_id', $patients->id)->sum('rebooked');
-                $totalBookCount     = BookCount::sum('booked');
-                $totalRebookCount   = BookCount::sum('rebooked');
-
-                // ── Step 1: Create Customer on Platform Account ──────────────
-                $customer = Customer::create([
-                    'name'     => $patients->name . ' ' . $patients->lastname,
-                    'email'    => $patients->email,
-                    'metadata' => ['user_id' => $patients->id],
-                ]);
-
-                // ── Step 2: Attach Payment Method to Platform Customer ───────
-                // The PaymentMethod MUST stay on the platform account (not the
-                // connected account) when using transfer_data + on_behalf_of.
-                $paymentMethod = PaymentMethod::retrieve($request->payment_method_id);
-                $paymentMethod->attach(['customer' => $customer->id]);
-
-                Customer::update($customer->id, [
-                    'invoice_settings' => [
-                        'default_payment_method' => $paymentMethod->id,
-                    ],
-                ]);
-
-                // ── Step 3: Create PaymentIntent on Platform ─────────────────
-                // FIX: Added `on_behalf_of` so Stripe resolves the PaymentMethod
-                //      against the platform account (where it was created), not
-                //      the connected account — eliminating the "No such
-                //      PaymentMethod" error.
-                $paymentIntent = PaymentIntent::create([
-                    'amount'                 => $amountInCents,
-                    'currency'               => $currency, // from request formdata (e.g. 'gbp' or 'eur')
-                    'payment_method'         => $paymentMethod->id,
-                    'customer'               => $customer->id,
-                    'off_session'            => true,
-                    'confirm'                => true,
-                    // on_behalf_of makes the connected account the merchant of
-                    // record for the payment (statement descriptor, card fees)
-                    // while the PaymentMethod itself stays on the platform.
-                    'on_behalf_of'           => $doctor->stripe_account_id,
-                    'transfer_data'          => [
-                        'destination' => $doctor->stripe_account_id,
-                    ],
-                    // FIX: was previously $adminAmount * 100, which double-
-                    //      converted dollars→cents. Now computed directly in cents.
-                    'application_fee_amount' => $adminAmountInCents,
-                    'metadata'               => [
-                        'appointment_id' => $request->appointment_id,
-                        'patient_id'     => $patients->id,
-                        'test_mode'      => $testMode,
-                    ],
-                ]);
-
-                Log::info('PaymentIntent created successfully.', [
-                    'payment_intent_id' => $paymentIntent->id,
-                    'status'            => $paymentIntent->status,
-                    'test_mode'         => $testMode,
-                ]);
-
-                // ── Step 4: Update Appointment to Pending ────────────────────
-                Appointment::where('id', $request->appointment_id)
-                    ->update(['charIsPaid' => 'P']);
-
-                // Cancel any other appointment for the same slot
-                Appointment::where('dr_id', $request->doctor)
-                    ->where('varAppointment', $appointment->varAppointment)
-                    ->where('startTime', $appointment->startTime)
-                    ->where('id', '!=', $request->appointment_id)
-                    ->update(['chrIsCanceled' => 'Y']);
-
-                // ── Step 5: Log Payment ──────────────────────────────────────
-                PaymentLog::create([
-                    'patient_id'       => $patients->id,
-                    'dr_id'            => $request->doctor,
-                    'appointment_id'   => $request->appointment_id,
-                    'amount'           => $request->amount,
-                    'payment_id'       => $paymentIntent->id,
-                    'varStatus'        => 'pending',
-                    'transaction_time' => now(),
-                    'response'         => json_encode($paymentIntent),
-                    'description'      => 'Payment initiated' . ($testMode === 'Y' ? ' (test mode)' : ''),
+            if (!$razorpayResponse->ok()) {
+                Payment::create([
+                    'status'         => 'failed',
+                    'transaction_id' => $request->payment_method_id,
+                    'patient_id'     => $patients->id,
+                    'doctor_id'      => $request->doctor,
+                    'appointment_id' => $request->appointment_id,
+                    'created_at'     => now(),
                 ]);
 
                 return response()->json([
-                    'message'        => 'Payment is in progress.',
-                    'payment_intent' => $paymentIntent,
-                    'test_mode'      => $testMode,
-                    'book_counts'    => [
-                        'patient_book_count'   => (string) $patientBookCount,
-                        'patient_rebook_count' => (string) $patientRebookCount,
-                        'total_book_count'     => (string) $totalBookCount,
-                        'total_rebook_count'   => (string) $totalRebookCount,
-                    ],
-                ]);
+                    'message' => 'Unable to verify payment with Razorpay.',
+                    'data'    => ['error' => $razorpayResponse->json()],
+                ], 400);
             }
-        } catch (ApiErrorException $e) {
-            Log::error('Stripe API error during payment processing.', [
-                'error'     => $e->getMessage(),
-                'test_mode' => $request->input('test_mode', 'N'),
+
+            $paymentData = $razorpayResponse->json();
+            $status = (($paymentData['status'] ?? null) === 'captured') ? 'success' : 'failed';
+
+            Payment::create([
+                'status'         => $status,
+                'transaction_id' => $request->payment_method_id,
+                'patient_id'     => $patients->id,
+                'doctor_id'      => $request->doctor,
+                'appointment_id' => $request->appointment_id,
+                'created_at'     => now(),
             ]);
+
+            Appointment::where('id', $request->appointment_id)
+                ->update(['charIsPaid' => $status === 'success' ? 'Y' : 'N']);
+
             return response()->json([
-                'message' => $e->getMessage(),
+                'message' => $status === 'success' ? 'Payment successful.' : 'Payment failed.',
+                'status'  => $status,
+                'payment' => $paymentData,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Razorpay payment verification failed.', [
+                'error' => $e->getMessage(),
+            ]);
+
+            Payment::create([
+                'status'         => 'failed',
+                'transaction_id' => $request->payment_method_id,
+                'patient_id'     => $patients->id,
+                'doctor_id'      => $request->doctor,
+                'appointment_id' => $request->appointment_id,
+                'created_at'     => now(),
+            ]);
+
+            return response()->json([
+                'message' => 'Payment verification failed.',
                 'data'    => ['error' => $e->getMessage()],
             ], 400);
         }
