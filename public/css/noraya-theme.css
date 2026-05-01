@@ -1,0 +1,205 @@
+:root,
+[data-bs-theme="light"] {
+  --bs-primary: #109014;
+  --bs-primary-rgb: 16, 144, 20;
+  --bs-link-color: #0f7f13;
+  --bs-link-color-rgb: 15, 127, 19;
+  --bs-link-hover-color: #0b6510;
+  --bs-link-hover-color-rgb: 11, 101, 16;
+  --bs-focus-ring-color: rgba(16, 144, 20, 0.25);
+}
+
+.app-main {
+  padding: 1rem;
+}
+
+.app-header {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.app-header .nav-link {
+  color: #1f2937;
+}
+
+.app-header .nav-link:hover,
+.app-header .nav-link:focus {
+  color: #0f7f13;
+}
+
+.sidebar-brand {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-brand .brand-link {
+  padding: 0.85rem 0.75rem;
+}
+
+.app-sidebar .nav-link {
+  color: rgba(255, 255, 255, 0.85) !important;
+  border-radius: 0.5rem;
+  margin: 0.125rem 0.5rem;
+}
+
+.app-sidebar .nav-link .nav-icon {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.app-sidebar .nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+.app-sidebar .nav-link.active {
+  background: linear-gradient(90deg, rgba(16, 144, 20, 0.95), rgba(16, 144, 20, 0.8)) !important;
+  color: #ffffff !important;
+}
+
+.app-sidebar .nav-link.active .nav-icon {
+  color: #ffffff !important;
+}
+
+.btn-primary,
+.bg-primary,
+.text-bg-primary,
+.badge.text-bg-primary {
+  background-color: #109014 !important;
+  border-color: #109014 !important;
+  color: #ffffff !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+  background-color: #0d7811 !important;
+  border-color: #0d7811 !important;
+  color: #ffffff !important;
+}
+
+.link-primary,
+.text-primary {
+  color: #0f7f13 !important;
+}
+
+a {
+  color: #0f7f13;
+}
+
+a:hover {
+  color: #0b6510;
+}
+
+.table thead th {
+  background-color: #0f7f13;
+  color: #ffffff;
+  border-color: #0c6810;
+  vertical-align: middle;
+}
+
+.table td,
+.table th {
+  vertical-align: middle;
+}
+
+.table-bordered > :not(caption) > * > * {
+  border-color: #d7e7d8;
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+  --bs-table-accent-bg: #f4fbf4;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+  background: #109014 !important;
+  border-color: #109014 !important;
+  color: #fff !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+  background: #0d7811 !important;
+  border-color: #0d7811 !important;
+  color: #fff !important;
+}
+
+.pending-doctors-card .card-body {
+  overflow-x: auto;
+}
+
+.pending-doctors-table {
+  width: 100% !important;
+  min-width: 900px;
+}
+
+.pending-doctors-table td,
+.pending-doctors-table th {
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.action-buttons .btn {
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  width: 110px;
+}
+
+.status-badge {
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+.doctor-avatar {
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid #e9ecef;
+}
+
+.modal-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 20px;
+  row-gap: 10px;
+}
+
+.detail-label {
+  color: #6c757d;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.detail-value {
+  font-weight: 600;
+  word-break: break-word;
+}
+
+@media (max-width: 767px) {
+  .modal-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Apply pending-doctors table layout across admin tables */
+.app-main .card .card-body {
+  overflow-x: auto;
+}
+
+.app-main .card .card-body .table {
+  width: 100% !important;
+  min-width: 900px;
+}
+
+.app-main .card .card-body .table td,
+.app-main .card .card-body .table th {
+  white-space: nowrap;
+}
