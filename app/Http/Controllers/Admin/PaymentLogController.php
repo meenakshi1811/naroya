@@ -5,17 +5,25 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\PaymentLog;
+use App\Models\User;
 
 class PaymentLogController extends Controller
 {
 
-    public function showPaymentLogs()
+    public function showPaymentLogs(Request $request)
     {
-        // Fetch all payment logs (you can paginate this if needed)
-        $paymentLogs = PaymentLog::get(); // 10 records per page
+        $query = PaymentLog::query();
+        $selectedDoctor = null;
 
-        // Pass the payment logs to the view
-        return view('admin.payment', compact('paymentLogs'));
+        if ($request->filled('doctor_id')) {
+            $doctorId = (int) $request->doctor_id;
+            $query->where('dr_id', $doctorId);
+            $selectedDoctor = User::select('id', 'name', 'surname', 'email')->find($doctorId);
+        }
+
+        $paymentLogs = $query->get();
+
+        return view('admin.payment', compact('paymentLogs', 'selectedDoctor'));
     }
    
 }
