@@ -25,9 +25,7 @@
                             <th>Name</th>
                             <th>Email</th>
                             <th>Category</th>
-                            <th>Country</th>
                             <th>Profile</th>
-                            <th>Bank Setup</th>
                             <th>Total Payment</th>
                             <th>Recent Payment</th>
                             <th>Actions</th>
@@ -44,7 +42,6 @@
                             <td>{{ $data->name . ' '. $data->surname }}</td>
                             <td>{{ $data->email }}</td>
                             <td>{{ $data->categoryRel->title ?? '-' }}</td>
-                            <td>{{ $data->countryRel->countryname ?? '-' }}</td>
                             <td>
                                 @if(!empty($data->varProfile))
                                 <img src="{{ config('app.url').'api/docterprofile/'.$data->varProfile }}" alt="{{ $data->name }}" width="64" height="64" class="doctor-avatar" />
@@ -53,11 +50,7 @@
                                 @endif
                             </td>
                             @php
-                            if($data->isPaymentFlowRegistered == 1){
-                                $issetup = 'Yes';
-                            }else{
-                                $issetup = 'No';
-                            }
+                           
                              if($data->total_payment < 0){
                                 $data->total_payment = 0.00;
                             }
@@ -90,7 +83,6 @@
                                 'chrApproval' => $data->chrApproval,
                             ];
                             @endphp
-                            <td class="text-center">{{ $issetup }}</td>
                             <td>{{ number_format($data->total_payment, 2) }}</td>
                             <td id="remainingPayment_{{ $data->id }}">{{ ($data->recent_payment_amount >= 0) ? number_format($data->recent_payment_amount, 2) : '+'.number_format($data->recent_payment_amount, 2)}}</td>
                             {{--<td>
@@ -137,7 +129,6 @@
                     <div><div class="detail-label">Email</div><div class="detail-value" id="modalEmail">-</div></div>
                     <div><div class="detail-label">Surname</div><div class="detail-value" id="modalSurname">-</div></div>
                     <div><div class="detail-label">Category</div><div class="detail-value" id="modalCategory">-</div></div>
-                    <div><div class="detail-label">Country</div><div class="detail-value" id="modalCountry">-</div></div>
                     <div><div class="detail-label">State</div><div class="detail-value" id="modalState">-</div></div>
                     <div><div class="detail-label">Languages</div><div class="detail-value" id="modalLanguages">-</div></div>
                     <div><div class="detail-label">GMC Registration No</div><div class="detail-value" id="modalGMCRegistrationNo">-</div></div>
@@ -197,7 +188,6 @@
         document.getElementById('modalEmail').innerText = data.email || '-';
         document.getElementById('modalSurname').innerText = data.surname || '-';
         document.getElementById('modalCategory').innerText = data.category || '-';
-        document.getElementById('modalCountry').innerText = data.country || '-';
         document.getElementById('modalState').innerText = data.state || '-';
         renderBadgeList('modalLanguages', data.languages || []);
         document.getElementById('modalGMCRegistrationNo').innerText = data.gmc_registration_no || '-';

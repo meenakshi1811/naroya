@@ -24,12 +24,7 @@
                             <th>Name</th>
                             <th>Email</th>
                             <th>Category</th>
-                            <th>Country</th>
                             <th>Profile</th>
-                            <th>Status</th>
-                            <th>Bank Setup</th>
-                            <th>Total Payment</th>
-                            <th>Recent Payment</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -43,15 +38,12 @@
                             $isSetup = $data->isPaymentFlowRegistered == 1 ? 'Yes' : 'No';
                             $totalPayment = max(0, (float)($data->total_payment ?? 0));
                             $recentPayment = (float)($data->recent_payment_amount ?? 0);
-                            $status = ($data->chrApproval === 'Y') ? 'Approved' : 'Pending';
-                            $statusClass = ($data->chrApproval === 'Y') ? 'badge-success' : 'badge-warning';
                             $modalData = [
                                 'id' => $data->id,
                                 'name' => $data->name,
                                 'email' => $data->email,
                                 'surname' => $data->surname,
                                 'category' => optional($data->categoryRel)->title ?? '-',
-                                'country' => optional($data->countryRel)->countryname ?? '-',
                                 'state' => optional($data->stateRel)->name ?? ($data->state ?? '-'),
                                 'languages' => $data->language_names ?? [],
                                 'gmc_registration_no' => $data->gmc_registration_no,
@@ -75,7 +67,6 @@
                             <td>{{ trim(($data->name ?? '') . ' ' . ($data->surname ?? '')) ?: '-' }}</td>
                             <td>{{ $data->email ?? '-' }}</td>
                             <td>{{ $data->categoryRel->title ?? '-' }}</td>
-                            <td>{{ $data->countryRel->countryname ?? '-' }}</td>
                             <td>
                                 @if(!empty($data->varProfile))
                                 <img src="{{ config('app.url').'api/docterprofile/'.$data->varProfile }}" alt="{{ $data->name }}" width="64" height="64" class="doctor-avatar" />
@@ -83,14 +74,8 @@
                                 <span class="text-muted">N/A</span>
                                 @endif
                             </td>
-                            <td>
-                                <span class="badge status-badge {{ $statusClass }}">{{ $status }}</span>
-                            </td>
-                            <td class="text-center">{{ $isSetup }}</td>
-                            <td>{{ number_format($totalPayment, 2) }}</td>
-                            <td id="remainingPayment_{{ $data->id }}">
-                                {{ $recentPayment >= 0 ? number_format($recentPayment, 2) : '+' . number_format(abs($recentPayment), 2) }}
-                            </td>
+                           
+                            
                             <td>
                                 <div class="action-buttons">
                                     <button
@@ -128,17 +113,12 @@
                 </button>
             </div>
             <div class="modal-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0">Profile Information</h6>
-                    <span id="modalStatusBadge" class="badge status-badge badge-warning">Pending</span>
-                </div>
 
                 <div class="modal-details-grid">
                     <div><div class="detail-label">Name</div><div class="detail-value" id="modalName">-</div></div>
                     <div><div class="detail-label">Email</div><div class="detail-value" id="modalEmail">-</div></div>
                     <div><div class="detail-label">Surname</div><div class="detail-value" id="modalSurname">-</div></div>
                     <div><div class="detail-label">Category</div><div class="detail-value" id="modalCategory">-</div></div>
-                    <div><div class="detail-label">Country</div><div class="detail-value" id="modalCountry">-</div></div>
                     <div><div class="detail-label">State</div><div class="detail-value" id="modalState">-</div></div>
                     <div><div class="detail-label">Languages</div><div class="detail-value" id="modalLanguages">-</div></div>
                     <div><div class="detail-label">GMC Registration No</div><div class="detail-value" id="modalGMCRegistrationNo">-</div></div>
@@ -203,7 +183,6 @@
         document.getElementById('modalEmail').innerText = data.email || '-';
         document.getElementById('modalSurname').innerText = data.surname || '-';
         document.getElementById('modalCategory').innerText = data.category || '-';
-        document.getElementById('modalCountry').innerText = data.country || '-';
         document.getElementById('modalState').innerText = data.state || '-';
         renderBadgeList('modalLanguages', data.languages || []);
         document.getElementById('modalGMCRegistrationNo').innerText = data.gmc_registration_no || '-';
@@ -222,19 +201,7 @@
 
         var isApproved = (data.chrApproval === 'Y');
         var approvalButton = document.getElementById('chrapproval');
-        var statusBadge = document.getElementById('modalStatusBadge');
-
-        if (isApproved) {
-            approvalButton.style.display = 'none';
-            statusBadge.innerText = 'Approved';
-            statusBadge.classList.remove('badge-warning');
-            statusBadge.classList.add('badge-success');
-        } else {
-            approvalButton.style.display = 'inline-block';
-            statusBadge.innerText = 'Pending';
-            statusBadge.classList.remove('badge-success');
-            statusBadge.classList.add('badge-warning');
-        }
+      
     }
 
     function renderBadgeList(elementId, items) {
@@ -296,7 +263,7 @@
     }
 
     function confirmDelete(doctorId) {
-        if (confirm('Are you sure you want to delete this doctor? This will also delete their connected Stripe account.')) {
+        if (confirm('Are you sure you want to delete this doctor?')) {
             $.ajax({
                 url: "{{ url('admin/delete-doctor') }}/" + doctorId,
                 type: 'DELETE',
