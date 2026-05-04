@@ -60,6 +60,7 @@ Route::middleware(['auth:web'])->group(function () {
         return view('admin.dashboard'); // Create this view
     });
     Route::get('/admin/doctor',[App\Http\Controllers\Admin\DoctorController::class, 'index'])->name('admin.doctor');
+    Route::get('/admin/doctor/{id}/activities',[App\Http\Controllers\Admin\DoctorController::class, 'activities'])->name('admin.doctor.activities');
     Route::get('/admin/pending-doctor',[App\Http\Controllers\Admin\DoctorController::class, 'PendingList'])->name('admin.doctor');
     Route::post('/admin/doctor',[App\Http\Controllers\Admin\DoctorController::class, 'updateData'])->name('admin.approval');
     Route::delete('/admin/doctor/delete/{id}', [App\Http\Controllers\Admin\DoctorController::class, 'destroy'])->name('admin.doctor.delete');
