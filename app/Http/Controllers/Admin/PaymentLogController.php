@@ -9,6 +9,10 @@ use App\Models\User;
 
 class PaymentLogController extends Controller
 {
+    public function showPaymentLedger()
+    {
+        return view('admin.payment');
+    }
 
     public function showDoctorPaymentLedger($id)
     {

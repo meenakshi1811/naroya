@@ -35,6 +35,9 @@
                          <li class="nav-item"> <a href="{{ url('/admin/payment-log') }}" class="nav-link {{ (Request::segment('2') == 'payment-log') ? 'active': ''}}"> <i class="nav-icon bi bi-circle"></i>
                             <p>Payment-Logs</p>
                         </a> </li> 
+                        <li class="nav-item"> <a href="{{ url('/admin/payment-ledger') }}" class="nav-link {{ (Request::segment('2') == 'payment-ledger') ? 'active': ''}}"> <i class="nav-icon bi bi-circle"></i>
+                            <p>Payment Ledger</p>
+                        </a> </li> 
                                                                         
                                                                            <li class="nav-item">
                             <a href="{{ url('/admin/settings') }}" class="nav-link {{ (Request::segment('2') == 'settings') ? 'active' : '' }}">
