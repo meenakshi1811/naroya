@@ -106,17 +106,6 @@ class AuthController extends Controller
                     $user->fcm_token = $request->fcm_token;
                     $user->save();
 
-            if ((string) $previousFees !== (string) $user->varFees) {
-                DoctorActivity::create([
-                    'doctor_id' => $user->id,
-                    'activity_type' => 'consultation_fee_updated',
-                    'description' => 'Consultation fee updated from ' . $previousFees . ' to ' . $user->varFees . '.',
-                    'meta' => [
-                        'old_fee' => $previousFees,
-                        'new_fee' => $user->varFees,
-                    ],
-                ]);
-            }
             }
         } elseif (!empty($user->fcm_token)) {
             $notificationController = new NotificationController();
