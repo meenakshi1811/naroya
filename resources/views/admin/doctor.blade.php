@@ -103,6 +103,7 @@
                                         data-target="#userModal"
                                         onclick='openModal(@json($modalData))'
                                     >View Details</button>
+                                    <a href="{{ route('admin.doctor.activities', $data->id) }}" class="btn btn-outline-secondary">Activity</a>
                                     <button type="button" class="btn btn-outline-danger" onclick="deleteDoctor({{ $data->id }})">Delete</button>
                                 </div>
                             </td>
@@ -160,6 +161,7 @@
     </div>
 </div>
 
+
 <!-- Update Payment Modal -->
 <div class="modal fade" id="updatePaymentModal" tabindex="-1" role="dialog" aria-labelledby="updatePaymentModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -215,6 +217,7 @@
             document.getElementById('chrapproval').style.display = "block";
         }
     }
+
 
     function renderBadgeList(elementId, items) {
         var container = document.getElementById(elementId);
