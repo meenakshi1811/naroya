@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\DoctorCredit;
 use App\Models\GeneralSetting;
 use App\Models\Language;
+use App\Models\DoctorActivity;
 use App\Mail\SendApproval;
 use Illuminate\Support\Facades\Mail;
 use Stripe\Stripe;
@@ -66,7 +67,19 @@ class DoctorController extends Controller
         });
     }
 
-   
+
+    public function activities($id)
+    {
+        $doctor = User::select('id', 'name', 'surname')->findOrFail($id);
+
+        $activities = DoctorActivity::where('doctor_id', $id)
+            ->latest()
+            ->limit(100)
+            ->get(['activity_type', 'description', 'meta', 'created_at']);
+
+        return view('admin.doctor-activity', compact('doctor', 'activities'));
+    }
+
     public function destroy($id)
     {
         try {
