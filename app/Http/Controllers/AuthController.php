@@ -21,6 +21,7 @@ use Laravel\Passport\RefreshToken;
 use Laravel\Passport\Token;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\DoctorRegistrationReceivedMail;
+use App\Models\DoctorActivity;
 
 class AuthController extends Controller
 {
@@ -104,6 +105,7 @@ class AuthController extends Controller
             
                     $user->fcm_token = $request->fcm_token;
                     $user->save();
+
             }
         } elseif (!empty($user->fcm_token)) {
             $notificationController = new NotificationController();
@@ -718,6 +720,7 @@ class AuthController extends Controller
             $user->dha_reg = $request->dha_reg;
             $user->reg_no = $request->reg_no;
             $user->chrSmartcard = $request->chrSmartcard;
+            $previousFees = $user->varFees;
             $user->varFees = $request->fees;
             $user->varTimeDuration = $request->consultation_time;
             if($request->hasFile('profile_picture') && !empty($request->file('profile_picture'))) {
@@ -770,8 +773,6 @@ class AuthController extends Controller
                     }
                 }
             } 
-            echo'<pre>';print_r($languageIds);exit();
-
             $user->language_ids = !empty($languageIds) ? $languageIds : null;
 
             $user->save();
