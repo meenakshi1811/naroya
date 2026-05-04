@@ -77,10 +77,7 @@ class DoctorController extends Controller
             ->limit(100)
             ->get(['activity_type', 'description', 'meta', 'created_at']);
 
-        return response()->json([
-            'doctor' => $doctor,
-            'activities' => $activities,
-        ]);
+        return view('admin.doctor-activity', compact('doctor', 'activities'));
     }
 
     public function destroy($id)
