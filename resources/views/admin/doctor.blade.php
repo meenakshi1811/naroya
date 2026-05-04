@@ -103,6 +103,7 @@
                                         data-target="#userModal"
                                         onclick='openModal(@json($modalData))'
                                     >View Details</button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="openActivityModal({{ $data->id }})">Activity</button>
                                     <button type="button" class="btn btn-outline-danger" onclick="deleteDoctor({{ $data->id }})">Delete</button>
                                 </div>
                             </td>
@@ -155,6 +156,21 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-success" id="chrapproval" onclick="Aprroval()">Approve Doctor</button>
                 <button type="button" class="btn btn-light" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="activityModal" tabindex="-1" role="dialog" aria-labelledby="activityModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="activityModalLabel">Doctor Activity</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <div id="activityContainer" class="text-muted">Loading...</div>
             </div>
         </div>
     </div>
@@ -214,6 +230,38 @@
         } else {
             document.getElementById('chrapproval').style.display = "block";
         }
+    }
+
+
+    function openActivityModal(doctorId) {
+        $('#activityModal').modal('show');
+        document.getElementById('activityContainer').innerHTML = 'Loading...';
+
+        fetch('/admin/doctor/' + doctorId + '/activities')
+            .then(response => response.json())
+            .then(data => {
+                var activities = data.activities || [];
+                if (!activities.length) {
+                    document.getElementById('activityContainer').innerHTML = '<p class="mb-0">No activity found.</p>';
+                    return;
+                }
+
+                var rows = activities.map(function(item) {
+                    var feeText = '';
+                    if (item.meta && item.meta.old_fee !== undefined && item.meta.new_fee !== undefined) {
+                        feeText = '<div><small><strong>Old:</strong> ' + item.meta.old_fee + ' | <strong>New:</strong> ' + item.meta.new_fee + '</small></div>';
+                    }
+                    return '<div class="border rounded p-2 mb-2">' +
+                           '<div><strong>' + (item.activity_type || '-') + '</strong> <small class="text-muted">' + (item.created_at || '') + '</small></div>' +
+                           '<div>' + (item.description || '') + '</div>' + feeText +
+                           '</div>';
+                }).join('');
+
+                document.getElementById('activityContainer').innerHTML = rows;
+            })
+            .catch(function() {
+                document.getElementById('activityContainer').innerHTML = '<p class="text-danger mb-0">Unable to load activities.</p>';
+            });
     }
 
     function renderBadgeList(elementId, items) {
