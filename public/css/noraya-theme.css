@@ -121,6 +121,28 @@ a:hover {
   color: #fff !important;
 }
 
+.admin-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-list-header .card-title {
+  float: none;
+  margin: 0;
+}
+
+.admin-list-add-button {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.admin-list-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
 .pending-doctors-card .card-body {
   overflow-x: auto;
 }
@@ -130,8 +152,15 @@ a:hover {
   min-width: 900px;
 }
 
+.admin-list-table {
+  width: 100% !important;
+  min-width: 0;
+}
+
 .pending-doctors-table td,
-.pending-doctors-table th {
+.pending-doctors-table th,
+.admin-list-table td,
+.admin-list-table th {
   vertical-align: middle;
   white-space: nowrap;
 }
@@ -144,12 +173,38 @@ a:hover {
   justify-content: center;
 }
 
+.admin-list-actions {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-list-actions form {
+  margin: 0;
+}
+
 .action-buttons .btn {
   border-radius: 6px;
   padding: 6px 12px;
   font-size: 13px;
   font-weight: 600;
   width: 110px;
+}
+
+.admin-list-actions .btn {
+  min-width: 110px;
+  width: auto;
+}
+
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+  padding-top: 1rem !important;
+}
+
+.dataTables_wrapper .dataTables_paginate {
+  margin-left: auto;
+  white-space: nowrap;
 }
 
 .status-badge {
@@ -189,16 +244,7 @@ a:hover {
   }
 }
 
-/* Apply pending-doctors table layout across admin tables */
-.app-main .card .card-body {
-  overflow-x: auto;
-}
-
-.app-main .card .card-body .table {
-  width: 100% !important;
-  min-width: 900px;
-}
-
+/* Keep admin table cells compact without forcing every card to overflow. */
 .app-main .card .card-body .table td,
 .app-main .card .card-body .table th {
   white-space: nowrap;
