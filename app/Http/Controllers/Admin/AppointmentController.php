@@ -71,22 +71,16 @@ class AppointmentController extends Controller
 
         
         return $appointments->map(function ($item) {
-            return (object)[
-                'id' => $item->id,
-                'patient' => $item->patient->name ?? null,
-                'lastname' => $item->patient->lastname ?? null,
-                'doctor' => $item->doctor->name ?? null,
-                'surname' => $item->doctor->surname ?? null,
-                'speciality' => $item->doctor->speciality->title ?? null,
-                'speciality_id' => $item->doctor->speciality->id ?? null,
-                'country' => $item->doctor->countryRel->countryname ?? null,
-                'state' => $item->doctor->stateRel->name ?? null,
-
-                // include all appointment fields
-                'varAppointment' => $item->varAppointment,
-                'created_at' => $item->created_at,
-                'updated_at' => $item->updated_at,
-            ];
+            return (object) array_merge($item->getAttributes(), [
+                'patient' => $item->patient?->name,
+                'lastname' => $item->patient?->lastname,
+                'doctor' => $item->doctor?->name,
+                'surname' => $item->doctor?->surname,
+                'speciality' => $item->doctor?->speciality?->title,
+                'speciality_id' => $item->doctor?->speciality?->id,
+                'country' => $item->doctor?->countryRel?->countryname,
+                'state' => $item->doctor?->stateRel?->name,
+            ]);
         });
     }
 
