@@ -36,6 +36,9 @@
                     <div class="col-md-3">
                         <input type="text" id="filter_state" class="form-control" placeholder="Enter State">
                     </div>
+                    <div class="col-md-3">
+                        <input type="text" id="filter_search" class="form-control" placeholder="Search appointments">
+                    </div>
                 </div>
 
                 <table class="table table-bordered" id="appointment_table">
@@ -55,29 +58,13 @@
                         </tr>
                     </thead>
                     <tbody>
-                    @if(isset($appointmentData) && count($appointmentData) > 0)
-                        @foreach($appointmentData as $data)
-                            <tr class="align-middle">
-                                <td class="text-center">{{ $data->id }}</td>
-                                <td class="text-center">{{ $data->patient .' '. $data->lastname }}</td>
-                                <td class="text-center">{{ $data->doctor .' '. $data->surname }}</td>
-                                <td class="text-center">{{ $data->speciality }}</td>
-                                <td class="text-center">{{ \Carbon\Carbon::parse($data->varAppointment)->format('d F Y') }}</td>
-                                <td class="text-center">{!! $data->startTime !!} - {!! $data->endTime !!}</td>
-                                <td class="text-center">{{ $data->varSympton }}</td>
-                                <td class="text-center">{!! $data->varSymptondesc !!}</td>
-                                <td class="text-center">{!! ($data->chrIsAccepted == 'Y')? 'Yes' : 'No' !!}</td>
-                                <td class="text-center">{!! !empty($data->country)? $data->country : '-' !!}</td>  
-                                <td class="text-center">{!! !empty($data->state)? $data->state : '-' !!}</td>                                                                    
-                            </tr>
-                        @endforeach
-                    @else
-                        <tr>
-                            <td colspan="11" class="text-center">No records found</td>
-                        </tr>
-                     @endif    
+                        @include('admin.appointments.appointment_table')
                     </tbody>
                 </table>
+
+                <div id="appointment_pagination" class="mt-3">
+                    {{ $appointmentData->links('pagination::bootstrap-5') }}
+                </div>
             </div> <!-- /.card-body -->
         </div> <!-- /.card -->
     </div> <!-- /.col -->
@@ -99,25 +86,45 @@ $(document).ready(function() {
 
     loadSpecialities();
 
-    // Filter event handlers
-    $('#filter_date, #filter_doctor, #filter_speciality, #filter_country, #filter_state').change(function() {
-        const filters = {
+    function getFilters() {
+        return {
             date: $('#filter_date').val(),
             doctor: $('#filter_doctor').val(),
             speciality: $('#filter_speciality').val(),
             country: $('#filter_country').val(),
-            state: $('#filter_state').val()
+            state: $('#filter_state').val(),
+            search: $('#filter_search').val()
         };
+    }
 
-        // Make AJAX request to filter appointments
+    function loadAppointments(url = "{{ route('appointments.filter') }}") {
         $.ajax({
-            url: "{{ route('appointments.filter') }}",
+            url: url,
             method: "GET",
-            data: filters,
+            data: getFilters(),
             success: function(data) {
-                $('#appointment_table tbody').html(data);
+                $('#appointment_table tbody').html(data.rows);
+                $('#appointment_pagination').html(data.pagination);
             }
         });
+    }
+
+    let searchTimer;
+
+    $('#filter_date, #filter_speciality').change(function() {
+        loadAppointments();
+    });
+
+    $('#filter_doctor, #filter_country, #filter_state, #filter_search').on('keyup change', function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function() {
+            loadAppointments();
+        }, 400);
+    });
+
+    $(document).on('click', '#appointment_pagination a', function(e) {
+        e.preventDefault();
+        loadAppointments($(this).attr('href'));
     });
 });
 </script>
