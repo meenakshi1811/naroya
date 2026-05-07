@@ -35,8 +35,8 @@
                             <div class="mb-2">{{ $activity->description }}</div>
                             @if(!empty($activity->meta['old_fee']) || !empty($activity->meta['new_fee']))
                                 <div class="d-flex flex-wrap gap-2">
-                                    <span class="badge badge-pill badge-secondary">Old Fee: {{ $activity->meta['old_fee'] ?? '-' }}</span>
-                                    <span class="badge badge-pill badge-success">New Fee: {{ $activity->meta['new_fee'] ?? '-' }}</span>
+                                    <span class="badge badge-pill badge-secondary text-dark">Old Fee: {{ $activity->meta['old_fee'] ?? '-' }}</span>
+                                    <span class="badge badge-pill badge-success text-success">New Fee: {{ $activity->meta['new_fee'] ?? '-' }}</span>
                                 </div>
                             @endif
                         </div>

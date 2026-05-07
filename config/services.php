@@ -30,11 +30,9 @@ return [
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
-    'stripe' => [
-        'key' => env('STRIPE_KEY'),
-        'secret' => env('STRIPE_SECRET'),
-        'webhook_secret'      => env('STRIPE_WEBHOOK_SECRET'),
-        'test_webhook_secret' => env('STRIPE_TEST_WEBHOOK_SECRET'),
+    'raxorpay' => [
+        'key' => env('RAZORPAY_KEY'),
+        'secret' => env('RAZORPAY_SECRET'),
     ],
 
 ];

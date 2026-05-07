@@ -28,7 +28,7 @@
                             <th>Profile</th>
                             <th>Total Payment</th>
                             <th>Recent Payment</th>
-                            <th>Payment Ledger</th>
+                            {{-- <th>Payment Ledger</th> --}}
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -86,11 +86,11 @@
                             @endphp
                             <td>{{ number_format($data->total_payment, 2) }}</td>
                             <td id="remainingPayment_{{ $data->id }}">{{ ($data->recent_payment_amount >= 0) ? number_format($data->recent_payment_amount, 2) : '+'.number_format($data->recent_payment_amount, 2)}}</td>
-                            <td>
+                            {{-- <td>
                                 <a href="{{ route('admin.payment-ledger', $data->id) }}" class="btn btn-outline-primary btn-sm">
                                     View Ledger
                                 </a>
-                            </td>
+                            </td> --}}
                             {{--<td>
                                 <button class="btn btn-warning" onclick="openUpdatePaymentModal({{ $data->id }}, {{ $data->remaining_payment }})">Update Payment</button>
                             </td> --}}
