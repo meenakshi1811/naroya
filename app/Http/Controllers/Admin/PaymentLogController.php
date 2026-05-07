@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\PaymentLog;
 use App\Models\Payment;
 use App\Models\User;
+use App\Models\Payment;
 
 class PaymentLogController extends Controller
 {
