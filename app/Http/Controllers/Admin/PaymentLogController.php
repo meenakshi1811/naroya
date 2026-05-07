@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\PaymentLog;
+use App\Models\Payment;
 use App\Models\User;
 use App\Models\Payment;
 
@@ -27,13 +28,12 @@ class PaymentLogController extends Controller
     public function showPaymentLogs(Request $request)
     {
         $query = Payment::query()
-            ->leftJoin('users as patients', 'payments.patient_id', '=', 'patients.id')
+            ->leftJoin('patients', 'payments.patient_id', '=', 'patients.id')
             ->leftJoin('users as doctors', 'payments.doctor_id', '=', 'doctors.id')
-            ->leftJoin('appointment', 'payments.appointment_id', '=', 'appointment.id')
             ->select([
                 'payments.*',
                 'patients.name as patient_name',
-                'patients.surname as patient_surname',
+                'patients.lastname as patient_lastname',
                 'doctors.name as doctor_name',
                 'doctors.surname as doctor_surname',
                 'doctors.varFees as amount',

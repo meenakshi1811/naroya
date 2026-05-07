@@ -26,13 +26,13 @@
                     @foreach($paymentLogs as $index => $payment)
                         <tr>
                             <td>{{ $index + 1 }}</td>
-                            <td>{{ trim(($payment->patient_name ?? '') . ' ' . ($payment->patient_surname ?? '')) ?: '-' }}</td>
+                            <td>{{ trim(($payment->patient_name ?? '') . ' ' . ($payment->patient_lastname ?? '')) ?: '-' }}</td>
                             <td>{{ trim(($payment->doctor_name ?? '') . ' ' . ($payment->doctor_surname ?? '')) ?: '-' }}</td>
                             <td>{{ auth()->user()->name ?? 'Admin' }}</td>
                             <td>{{ $payment->appointment_id }}</td>
                             <td>₹{{ number_format((float) ($payment->amount ?? 0), 2) }}</td>
                             <td>{{ ucfirst($payment->status ?? '-') }}</td>
-                            <td>{{ optional($payment->created_at)->format('d M Y, h:i A') ?? '-' }}</td>
+                            <td>{{ !empty($payment->created_at) ? \Carbon\Carbon::parse($payment->created_at)->format('d M Y, h:i A') : '-' }}</td>
                             <td>
                                 @if(($payment->status ?? '') !== 'refunded' && !empty($payment->transaction_id))
                                     <button

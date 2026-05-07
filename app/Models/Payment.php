@@ -21,4 +21,14 @@ class Payment extends Model
         'appointment_id',
         'created_at',
     ];
+
+    public function patient()
+    {
+        return $this->belongsTo(Patients::class, 'patient_id');
+    }
+
+    public function doctor()
+    {
+        return $this->belongsTo(User::class, 'doctor_id');
+    }
 }
