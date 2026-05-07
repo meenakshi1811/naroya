@@ -1270,10 +1270,13 @@ class PatientController extends Controller
 
 
 
+                        $doctor = User::find($request->doctor); // doctor id maps to users.id
+
                         // Create the appointment
                         $appointment = new Appointment();
                         $appointment->patient_id = $patient->id; // Make sure you pass patient_id in request
                         $appointment->dr_id = $request->doctor;
+                        $appointment->amount = $doctor->varFees ?? null;
                         $appointment->varAppointment = $request->date; // Modify based on your needs
                         $appointment->startTime = $request->time_start;
                         $appointment->endTime = $request->time_end;
@@ -1283,8 +1286,6 @@ class PatientController extends Controller
                         $appointment->save();
 
 
-                        
-                        $doctor = User::find($request->doctor); // Assuming you have a Doctors model
                         if ($doctor && $doctor->fcm_token) {
                             $notificationController = new NotificationController();
                            $notificationController->sendPushNotification(

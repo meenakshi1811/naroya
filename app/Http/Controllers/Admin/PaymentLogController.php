@@ -29,13 +29,14 @@ class PaymentLogController extends Controller
         $query = Payment::query()
             ->leftJoin('patients', 'payments.patient_id', '=', 'patients.id')
             ->leftJoin('users as doctors', 'payments.doctor_id', '=', 'doctors.id')
+            ->leftJoin('appointment', 'payments.appointment_id', '=', 'appointment.id')
             ->select([
                 'payments.*',
                 'patients.name as patient_name',
                 'patients.lastname as patient_lastname',
                 'doctors.name as doctor_name',
                 'doctors.surname as doctor_surname',
-                'doctors.varFees as amount',
+                'appointment.amount as amount',
             ]);
 
         if ($request->filled('doctor_id')) {

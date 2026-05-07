@@ -19,6 +19,7 @@ class Appointment extends Model
         'id',
         'patient_id',
         'dr_id',
+        'amount',
         'varAppointment',
         'startTime',
         'endTime',
