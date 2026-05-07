@@ -2,6 +2,42 @@
 @section('content')
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap4.min.css">
 
+<style>
+    #refundModal .modal-content {
+        border: 0;
+        border-radius: 14px;
+        box-shadow: 0 14px 40px rgba(0, 0, 0, 0.18);
+    }
+
+    #refundModal .modal-header,
+    #refundModal .modal-footer {
+        border: 0;
+    }
+
+    #refundModal .modal-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    #refundModal .modal-body {
+        font-size: 1.12rem;
+        color: #374151;
+        padding-top: 0.25rem;
+    }
+
+    #refundModal .modal-footer {
+        gap: 0.5rem;
+    }
+
+    #refundModal .btn {
+        min-width: 96px;
+        font-weight: 600;
+        border-radius: 10px;
+        padding: 0.55rem 1rem;
+    }
+</style>
+
 <div class="container-fluid">
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -58,15 +94,13 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="refundModalLabel">Confirm Refund</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 Are you sure you want to refund this payment?
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
                 <button type="button" class="btn btn-danger" id="confirmRefundBtn">Yes, Refund</button>
             </div>
         </div>
@@ -88,11 +122,19 @@
 
         let selectedPaymentId = null;
         let selectedTransactionId = null;
+        const refundModalElement = document.getElementById('refundModal');
+        const refundModal = new bootstrap.Modal(refundModalElement);
+
+        refundModalElement.addEventListener('hidden.bs.modal', function () {
+            selectedPaymentId = null;
+            selectedTransactionId = null;
+            $('#confirmRefundBtn').prop('disabled', false).text('Yes, Refund');
+        });
 
         $(document).on('click', '.refund-btn', function () {
             selectedPaymentId = $(this).data('payment-id');
             selectedTransactionId = $(this).data('transaction-id');
-            $('#refundModal').modal('show');
+            refundModal.show();
         });
 
         $('#confirmRefundBtn').on('click', function () {
@@ -111,7 +153,7 @@
                     payment_method_id: selectedTransactionId,
                 },
                 success: function (response) {
-                    $('#refundModal').modal('hide');
+                    refundModal.hide();
                     alert(response.message || 'Refund successful.');
                     window.location.reload();
                 },
