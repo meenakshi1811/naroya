@@ -70,7 +70,7 @@
                             <td>{{ ucfirst($payment->status ?? '-') }}</td>
                             <td>{{ !empty($payment->created_at) ? \Carbon\Carbon::parse($payment->created_at)->format('d M Y, h:i A') : '-' }}</td>
                             <td>
-                                @if(($payment->status ?? '') !== 'refunded' && !empty($payment->transaction_id))
+                                @if(($payment->status ?? '') === 'success' && !empty($payment->transaction_id))
                                     <button
                                         class="btn btn-danger btn-sm refund-btn"
                                         data-payment-id="{{ $payment->id }}">

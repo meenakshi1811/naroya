@@ -288,6 +288,28 @@ class PaymentController extends Controller
         }
 
         try {
+            $paymentDetailsResponse = Http::withBasicAuth($razorpayKey, $razorpaySecret)
+                ->get('https://api.razorpay.com/v1/payments/' . $paymentTransactionId);
+
+            if (!$paymentDetailsResponse->ok()) {
+                return response()->json([
+                    'message' => 'Unable to verify payment details from Razorpay before refund.',
+                    'error' => $paymentDetailsResponse->json(),
+                    'payment_transaction_id' => $paymentTransactionId,
+                ], 400);
+            }
+
+            $paymentDetails = $paymentDetailsResponse->json();
+            $paymentStatus = $paymentDetails['status'] ?? null;
+
+            if ($paymentStatus !== 'captured') {
+                return response()->json([
+                    'message' => 'Only captured payments can be refunded.',
+                    'payment_transaction_id' => $paymentTransactionId,
+                    'razorpay_payment_status' => $paymentStatus,
+                ], 422);
+            }
+
             $refundResponse = Http::withBasicAuth($razorpayKey, $razorpaySecret)
                 ->post('https://api.razorpay.com/v1/payments/' . $paymentTransactionId . '/refund', [
                     'speed' => 'normal',
@@ -298,6 +320,7 @@ class PaymentController extends Controller
                     'message' => 'Unable to process refund from Razorpay.',
                     'error' => $refundResponse->json(),
                     'payment_transaction_id' => $paymentTransactionId,
+                    'razorpay_payment_status' => $paymentStatus,
                 ], 400);
             }
 
