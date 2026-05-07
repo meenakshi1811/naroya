@@ -41,26 +41,28 @@
                     </div>
                 </div>
 
-                <table class="table table-bordered" id="appointment_table">
-                    <thead>
-                        <tr>
-                            <th class="text-center" style="width: 60px">#</th>
-                            <th class="text-center">Patient</th>
-                            <th class="text-center">Doctor</th>
-                            <th class="text-center">Speciality</th>
-                            <th class="text-center">Appointment Date</th>
-                            <th class="text-center">Appointment Time</th>
-                            <th class="text-center">Symptom</th>
-                            <th class="text-center">Symptom Detail</th>
-                            <th class="text-center">Accepted</th>
-                            <th class="text-center">Country</th>
-                            <th class="text-center">State</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @include('admin.appointments.appointment_table')
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table table-bordered mb-0" id="appointment_table">
+                        <thead>
+                            <tr>
+                                <th class="text-center" style="width: 60px">#</th>
+                                <th class="text-center">Patient</th>
+                                <th class="text-center">Doctor</th>
+                                <th class="text-center">Speciality</th>
+                                <th class="text-center">Appointment Date</th>
+                                <th class="text-center">Appointment Time</th>
+                                <th class="text-center">Symptom</th>
+                                <th class="text-center">Symptom Detail</th>
+                                <th class="text-center">Accepted</th>
+                                <th class="text-center">Country</th>
+                                <th class="text-center">State</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @include('admin.appointments.appointment_table')
+                        </tbody>
+                    </table>
+                </div>
 
                 <div id="appointment_pagination" class="mt-3">
                     {{ $appointmentData->links('pagination::bootstrap-5') }}
