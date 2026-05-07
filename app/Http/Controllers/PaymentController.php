@@ -253,9 +253,60 @@ class PaymentController extends Controller
 
     public function processRefund(Request $request)
     {
-        return response()->json([
-            'message' => 'Refund initiated successfully.',
-            'data'    => $refund,
-        ], 200);
+        $request->validate([
+            'payment_method_id' => 'required|string',
+            'payment_id' => 'required|integer',
+        ]);
+
+        $payment = Payment::find($request->payment_id);
+        if (!$payment) {
+            return response()->json([
+                'message' => 'Payment record not found.',
+            ], 404);
+        }
+
+        if ($payment->status === 'refunded') {
+            return response()->json([
+                'message' => 'Payment is already refunded.',
+            ], 400);
+        }
+
+        $razorpayKey = config('services.razorpay.key');
+        $razorpaySecret = config('services.razorpay.secret');
+
+        if (empty($razorpayKey) || empty($razorpaySecret)) {
+            return response()->json([
+                'message' => 'Refund gateway is not configured.',
+            ], 500);
+        }
+
+        try {
+            $refundResponse = Http::withBasicAuth($razorpayKey, $razorpaySecret)
+                ->post('https://api.razorpay.com/v1/payments/' . $request->payment_method_id . '/refund', [
+                    'speed' => 'normal',
+                ]);
+
+            if (!$refundResponse->ok()) {
+                return response()->json([
+                    'message' => 'Unable to process refund from Razorpay.',
+                    'error' => $refundResponse->json(),
+                ], 400);
+            }
+
+            $payment->status = 'refunded';
+            $payment->save();
+
+            return response()->json([
+                'message' => 'Refund successful.',
+                'data' => $refundResponse->json(),
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Razorpay refund failed.', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'message' => 'Refund request failed.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }
