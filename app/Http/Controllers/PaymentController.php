@@ -119,8 +119,8 @@ class PaymentController extends Controller
         }
 
         try {
-            $razorpayKey    = env('RAZORPAY_KEY_ID');
-            $razorpaySecret = env('RAZORPAY_KEY_SECRET');
+            $razorpayKey    = config('services.razorpay.key');
+            $razorpaySecret = config('services.razorpay.secret');
 
             if (empty($razorpayKey) || empty($razorpaySecret)) {
                 Log::error('Razorpay credentials are missing.', [
