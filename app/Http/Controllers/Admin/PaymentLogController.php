@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\PaymentLog;
+use App\Models\Payment;
 use App\Models\User;
 
 class PaymentLogController extends Controller
@@ -25,18 +26,25 @@ class PaymentLogController extends Controller
 
     public function showPaymentLogs(Request $request)
     {
-        $query = PaymentLog::query();
-        $selectedDoctor = null;
+        $query = Payment::query()
+            ->leftJoin('patients', 'payments.patient_id', '=', 'patients.id')
+            ->leftJoin('users as doctors', 'payments.doctor_id', '=', 'doctors.id')
+            ->select([
+                'payments.*',
+                'patients.name as patient_name',
+                'patients.lastname as patient_lastname',
+                'doctors.name as doctor_name',
+                'doctors.surname as doctor_surname',
+                'doctors.varFees as amount',
+            ]);
 
         if ($request->filled('doctor_id')) {
-            $doctorId = (int) $request->doctor_id;
-            $query->where('dr_id', $doctorId);
-            $selectedDoctor = User::select('id', 'name', 'surname', 'email')->find($doctorId);
+            $query->where('payments.doctor_id', (int) $request->doctor_id);
         }
 
-        $paymentLogs = $query->get();
+        $paymentLogs = $query->orderByDesc('payments.id')->get();
 
-        return view('admin.payment', compact('paymentLogs', 'selectedDoctor'));
+        return view('admin.payment', compact('paymentLogs'));
     }
    
 }
