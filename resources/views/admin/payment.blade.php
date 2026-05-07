@@ -73,8 +73,7 @@
                                 @if(($payment->status ?? '') !== 'refunded' && !empty($payment->transaction_id))
                                     <button
                                         class="btn btn-danger btn-sm refund-btn"
-                                        data-payment-id="{{ $payment->id }}"
-                                        data-transaction-id="{{ $payment->transaction_id }}">
+                                        data-payment-id="{{ $payment->id }}">
                                         Refund
                                     </button>
                                 @else
@@ -121,24 +120,21 @@
         });
 
         let selectedPaymentId = null;
-        let selectedTransactionId = null;
         const refundModalElement = document.getElementById('refundModal');
         const refundModal = new bootstrap.Modal(refundModalElement);
 
         refundModalElement.addEventListener('hidden.bs.modal', function () {
             selectedPaymentId = null;
-            selectedTransactionId = null;
             $('#confirmRefundBtn').prop('disabled', false).text('Yes, Refund');
         });
 
         $(document).on('click', '.refund-btn', function () {
             selectedPaymentId = $(this).data('payment-id');
-            selectedTransactionId = $(this).data('transaction-id');
             refundModal.show();
         });
 
         $('#confirmRefundBtn').on('click', function () {
-            if (!selectedTransactionId || !selectedPaymentId) {
+            if (!selectedPaymentId) {
                 return;
             }
 
@@ -150,7 +146,6 @@
                 data: {
                     _token: '{{ csrf_token() }}',
                     payment_id: selectedPaymentId,
-                    payment_method_id: selectedTransactionId,
                 },
                 success: function (response) {
                     refundModal.hide();

@@ -254,7 +254,6 @@ class PaymentController extends Controller
     public function processRefund(Request $request)
     {
         $request->validate([
-            'payment_method_id' => 'required|string',
             'payment_id' => 'required|integer',
         ]);
 
@@ -280,9 +279,17 @@ class PaymentController extends Controller
             ], 500);
         }
 
+        $paymentTransactionId = trim((string) $payment->transaction_id);
+
+        if ($paymentTransactionId === '') {
+            return response()->json([
+                'message' => 'Payment transaction id is missing for this record.',
+            ], 422);
+        }
+
         try {
             $refundResponse = Http::withBasicAuth($razorpayKey, $razorpaySecret)
-                ->post('https://api.razorpay.com/v1/payments/' . $request->payment_method_id . '/refund', [
+                ->post('https://api.razorpay.com/v1/payments/' . $paymentTransactionId . '/refund', [
                     'speed' => 'normal',
                 ]);
 
@@ -290,6 +297,7 @@ class PaymentController extends Controller
                 return response()->json([
                     'message' => 'Unable to process refund from Razorpay.',
                     'error' => $refundResponse->json(),
+                    'payment_transaction_id' => $paymentTransactionId,
                 ], 400);
             }
 
