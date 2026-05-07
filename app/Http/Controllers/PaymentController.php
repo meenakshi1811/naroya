@@ -122,6 +122,27 @@ class PaymentController extends Controller
             $razorpayKey    = env('RAZORPAY_KEY_ID');
             $razorpaySecret = env('RAZORPAY_KEY_SECRET');
 
+            if (empty($razorpayKey) || empty($razorpaySecret)) {
+                Log::error('Razorpay credentials are missing.', [
+                    'has_key'    => !empty($razorpayKey),
+                    'has_secret' => !empty($razorpaySecret),
+                ]);
+
+                Payment::create([
+                    'status'         => 'failed',
+                    'transaction_id' => $request->payment_method_id,
+                    'patient_id'     => $patients->id,
+                    'doctor_id'      => $request->doctor,
+                    'appointment_id' => $request->appointment_id,
+                    'created_at'     => now(),
+                ]);
+
+                return response()->json([
+                    'message' => 'Payment gateway is not configured. Please contact support.',
+                    'data'    => ['error' => 'Missing Razorpay configuration'],
+                ], 500);
+            }
+
             $razorpayResponse = Http::withBasicAuth($razorpayKey, $razorpaySecret)
                 ->get('https://api.razorpay.com/v1/payments/' . $request->payment_method_id);
 
