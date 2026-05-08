@@ -17,10 +17,13 @@
                                 <th>No. of Appointments</th>
                                 <th>Transaction Entries</th>
                                 <th>Gross Amount (INR)</th>
+                                <th>Commission %</th>
+                                <th>Commission Amount (INR)</th>
                                 <th>Refunds</th>
                                 <th>Refund Amount (INR)</th>
                                 <th>Final Payout (INR)</th>
                                 <th>Completed Transfers</th>
+                                <th>Transfer Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -30,14 +33,26 @@
                                     <td>{{ $summary['appointment_count'] }}</td>
                                     <td>{{ $summary['transaction_count'] }}</td>
                                     <td>₹{{ number_format($summary['gross_amount'], 2) }}</td>
+                                    <td>{{ rtrim(rtrim(number_format($summary['commission_percentage'], 2), '0'), '.') }}%</td>
+                                    <td>₹{{ number_format($summary['commission_amount'], 2) }}</td>
                                     <td>{{ $summary['refund_count'] }}</td>
                                     <td>₹{{ number_format($summary['refund_amount'], 2) }}</td>
                                     <td><strong>₹{{ number_format($summary['final_payout'], 2) }}</strong></td>
                                     <td>{{ $summary['completed_transfers'] }}</td>
+                                    <td>
+                                        <form action="{{ route('admin.payment-ledger.mark-monthly-paid') }}" method="POST" onsubmit="return confirm('Mark all entries for {{ $summary['month_label'] }} as paid?');">
+                                            @csrf
+                                            <input type="hidden" name="month_key" value="{{ $summary['month_key'] }}">
+                                            @if(!empty($selectedDoctor))
+                                                <input type="hidden" name="doctor_id" value="{{ $selectedDoctor->id }}">
+                                            @endif
+                                            <button type="submit" class="btn btn-sm btn-success">Mark as Paid</button>
+                                        </form>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center">No monthly payout records found</td>
+                                    <td colspan="11" class="text-center">No monthly payout records found</td>
                                 </tr>
                             @endforelse
                         </tbody>
