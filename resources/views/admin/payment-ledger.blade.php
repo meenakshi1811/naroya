@@ -65,7 +65,7 @@
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h3 class="card-title mb-0">
-                Payment Ledger
+                Payment Ledger Details
                 @if(!empty($selectedDoctor))
                     - {{ trim(($selectedDoctor->name ?? '') . ' ' . ($selectedDoctor->surname ?? '')) }}
                 @endif
