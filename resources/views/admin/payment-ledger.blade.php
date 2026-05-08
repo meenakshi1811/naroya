@@ -75,12 +75,18 @@
                                             @csrf
                                             <input type="hidden" name="month_key" value="{{ $summary['month_key'] }}">
                                             <input type="hidden" name="doctor_id" value="{{ $summary['doctor_id'] }}">
-                                            <button
-                                                type="button"
-                                                class="btn btn-sm btn-success mark-paid-btn"
-                                                data-month-label="{{ $summary['month_label'] }}">
-                                                Mark as Paid
-                                            </button>
+                                            @if((int) ($summary['monthly_payout'] ?? 0) === 1)
+                                                <button type="button" class="btn btn-sm btn-secondary" disabled>
+                                                    Paid
+                                                </button>
+                                            @else
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-sm btn-success mark-paid-btn"
+                                                    data-month-label="{{ $summary['month_label'] }}">
+                                                    Mark as Paid
+                                                </button>
+                                            @endif
                                         </form>
                                     </td>
                                 </tr>
