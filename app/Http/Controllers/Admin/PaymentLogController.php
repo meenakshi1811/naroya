@@ -91,7 +91,7 @@ class PaymentLogController extends Controller
                 $date = !empty($log->transaction_time) ? Carbon::parse($log->transaction_time) : Carbon::now();
                 return $date->format('Y-m');
             })
-            ->map(function ($logs, $monthKey) {
+            ->map(function ($logs, $monthKey) use ($commissionPercentage) {
                 $appointmentIds = $logs->pluck('appointment_id')->filter()->unique();
                 $grossAmount = (float) $logs
                     ->filter(fn ($log) => stripos((string) $log->varStatus, 'refund') === false)
