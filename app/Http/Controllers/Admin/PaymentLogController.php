@@ -14,7 +14,12 @@ class PaymentLogController extends Controller
 {
     public function showPaymentLedger()
     {
-        $paymentLogs = PaymentLog::query()->orderByDesc('id')->get();
+        $startOfMonth = Carbon::now()->startOfMonth();
+        $endOfMonth = Carbon::now()->endOfMonth();
+        $paymentLogs = PaymentLog::query()
+            ->whereBetween('transaction_time', [$startOfMonth, $endOfMonth])
+            ->orderByDesc('id')
+            ->get();
         $commissionPercentage = $this->getCommissionPercentage();
         $monthlySummaries = $this->buildMonthlySummaries($paymentLogs, $commissionPercentage);
 
@@ -23,8 +28,13 @@ class PaymentLogController extends Controller
 
     public function showDoctorPaymentLedger($id)
     {
+        $startOfMonth = Carbon::now()->startOfMonth();
+        $endOfMonth = Carbon::now()->endOfMonth();
         $query = PaymentLog::query()->where('dr_id', (int) $id);
-        $paymentLogs = $query->orderByDesc('id')->get();
+        $paymentLogs = $query
+            ->whereBetween('transaction_time', [$startOfMonth, $endOfMonth])
+            ->orderByDesc('id')
+            ->get();
         $selectedDoctor = User::select('id', 'name', 'surname', 'email')->find($id);
         $commissionPercentage = $this->getCommissionPercentage();
         $monthlySummaries = $this->buildMonthlySummaries($paymentLogs, $commissionPercentage);
@@ -74,12 +84,18 @@ class PaymentLogController extends Controller
             $query->where('dr_id', (int) $request->doctor_id);
         }
 
+        $doctorIds = (clone $query)->pluck('dr_id')->filter()->unique()->values();
+
         $updatedCount = $query->where(function ($statusQuery) {
             $statusQuery->whereNull('varStatus')
                 ->orWhere('varStatus', '!=', 'completed');
         })->update([
             'varStatus' => 'completed',
         ]);
+
+        if ($doctorIds->isNotEmpty()) {
+            User::whereIn('id', $doctorIds)->update(['monthly_payout' => 1]);
+        }
 
         return redirect()->back()->with('success', "Marked {$updatedCount} records as paid for {$monthDate->format('F Y')}.");
     }
