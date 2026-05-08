@@ -7,14 +7,18 @@ use Illuminate\Http\Request;
 use App\Models\PaymentLog;
 use App\Models\Payment;
 use App\Models\User;
+use App\Models\GeneralSetting;
+use Carbon\Carbon;
 
 class PaymentLogController extends Controller
 {
     public function showPaymentLedger()
     {
         $paymentLogs = PaymentLog::query()->orderByDesc('id')->get();
+        $commissionPercentage = $this->getCommissionPercentage();
+        $monthlySummaries = $this->buildMonthlySummaries($paymentLogs, $commissionPercentage);
 
-        return view('admin.payment-ledger', compact('paymentLogs'));
+        return view('admin.payment-ledger', compact('paymentLogs', 'monthlySummaries', 'commissionPercentage'));
     }
 
     public function showDoctorPaymentLedger($id)
@@ -22,8 +26,10 @@ class PaymentLogController extends Controller
         $query = PaymentLog::query()->where('dr_id', (int) $id);
         $paymentLogs = $query->orderByDesc('id')->get();
         $selectedDoctor = User::select('id', 'name', 'surname', 'email')->find($id);
+        $commissionPercentage = $this->getCommissionPercentage();
+        $monthlySummaries = $this->buildMonthlySummaries($paymentLogs, $commissionPercentage);
 
-        return view('admin.payment-ledger', compact('paymentLogs', 'selectedDoctor'));
+        return view('admin.payment-ledger', compact('paymentLogs', 'selectedDoctor', 'monthlySummaries', 'commissionPercentage'));
     }
 
     public function showPaymentLogs(Request $request)
@@ -48,5 +54,75 @@ class PaymentLogController extends Controller
         $paymentLogs = $query->orderByDesc('payments.id')->get();
 
         return view('admin.payment', compact('paymentLogs'));
+    }
+
+    public function markMonthlyPayoutAsPaid(Request $request)
+    {
+        $request->validate([
+            'month_key' => 'required|date_format:Y-m',
+            'doctor_id' => 'nullable|integer',
+        ]);
+
+        $monthDate = Carbon::createFromFormat('Y-m', $request->month_key);
+        $startOfMonth = $monthDate->copy()->startOfMonth();
+        $endOfMonth = $monthDate->copy()->endOfMonth();
+
+        $query = PaymentLog::query()
+            ->whereBetween('transaction_time', [$startOfMonth, $endOfMonth]);
+
+        if ($request->filled('doctor_id')) {
+            $query->where('dr_id', (int) $request->doctor_id);
+        }
+
+        $updatedCount = $query->where(function ($statusQuery) {
+            $statusQuery->whereNull('varStatus')
+                ->orWhere('varStatus', '!=', 'completed');
+        })->update([
+            'varStatus' => 'completed',
+        ]);
+
+        return redirect()->back()->with('success', "Marked {$updatedCount} records as paid for {$monthDate->format('F Y')}.");
+    }
+
+    private function buildMonthlySummaries($paymentLogs, float $commissionPercentage)
+    {
+        return $paymentLogs
+            ->groupBy(function ($log) {
+                $date = !empty($log->transaction_time) ? Carbon::parse($log->transaction_time) : Carbon::now();
+                return $date->format('Y-m');
+            })
+            ->map(function ($logs, $monthKey) use ($commissionPercentage) {
+                $appointmentIds = $logs->pluck('appointment_id')->filter()->unique();
+                $grossAmount = (float) $logs
+                    ->filter(fn ($log) => stripos((string) $log->varStatus, 'refund') === false)
+                    ->sum('amount');
+
+                $refundLogs = $logs->filter(fn ($log) => stripos((string) $log->varStatus, 'refund') !== false);
+                $refundAmount = (float) $refundLogs->sum('amount');
+                $commissionAmount = ($grossAmount * $commissionPercentage) / 100;
+                $finalPayout = $grossAmount - $commissionAmount - $refundAmount;
+                $completedTransfers = $logs->filter(fn ($log) => strtolower((string) $log->varStatus) === 'completed')->count();
+
+                return [
+                    'month_key' => $monthKey,
+                    'month_label' => Carbon::createFromFormat('Y-m', $monthKey)->format('F Y'),
+                    'appointment_count' => $appointmentIds->count(),
+                    'transaction_count' => $logs->count(),
+                    'gross_amount' => $grossAmount,
+                    'commission_percentage' => $commissionPercentage,
+                    'commission_amount' => $commissionAmount,
+                    'refund_count' => $refundLogs->count(),
+                    'refund_amount' => $refundAmount,
+                    'final_payout' => $finalPayout,
+                    'completed_transfers' => $completedTransfers,
+                ];
+            })
+            ->sortByDesc('month_key')
+            ->values();
+    }
+
+    private function getCommissionPercentage(): float
+    {
+        return (float) (GeneralSetting::where('field_name', 'percentage')->value('field_value') ?? 0);
     }
 }
