@@ -26,6 +26,7 @@
                         <thead>
                             <tr>
                                 <th>Month</th>
+                                <th>Doctor</th>
                                 <th>No. of Appointments</th>
                                 <th>Transaction Entries</th>
                                 <th>Gross Amount (INR)</th>
@@ -42,6 +43,7 @@
                             @forelse($monthlySummaries as $summary)
                                 <tr>
                                     <td><span class="badge badge-warning text-dark">{{ $summary['month_label'] }}</span></td>
+                                    <td>{{ $summary['doctor_name'] }}</td>
                                     <td>{{ $summary['appointment_count'] }}</td>
                                     <td>{{ $summary['transaction_count'] }}</td>
                                     <td>₹{{ number_format($summary['gross_amount'], 2) }}</td>
@@ -55,9 +57,7 @@
                                         <form action="{{ route('admin.payment-ledger.mark-monthly-paid') }}" method="POST" class="mark-paid-form">
                                             @csrf
                                             <input type="hidden" name="month_key" value="{{ $summary['month_key'] }}">
-                                            @if(!empty($selectedDoctor))
-                                                <input type="hidden" name="doctor_id" value="{{ $selectedDoctor->id }}">
-                                            @endif
+                                            <input type="hidden" name="doctor_id" value="{{ $summary['doctor_id'] }}">
                                             <button
                                                 type="button"
                                                 class="btn btn-sm btn-success mark-paid-btn"
@@ -69,7 +69,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="11" class="text-center">No monthly payout records found</td>
+                                    <td colspan="12" class="text-center">No monthly payout records found</td>
                                 </tr>
                             @endforelse
                         </tbody>
