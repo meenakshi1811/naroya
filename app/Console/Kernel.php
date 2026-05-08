@@ -14,6 +14,7 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('meeting:reminder')->everyMinute();
         $schedule->command('reset:bookcount')->daily();
+        $schedule->command('payout:reset-monthly')->monthlyOn(1, '00:05');
     }
 
     /**
