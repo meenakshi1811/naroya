@@ -68,16 +68,24 @@ class PaymentLogController extends Controller
         $startOfMonth = $monthDate->copy()->startOfMonth();
         $endOfMonth = $monthDate->copy()->endOfMonth();
 
-        $query = PaymentLog::query()
+        $paymentQuery = Payment::query()
+            ->whereBetween('created_at', [$startOfMonth, $endOfMonth]);
+
+        if ($request->filled('doctor_id')) {
+            $paymentQuery->where('doctor_id', (int) $request->doctor_id);
+        }
+
+        $doctorIds = (clone $paymentQuery)->pluck('doctor_id')->filter()->unique()->values();
+        $paymentUpdatedCount = $paymentQuery->update(['monthly_payout' => 1]);
+
+        $logQuery = PaymentLog::query()
             ->whereBetween('transaction_time', [$startOfMonth, $endOfMonth]);
 
         if ($request->filled('doctor_id')) {
-            $query->where('dr_id', (int) $request->doctor_id);
+            $logQuery->where('dr_id', (int) $request->doctor_id);
         }
 
-        $doctorIds = (clone $query)->pluck('dr_id')->filter()->unique()->values();
-
-        $updatedCount = $query->where(function ($statusQuery) {
+        $updatedCount = $logQuery->where(function ($statusQuery) {
             $statusQuery->whereNull('varStatus')
                 ->orWhere('varStatus', '!=', 'completed');
         })->update([
@@ -88,7 +96,11 @@ class PaymentLogController extends Controller
             User::whereIn('id', $doctorIds)->update(['monthly_payout' => 1]);
         }
 
-        return redirect()->back()->with('success', "Marked {$updatedCount} records as paid for {$monthDate->format('F Y')}.");
+        if ($paymentUpdatedCount === 0 && $updatedCount === 0) {
+            return redirect()->back()->with('error', "No payout records found to mark as paid for {$monthDate->format('F Y')}.");
+        }
+
+        return redirect()->back()->with('success', "Marked {$paymentUpdatedCount} payment records as paid for {$monthDate->format('F Y')}.");
     }
 
     private function buildMonthlySummariesForDoctors(Carbon $startOfMonth, Carbon $endOfMonth, float $commissionPercentage, ?int $doctorId = null)
