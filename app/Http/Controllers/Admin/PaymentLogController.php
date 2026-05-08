@@ -12,16 +12,18 @@ class PaymentLogController extends Controller
 {
     public function showPaymentLedger()
     {
-        return view('admin.payment');
+        $paymentLogs = PaymentLog::query()->orderByDesc('id')->get();
+
+        return view('admin.payment-ledger', compact('paymentLogs'));
     }
 
     public function showDoctorPaymentLedger($id)
     {
         $query = PaymentLog::query()->where('dr_id', (int) $id);
-        $paymentLogs = $query->get();
+        $paymentLogs = $query->orderByDesc('id')->get();
         $selectedDoctor = User::select('id', 'name', 'surname', 'email')->find($id);
 
-        return view('admin.payment', compact('paymentLogs', 'selectedDoctor'));
+        return view('admin.payment-ledger', compact('paymentLogs', 'selectedDoctor'));
     }
 
     public function showPaymentLogs(Request $request)
@@ -47,5 +49,4 @@ class PaymentLogController extends Controller
 
         return view('admin.payment', compact('paymentLogs'));
     }
-   
 }
