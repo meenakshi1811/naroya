@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use App\Models\PaymentLog;
 use App\Models\Payment;
 use App\Models\User;
-use App\Models\Appointment;
 use App\Models\GeneralSetting;
 use Carbon\Carbon;
 
@@ -107,20 +106,32 @@ class PaymentLogController extends Controller
         $monthLabel = $startOfMonth->format('F Y');
 
         return $doctors->map(function ($doctor) use ($startOfMonth, $endOfMonth, $commissionPercentage, $monthKey, $monthLabel) {
-                $appointmentQuery = Appointment::query()
-                    ->where('dr_id', $doctor->id)
-                    ->whereBetween('varAppointment', [$startOfMonth->toDateString(), $endOfMonth->toDateString()]);
-
-                $appointmentCount = $appointmentQuery->count();
-                $grossAmount = (float) $appointmentQuery->sum('amount');
-
-                $refundLogs = PaymentLog::query()
-                    ->where('dr_id', $doctor->id)
-                    ->whereBetween('transaction_time', [$startOfMonth, $endOfMonth])
-                    ->where('varStatus', 'like', '%refund%')
+                $paymentRows = Payment::query()
+                    ->leftJoin('appointment', 'payments.appointment_id', '=', 'appointment.id')
+                    ->where('payments.doctor_id', $doctor->id)
+                    ->whereBetween('payments.created_at', [$startOfMonth, $endOfMonth])
+                    ->select([
+                        'payments.status',
+                        'payments.appointment_id',
+                        'appointment.amount as appointment_amount',
+                    ])
                     ->get();
+
+                $appointmentCount = $paymentRows->pluck('appointment_id')->filter()->unique()->count();
+                $transactionCount = $paymentRows->count();
+                $grossAmount = (float) $paymentRows
+                    ->filter(fn ($row) => strtolower((string) $row->status) === 'success')
+                    ->sum(function ($row) {
+                        return (float) ($row->appointment_amount ?? 0);
+                    });
+
+                $refundRows = $paymentRows->filter(function ($row) {
+                    return str_contains(strtolower((string) $row->status), 'refund');
+                });
                 $commissionAmount = ($grossAmount * $commissionPercentage) / 100;
-                $refundAmount = (float) $refundLogs->sum('amount');
+                $refundAmount = (float) $refundRows->sum(function ($row) {
+                    return (float) ($row->appointment_amount ?? 0);
+                });
                 $finalPayout = $grossAmount - $commissionAmount - $refundAmount;
                 $completedTransfers = PaymentLog::query()
                     ->where('dr_id', $doctor->id)
@@ -134,11 +145,11 @@ class PaymentLogController extends Controller
                     'month_key' => $monthKey,
                     'month_label' => $monthLabel,
                     'appointment_count' => $appointmentCount,
-                    'transaction_count' => $appointmentCount,
+                    'transaction_count' => $transactionCount,
                     'gross_amount' => $grossAmount,
                     'commission_percentage' => $commissionPercentage,
                     'commission_amount' => $commissionAmount,
-                    'refund_count' => $refundLogs->count(),
+                    'refund_count' => $refundRows->count(),
                     'refund_amount' => $refundAmount,
                     'final_payout' => $finalPayout,
                     'completed_transfers' => $completedTransfers,
