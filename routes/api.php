@@ -49,7 +49,9 @@ Route::middleware('auth:api')->group(function () {
      Route::post('/doctor/schedule',[App\Http\Controllers\AuthController::class, 'getSchedule']);
      Route::post('/doctor/prescription',[App\Http\Controllers\AppointmentController::class, 'handlePrescription']);
      Route::post('/update-payment-setup', [App\Http\Controllers\PaymentController::class, 'updatePaymentSetupStatus']);
-     Route::post('/logout', [App\Http\Controllers\AuthController::class, 'logout']);
+    Route::post('/doctor/bank-details', [App\Http\Controllers\DoctorBankDetailController::class, 'upsert']);
+    Route::get('/doctor/bank-details/{doctorId}', [App\Http\Controllers\DoctorBankDetailController::class, 'showByDoctorId']);
+    Route::post('/logout', [App\Http\Controllers\AuthController::class, 'logout']);
 
 });
 
