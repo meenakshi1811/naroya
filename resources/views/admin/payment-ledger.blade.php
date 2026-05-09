@@ -36,7 +36,21 @@
         <div class="col-12">
             <div class="card card-outline card-info">
                 <div class="card-header">
-                    <h4 class="card-title mb-0">Monthly Doctor Payout Overview</h4>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <h4 class="card-title mb-0">Monthly Doctor Payout Overview</h4>
+                        <form method="GET" action="{{ isset($selectedDoctor) ? route('admin.payment-ledger.doctor', $selectedDoctor->id) : route('admin.payment-ledger') }}" class="d-flex gap-2 align-items-center">
+                            <select name="year" class="form-control form-control-sm" onchange="this.form.submit()">
+                                @foreach($yearOptions as $yearOption)
+                                    <option value="{{ $yearOption }}" {{ (int) $selectedYear === (int) $yearOption ? 'selected' : '' }}>{{ $yearOption }}</option>
+                                @endforeach
+                            </select>
+                            <select name="month" class="form-control form-control-sm" onchange="this.form.submit()">
+                                @foreach($monthOptions as $monthNumber => $monthLabel)
+                                    <option value="{{ $monthNumber }}" {{ (int) $selectedMonth === (int) $monthNumber ? 'selected' : '' }}>{{ $monthLabel }}</option>
+                                @endforeach
+                            </select>
+                        </form>
+                    </div>
                 </div>
                 <div class="card-body table-responsive p-0">
                     <table class="table table-hover mb-0">
