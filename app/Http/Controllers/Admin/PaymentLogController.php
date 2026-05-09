@@ -12,25 +12,25 @@ use Carbon\Carbon;
 
 class PaymentLogController extends Controller
 {
-    public function showPaymentLedger()
+    public function showPaymentLedger(Request $request)
     {
-        $startOfMonth = Carbon::now()->startOfMonth();
-        $endOfMonth = Carbon::now()->endOfMonth();
+        [$selectedYear, $selectedMonth, $startOfMonth, $endOfMonth] = $this->resolveLedgerMonthSelection($request);
         $commissionPercentage = $this->getCommissionPercentage();
         $monthlySummaries = $this->buildMonthlySummariesForDoctors($startOfMonth, $endOfMonth, $commissionPercentage);
+        [$yearOptions, $monthOptions] = $this->buildYearAndMonthOptions($selectedYear);
 
-        return view('admin.payment-ledger', compact('monthlySummaries', 'commissionPercentage'));
+        return view('admin.payment-ledger', compact('monthlySummaries', 'commissionPercentage', 'selectedYear', 'selectedMonth', 'yearOptions', 'monthOptions'));
     }
 
-    public function showDoctorPaymentLedger($id)
+    public function showDoctorPaymentLedger(Request $request, $id)
     {
-        $startOfMonth = Carbon::now()->startOfMonth();
-        $endOfMonth = Carbon::now()->endOfMonth();
+        [$selectedYear, $selectedMonth, $startOfMonth, $endOfMonth] = $this->resolveLedgerMonthSelection($request);
         $selectedDoctor = User::select('id', 'name', 'surname', 'email')->find($id);
         $commissionPercentage = $this->getCommissionPercentage();
         $monthlySummaries = $this->buildMonthlySummariesForDoctors($startOfMonth, $endOfMonth, $commissionPercentage, (int) $id);
+        [$yearOptions, $monthOptions] = $this->buildYearAndMonthOptions($selectedYear);
 
-        return view('admin.payment-ledger', compact('selectedDoctor', 'monthlySummaries', 'commissionPercentage'));
+        return view('admin.payment-ledger', compact('selectedDoctor', 'monthlySummaries', 'commissionPercentage', 'selectedYear', 'selectedMonth', 'yearOptions', 'monthOptions'));
     }
 
     public function showPaymentLogs(Request $request)
@@ -125,6 +125,7 @@ class PaymentLogController extends Controller
                     ->select([
                         'payments.status',
                         'payments.appointment_id',
+                        'payments.monthly_payout',
                         'appointment.amount as appointment_amount',
                     ])
                     ->get();
@@ -150,6 +151,9 @@ class PaymentLogController extends Controller
                     ->whereBetween('transaction_time', [$startOfMonth, $endOfMonth])
                     ->where('varStatus', 'completed')
                     ->count();
+                $isMonthPaid = $transactionCount > 0 && $paymentRows->every(function ($row) {
+                    return (int) ($row->monthly_payout ?? 0) === 1;
+                });
 
                 return [
                     'doctor_id' => $doctor->id,
@@ -165,11 +169,58 @@ class PaymentLogController extends Controller
                     'refund_amount' => $refundAmount,
                     'final_payout' => $finalPayout,
                     'completed_transfers' => $completedTransfers,
-                    'monthly_payout' => (int) ($doctor->monthly_payout ?? 0),
+                    'monthly_payout' => $isMonthPaid ? 1 : 0,
                 ];
             })
             ->sortBy('doctor_name')
             ->values();
+    }
+
+    private function resolveLedgerMonthSelection(Request $request): array
+    {
+        $now = Carbon::now();
+        $currentYear = (int) $now->year;
+        $currentMonth = (int) $now->month;
+
+        $selectedYear = (int) $request->query('year', $currentYear);
+        if ($selectedYear < 2026 || $selectedYear > $currentYear) {
+            $selectedYear = $currentYear;
+        }
+
+        $maxMonthForYear = $selectedYear === $currentYear ? $currentMonth : 12;
+        $selectedMonth = (int) $request->query('month', $currentMonth);
+        if ($selectedMonth < 1 || $selectedMonth > $maxMonthForYear) {
+            $selectedMonth = $maxMonthForYear;
+        }
+
+        $selectedDate = Carbon::create($selectedYear, $selectedMonth, 1);
+
+        return [
+            $selectedYear,
+            $selectedMonth,
+            $selectedDate->copy()->startOfMonth(),
+            $selectedDate->copy()->endOfMonth(),
+        ];
+    }
+
+    private function buildYearAndMonthOptions(int $selectedYear): array
+    {
+        $now = Carbon::now();
+        $currentYear = (int) $now->year;
+        $currentMonth = (int) $now->month;
+
+        $yearStart = 2026;
+        if ($currentYear < $yearStart) {
+            $yearStart = $currentYear;
+        }
+
+        $yearOptions = collect(range($yearStart, $currentYear))->reverse()->values()->all();
+        $maxMonthForYear = $selectedYear === $currentYear ? $currentMonth : 12;
+        $monthOptions = collect(range(1, $maxMonthForYear))
+            ->mapWithKeys(fn ($month) => [$month => Carbon::create(2000, $month, 1)->format('F')])
+            ->all();
+
+        return [$yearOptions, $monthOptions];
     }
 
     private function getCommissionPercentage(): float
