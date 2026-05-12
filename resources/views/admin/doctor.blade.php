@@ -28,6 +28,7 @@
                             <th>Profile</th>
                             <th>Total Payment</th>
                             <th>Recent Payment</th>
+                            <th>Bank Details</th>
                             {{-- <th>Payment Ledger</th> --}}
                             <th>Actions</th>
                         </tr>
@@ -82,10 +83,24 @@
                                 'varGraduation' => $data->varGraduation,
                                 'varGraduationYear' => $data->varGraduationYear,
                                 'chrApproval' => $data->chrApproval,
+                                'bank_name' => optional($data->bank_detail)->bank_name,
+                                'account_holder_name' => optional($data->bank_detail)->account_holder_name,
+                                'account_type' => optional($data->bank_detail)->account_type,
+                                'account_number' => optional($data->bank_detail)->account_number,
+                                'ifsc_code' => optional($data->bank_detail)->ifsc_code,
                             ];
                             @endphp
                             <td>{{ number_format($data->total_payment, 2) }}</td>
                             <td id="remainingPayment_{{ $data->id }}">{{ ($data->recent_payment_amount >= 0) ? number_format($data->recent_payment_amount, 2) : '+'.number_format($data->recent_payment_amount, 2)}}</td>
+                            <td>
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-primary btn-sm bank-detail-btn"
+                                    data-toggle="modal"
+                                    data-target="#bankDetailModal"
+                                    onclick='openBankModal(@json($modalData))'
+                                >View Details</button>
+                            </td>
                             {{-- <td>
                                 <a href="{{ route('admin.payment-ledger', $data->id) }}" class="btn btn-outline-primary btn-sm">
                                     View Ledger
@@ -111,7 +126,7 @@
                         @endforeach
                         @else
                         <tr>
-                            <td colspan="11" class="text-center">No records found</td>
+                            <td colspan="9" class="text-center">No records found</td>
                         </tr>
                         @endif
                     </tbody>
@@ -161,6 +176,64 @@
     </div>
 </div>
 
+
+
+<div class="modal fade" id="bankDetailModal" tabindex="-1" role="dialog" aria-labelledby="bankDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content bank-detail-modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bankDetailModalLabel">Doctor Bank Details</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="bank-detail-grid">
+                    <div><div class="detail-label">Bank Name</div><div class="detail-value" id="bankModalBankName">-</div></div>
+                    <div><div class="detail-label">Account Holder Name</div><div class="detail-value" id="bankModalAccountHolderName">-</div></div>
+                    <div><div class="detail-label">Account Type</div><div class="detail-value" id="bankModalAccountType">-</div></div>
+                    <div><div class="detail-label">Account Number</div><div class="detail-value" id="bankModalAccountNumber">-</div></div>
+                    <div><div class="detail-label">IFSC Code</div><div class="detail-value" id="bankModalIfscCode">-</div></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bank-detail-btn {
+        min-width: 115px;
+        font-weight: 600;
+    }
+
+    .bank-detail-modal-content {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 15px 45px rgba(28, 39, 60, 0.14);
+    }
+
+    .bank-detail-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .bank-detail-grid > div {
+        background: #f8f9fb;
+        border: 1px solid #e7ebf2;
+        border-radius: 10px;
+        padding: 10px 12px;
+    }
+
+    @media (min-width: 768px) {
+        .bank-detail-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+</style>
 
 <!-- Update Payment Modal -->
 <div class="modal fade" id="updatePaymentModal" tabindex="-1" role="dialog" aria-labelledby="updatePaymentModalLabel" aria-hidden="true">
@@ -218,6 +291,14 @@
         }
     }
 
+
+    function openBankModal(data) {
+        document.getElementById('bankModalBankName').innerText = data.bank_name || '-';
+        document.getElementById('bankModalAccountHolderName').innerText = data.account_holder_name || '-';
+        document.getElementById('bankModalAccountType').innerText = data.account_type || '-';
+        document.getElementById('bankModalAccountNumber').innerText = data.account_number || '-';
+        document.getElementById('bankModalIfscCode').innerText = data.ifsc_code || '-';
+    }
 
     function renderBadgeList(elementId, items) {
         var container = document.getElementById(elementId);
@@ -302,7 +383,7 @@
             "scrollX": true,
             "columnDefs": [
                 {
-                    "targets": [10],
+                    "targets": [7, 8],
                     "orderable": false
                 }
             ]
