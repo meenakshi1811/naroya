@@ -27,7 +27,7 @@ Route::get('/countries',[App\Http\Controllers\AuthController::class, 'countries'
 Route::get('/languages',[App\Http\Controllers\AuthController::class, 'languages']);
 Route::post('/forget-password',[App\Http\Controllers\ForgetPasswordController::class, 'EmailSend']);
 
-Route::get('/state/{countryId}',[App\Http\Controllers\AuthController::class, 'stateList']);
+Route::get('/state-list',[App\Http\Controllers\AuthController::class, 'stateList']);
 
 Route::get('/speciality', [App\Http\Controllers\AuthController::class, 'speciality']);
 Route::post('/stripe/webhook', [App\Http\Controllers\StripeWebhookController::class, 'handle']);

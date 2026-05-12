@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Passport\Http\Controllers\AccessTokenController;
 use App\Models\User;
+use App\Models\State;
 use App\Models\Appointment;
 use App\Models\Block;
 use Illuminate\Support\Facades\Hash;
@@ -931,10 +932,8 @@ class AuthController extends Controller
         ], 200);
     } 
 
-    public function stateList($countryId){
-        $states = DB::table('states')
-                        ->where('country_id',$countryId)
-                        ->get();
+    public function stateList(){
+        $states = State::orderBy('name','asc')->get();
         return response()->json([
             'message' => 'success',
             'data'=>[

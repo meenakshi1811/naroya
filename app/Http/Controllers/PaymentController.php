@@ -31,47 +31,14 @@ class PaymentController extends Controller
     /**
      * Helper to set the correct Stripe API key based on test_mode.
      */
-    private function setStripeKey($testMode = 'N', $doctorTestMode = 'N')
-    {
-        if ($testMode === 'Y' && $doctorTestMode === 'Y') {
-            Stripe::setApiKey(env('STRIPE__test_SECRET'));
-        } else {
-            Stripe::setApiKey(env('STRIPE_SECRET'));
-        }
-    }
+
 
     public function showPaymentForm()
     {
         return view('payment');
     }
 
-    public function createPaymentMethod(Request $request)
-    {
-        // Use test_mode from request if provided
-        $testMode = $request->input('test_mode', 'N');
-        $this->setStripeKey($testMode, $testMode); // both sides must agree
 
-        try {
-            $paymentMethod = PaymentMethod::create([
-                'type' => 'card',
-                'card' => [
-                    'number'    => '4242424242424242',
-                    'exp_month' => 12,
-                    'exp_year'  => 2025,
-                    'cvc'       => '123',
-                ],
-            ]);
-
-            return response()->json([
-                'payment_method_id' => $paymentMethod->id,
-                'message'           => 'Payment method created successfully.',
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => $e->getMessage(),
-            ], 400);
-        }
-    }
 
     public function ProcessPayment(Request $request)
     {
@@ -203,53 +170,7 @@ class PaymentController extends Controller
         }
     }
 
-    public function updatePaymentSetupStatus(Request $request)
-    {
-        try {
-            $userData = $request->user();
-            $userId   = $userData->id;
-            $testMode = $request->input('test_mode', 'N');
-
-            $user = User::findOrFail($userId);
-
-            if (!$user || !$user->stripe_account_id) {
-                return response()->json([
-                    'message'                => 'Stripe account not found for this user.',
-                    'isPaymentFlowRegistered' => false,
-                ], 200);
-            }
-
-            // ── Set correct Stripe key ───────────────────────────────────────
-            $this->setStripeKey($testMode, $testMode);
-
-            $account = Account::retrieve($user->stripe_account_id);
-
-            if ($account->charges_enabled && $account->payouts_enabled) {
-                $user->isPaymentFlowRegistered = true;
-                $user->save();
-
-                return response()->json([
-                    'message'                => 'Payment setup completed successfully.',
-                    'isPaymentFlowRegistered' => true,
-                    'test_mode'              => $testMode,
-                ]);
-            } else {
-                $user->isPaymentFlowRegistered = false;
-                $user->save();
-
-                return response()->json([
-                    'message'                => 'Payment setup is incomplete or not enabled.',
-                    'isPaymentFlowRegistered' => false,
-                    'test_mode'              => $testMode,
-                ]);
-            }
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Error retrieving Stripe account status.',
-                'error'   => $e->getMessage(),
-            ], 500);
-        }
-    }
+  
 
     public function processRefund(Request $request)
     {
@@ -290,7 +211,7 @@ class PaymentController extends Controller
         try {
             $paymentDetailsResponse = Http::withBasicAuth($razorpayKey, $razorpaySecret)
                 ->get('https://api.razorpay.com/v1/payments/' . $paymentTransactionId);
-
+          
             if (!$paymentDetailsResponse->ok()) {
                 return response()->json([
                     'message' => 'Unable to verify payment details from Razorpay before refund.',
@@ -301,7 +222,7 @@ class PaymentController extends Controller
 
             $paymentDetails = $paymentDetailsResponse->json();
             $paymentStatus = $paymentDetails['status'] ?? null;
-
+            
             if ($paymentStatus !== 'captured') {
                 return response()->json([
                     'message' => 'Only captured payments can be refunded.',
@@ -310,10 +231,16 @@ class PaymentController extends Controller
                 ], 422);
             }
 
-            $refundResponse = Http::withBasicAuth($razorpayKey, $razorpaySecret)
-                ->post('https://api.razorpay.com/v1/payments/' . $paymentTransactionId . '/refund', [
-                    'speed' => 'normal',
-                ]);
+           $refundResponse = Http::withBasicAuth($razorpayKey, $razorpaySecret)
+            ->asJson()
+            ->post("https://api.razorpay.com/v1/payments/{$paymentTransactionId}/refund", [
+                'amount' => 50000,
+            ]);
+
+            dd($refundResponse->status(), $refundResponse->json());
+
+
+            // echo'<pre>';print_r($refundResponse);exit();
 
             if (!$refundResponse->ok()) {
                 return response()->json([
@@ -332,6 +259,8 @@ class PaymentController extends Controller
                 'data' => $refundResponse->json(),
             ], 200);
         } catch (\Exception $e) {
+            echo'<pre>';print_r($e->getMessage());exit();
+
             Log::error('Razorpay refund failed.', ['error' => $e->getMessage()]);
 
             return response()->json([

@@ -148,9 +148,9 @@
                     payment_id: selectedPaymentId,
                 },
                 success: function (response) {
-                    refundModal.hide();
-                    alert(response.message || 'Refund successful.');
-                    window.location.reload();
+                    //refundModal.hide();
+                    //alert(response.message || 'Refund successful.');
+                    //window.location.reload();
                 },
                 error: function (xhr) {
                     const message = xhr.responseJSON?.message || 'Refund failed. Please try again.';
