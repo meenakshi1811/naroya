@@ -8,6 +8,7 @@ use Laravel\Passport\HasApiTokens;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Pagination\LengthAwarePaginator;
+use App\Models\Language;
 // use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable 
@@ -115,6 +116,33 @@ class User extends Authenticatable
             if (!is_null($patientId)) {
                 $doctor->isFavouriteFlag = $favouriteMap[$doctor->id] ?? 'N';
             }
+
+            $languageIds = $doctor->language_ids ?? [];
+            if (is_string($languageIds)) {
+                $decodedLanguageIds = json_decode($languageIds, true);
+                $languageIds = is_array($decodedLanguageIds) ? $decodedLanguageIds : [];
+            }
+            if (!is_array($languageIds)) {
+                $languageIds = [];
+            }
+
+            $languageIds = collect($languageIds)
+                ->map(fn ($languageId) => (int) $languageId)
+                ->filter(fn ($languageId) => $languageId > 0)
+                ->unique()
+                ->values()
+                ->all();
+
+            $doctor->language_ids = $languageIds;
+            $doctor->languages = !empty($languageIds)
+                ? Language::query()
+                    ->select('id', 'language_name')
+                    ->whereIn('id', $languageIds)
+                    ->orderBy('language_name')
+                    ->get()
+                    ->values()
+                    ->all()
+                : [];
 
             return $doctor;
         });
