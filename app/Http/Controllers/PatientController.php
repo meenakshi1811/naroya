@@ -458,7 +458,7 @@ class PatientController extends Controller
                             ->where('category', $request->speciality)
                             ->where('chrApproval', 'Y')
                             ->join('dr_category', 'users.category', '=', 'dr_category.id')
-                            ->where('country', $patient->country)
+                            // ->where('country', $patient->country)
                             ->leftJoin('block', function($join) use ($patient) {
                                 $join->on('block.dr_id', '=', 'users.id')
                                      ->where('block.patient_id', '=', $patient->id)
