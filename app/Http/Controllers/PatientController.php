@@ -28,7 +28,8 @@ class PatientController extends Controller
         $patients = Patients::get();
         return view('admin.patients', compact(['patients']));
     }
- public function deletePatient($id)
+    
+    public function deletePatient($id)
     {
         try {
             // Find the patient record by ID
