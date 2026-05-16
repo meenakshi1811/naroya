@@ -74,6 +74,24 @@ class User extends Authenticatable
         }
 
         $doctorIds = $doctorCollection->pluck('id')->filter()->unique()->values()->all();
+        $languageIds = $doctorCollection
+            ->pluck('language_ids')
+            ->flatMap(function ($ids) {
+                if (is_array($ids)) {
+                    return $ids;
+                }
+
+                if (is_string($ids) && !empty($ids)) {
+                    $decoded = json_decode($ids, true);
+                    return is_array($decoded) ? $decoded : [];
+                }
+
+                return [];
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
 
         $ratingsMap = Rating::query()
             ->selectRaw('doctor_id, IFNULL(AVG(rating), 0) as ratings, IFNULL(COUNT(id), 0) as review_count')
@@ -99,7 +117,14 @@ class User extends Authenticatable
                 ->toArray();
         }
 
-        $doctorCollection->transform(function ($doctor) use ($ratingsMap, $favouriteMap, $patientId) {
+        $languageMap = Language::query()
+            ->when(!empty($languageIds), function ($query) use ($languageIds) {
+                return $query->whereIn('id', $languageIds);
+            })
+            ->pluck('language_name', 'id')
+            ->toArray();
+
+        $doctorCollection->transform(function ($doctor) use ($ratingsMap, $favouriteMap, $patientId, $languageMap) {
             $doctor->varProfile = !empty($doctor->varProfile)
                 ? config('app.url') . 'api/docterprofile/' . $doctor->varProfile
                 : 'null';
@@ -115,6 +140,24 @@ class User extends Authenticatable
             if (!is_null($patientId)) {
                 $doctor->isFavouriteFlag = $favouriteMap[$doctor->id] ?? 'N';
             }
+
+            $doctorLanguageIds = is_array($doctor->language_ids)
+                ? $doctor->language_ids
+                : (is_string($doctor->language_ids) ? (json_decode($doctor->language_ids, true) ?: []) : []);
+
+            $doctor->language_ids = array_values($doctorLanguageIds);
+            $doctor->language = collect($doctorLanguageIds)
+                ->filter(function ($languageId) use ($languageMap) {
+                    return isset($languageMap[$languageId]);
+                })
+                ->map(function ($languageId) use ($languageMap) {
+                    return [
+                        'id' => (int) $languageId,
+                        'language_name' => $languageMap[$languageId],
+                    ];
+                })
+                ->values()
+                ->all();
 
             return $doctor;
         });
