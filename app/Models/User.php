@@ -28,7 +28,7 @@ class User extends Authenticatable
         'category',
         'country',
         'state',
-        'laocalization_id',
+        'localization_id',
         'gmc_registration_no',
         'ind_registration_no',
         'uae_reg_no',

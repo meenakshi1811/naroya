@@ -24,7 +24,7 @@ class Patients extends Authenticatable
         'lastname',
         'country',
         'state',
-        'laocalization_id',
+        'localization_id',
         'email_verified_at',
         'remember_token',
         'created_at',
