@@ -25,6 +25,7 @@ Route::post('/register',[App\Http\Controllers\AuthController::class, 'register']
 Route::get('/stripe/refresh/{userId}', [App\Http\Controllers\AuthController::class, 'refreshOnboarding'])->name('stripe.refresh');
 Route::get('/countries',[App\Http\Controllers\AuthController::class, 'countries']);
 Route::get('/languages',[App\Http\Controllers\AuthController::class, 'languages']);
+Route::post('/set-localization-language',[App\Http\Controllers\AuthController::class, 'setLocalizationLanguage']);
 Route::post('/forget-password',[App\Http\Controllers\ForgetPasswordController::class, 'EmailSend']);
 
 Route::get('/state-list',[App\Http\Controllers\AuthController::class, 'stateList']);
