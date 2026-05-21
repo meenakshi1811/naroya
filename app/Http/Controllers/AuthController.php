@@ -304,7 +304,37 @@ class AuthController extends Controller
         $userData = $request->user();
         if($userData->chrApproval == 'Y'){
         $userId = $userData->id;
-        $user = User::select('id','name as first_name','surname','category','country','state','email','gmc_registration_no','indemnity_insurance_provider','policy_no','india_registration_no','dha_reg','reg_no','chrSmartcard','varProfile as profile_picture','varSpeciality as speciality','varExperience as total_experience','varPostGraduation as post_graduation','varPostGraduationYear as pg_year','varGraduation as graduation','varGraduationYear as graduation_year','varFees as fees','varTimeDuration as consultation_time','language_ids')->where('id',$userId)->first();
+        $user = User::select(
+            'users.id',
+            'users.name as first_name',
+            'users.surname',
+            'users.category',
+            'users.country',
+            'users.state',
+            'users.email',
+            'users.gmc_registration_no',
+            'users.indemnity_insurance_provider',
+            'users.policy_no',
+            'users.india_registration_no',
+            'users.dha_reg',
+            'users.reg_no',
+            'users.chrSmartcard',
+            'users.varProfile as profile_picture',
+            'users.varSpeciality as speciality',
+            'users.varExperience as total_experience',
+            'users.varPostGraduation as post_graduation',
+            'users.varPostGraduationYear as pg_year',
+            'users.varGraduation as graduation',
+            'users.varGraduationYear as graduation_year',
+            'users.varFees as fees',
+            'users.varTimeDuration as consultation_time',
+            'users.language_ids',
+            'users.localization_id',
+            'language_master.language_name as localization_language_name'
+        )
+            ->leftJoin('language_master', 'users.localization_id', '=', 'language_master.id')
+            ->where('users.id', $userId)
+            ->first();
         $current_work_org = $this->getCurrentWorkOrg($userId, true);
         $current_work_org = json_encode($current_work_org);
         $user->current_work_org = $current_work_org;
