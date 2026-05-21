@@ -204,12 +204,15 @@ class AuthController extends Controller
             $request->validate([
                 'is_doc' => 'required|in:0,1',
                 'language_id' => 'required|integer|exists:language_master,id',
-                'token' => 'required|string',
             ]);
 
             $isDoctor = (string) $request->is_doc === '1';
             $languageId = (int) $request->language_id;
-            $token = trim((string) $request->token);
+            $token = trim((string) $request->bearerToken());
+
+            if (empty($token)) {
+                return response()->json(['message' => 'Authorization bearer token is required.'], 401);
+            }
 
             if ($isDoctor) {
                 $tokenParts = explode('.', $token);
