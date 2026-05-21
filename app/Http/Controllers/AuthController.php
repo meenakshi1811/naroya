@@ -243,7 +243,7 @@ class AuthController extends Controller
                     return response()->json(['message' => 'Doctor not found.'], 404);
                 }
 
-                $user->language_ids = [$languageId];
+                $user->laocalization_id = $languageId;
                 $user->save();
 
                 return response()->json([
@@ -251,7 +251,7 @@ class AuthController extends Controller
                     'data' => [
                         'is_doc' => 1,
                         'user_id' => $user->id,
-                        'language_id' => $languageId,
+                        'laocalization_id' => $languageId,
                     ],
                 ], 200);
             }
@@ -264,7 +264,7 @@ class AuthController extends Controller
                 return response()->json(['message' => 'Unauthorized request.'], 401);
             }
 
-            $patient->language_id = $languageId;
+            $patient->laocalization_id = $languageId;
             $patient->save();
 
             return response()->json([
@@ -272,7 +272,7 @@ class AuthController extends Controller
                 'data' => [
                     'is_doc' => 0,
                     'user_id' => $patient->id,
-                    'language_id' => $languageId,
+                    'laocalization_id' => $languageId,
                 ],
             ], 200);
         } catch (\Exception $e) {
