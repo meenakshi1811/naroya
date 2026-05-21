@@ -197,6 +197,91 @@ class AuthController extends Controller
      
 
 
+
+    public function setLocalizationLanguage(Request $request)
+    {
+        try {
+            $request->validate([
+                'is_doc' => 'required|in:0,1',
+                'language_id' => 'required|integer|exists:language_master,id',
+                'token' => 'required|string',
+            ]);
+
+            $isDoctor = (string) $request->is_doc === '1';
+            $languageId = (int) $request->language_id;
+            $token = trim((string) $request->token);
+
+            if ($isDoctor) {
+                $tokenParts = explode('.', $token);
+                if (count($tokenParts) < 2) {
+                    return response()->json(['message' => 'Invalid token provided.'], 401);
+                }
+
+                $payload = json_decode(base64_decode(strtr($tokenParts[1], '-_', '+/')), true);
+                $tokenId = $payload['jti'] ?? null;
+                $userId = isset($payload['sub']) ? (int) $payload['sub'] : null;
+
+                if (empty($tokenId) || empty($userId)) {
+                    return response()->json(['message' => 'Invalid token provided.'], 401);
+                }
+
+                $accessToken = Token::query()
+                    ->where('id', $tokenId)
+                    ->where('user_id', $userId)
+                    ->where('revoked', false)
+                    ->first();
+
+                if (!$accessToken || ($accessToken->expires_at && $accessToken->expires_at->isPast())) {
+                    return response()->json(['message' => 'Unauthorized request.'], 401);
+                }
+
+                $user = User::find($userId);
+                if (!$user) {
+                    return response()->json(['message' => 'Doctor not found.'], 404);
+                }
+
+                $user->language_ids = [$languageId];
+                $user->save();
+
+                return response()->json([
+                    'message' => 'Localization language updated successfully.',
+                    'data' => [
+                        'is_doc' => 1,
+                        'user_id' => $user->id,
+                        'language_id' => $languageId,
+                    ],
+                ], 200);
+            }
+
+            $decodedData = decrypt($token);
+            $patientId = $decodedData['id'] ?? null;
+
+            $patient = Patients::find($patientId);
+            if (!$patient || $patient->remember_token !== $token) {
+                return response()->json(['message' => 'Unauthorized request.'], 401);
+            }
+
+            $patient->language_id = $languageId;
+            $patient->save();
+
+            return response()->json([
+                'message' => 'Localization language updated successfully.',
+                'data' => [
+                    'is_doc' => 0,
+                    'user_id' => $patient->id,
+                    'language_id' => $languageId,
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Unable to update localization language.',
+                'data' => [
+                    'error' => $e->getMessage(),
+                ],
+            ], 400);
+        }
+    }
+
     public function languages()
     {
         $languages = Language::select('id', 'language_name')
