@@ -19,7 +19,6 @@
                             <th style="width: 10px">#</th>
                             <th>Name</th>
                             <th>Email</th>
-                            <th>Country</th>
                             <th>Profile</th>
                              <th>Actions</th>
                         </tr>
@@ -32,13 +31,6 @@
                             <td>{{ $data->id }}</td>
                            <td>{{ $data->name .' '. $data->lastname }}</td>
                             <td>{{ $data->email }}</td>
-                            @if(!empty($data->country))
-                            @php
-                            $countryName = DB::table('country_master')->select('countryname')->where('id',$data->country)->first();
-                            $countryName = $countryName->countryname;
-                            @endphp
-                            @endif
-                            <td>{!! !empty($data->country)? $countryName : '-' !!}</td>
                             @if(!empty($data->varProfile))
                             @php
                             $profileImage = config('app.url').'api/patientprofile/'.$data->varProfile;
@@ -55,7 +47,7 @@
                         @endforeach
                         @else
                         <tr>
-                            <td colspan="4" class="text-center">No records found</td>
+                            <td colspan="5" class="text-center">No records found</td>
                         </tr>
                         @endif
 
