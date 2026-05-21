@@ -387,7 +387,11 @@ class PatientController extends Controller
             try {
                 $tokenData = decrypt($headerArray[1]);
                 if (!empty($tokenData['id'])) {
-                    $patient = Patients::find($tokenData['id']);
+                    $patient = Patients::select('patients.*', 'language_master.language_name as localization_language_name')
+                        ->leftJoin('language_master', 'patients.localization_id', '=', 'language_master.id')
+                        ->where('patients.id', $tokenData['id'])
+                        ->first();
+
                     if (!empty($patient)) {
                         $patient->varProfile =  !empty($patient->varProfile) ? config('app.url') . 'api/patientprofile/' . $patient->varProfile : 'null';
                         return response()->json([
