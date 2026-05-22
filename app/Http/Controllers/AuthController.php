@@ -673,6 +673,7 @@ class AuthController extends Controller
                 'email' => 'required|string|email|unique:users|valid_email_domain',
                 'password' => 'required|string',
                 'language_ids' => 'nullable',
+                'bio_handle' => 'nullable|string',
                 // 'fcm_token' => 'required|string',
             ]);
 
@@ -715,6 +716,7 @@ class AuthController extends Controller
             $user = new User();
             $user->name = $request->first_name;
             $user->surname = $request->surname;
+            $user->bio_handle = $request->bio_handle;
             $user->category = $request->category;
             $user->country = $request->country;
             $user->state = $request->state;
@@ -829,6 +831,7 @@ class AuthController extends Controller
             $user = User::find($userId);
             $user->name = $request->first_name;
             $user->surname = $request->surname;
+            $user->bio_handle = $request->bio_handle;
             $user->category = $request->category;
             $user->country = $request->country;
             $user->state = $request->state;
