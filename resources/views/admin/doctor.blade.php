@@ -77,6 +77,8 @@
                                 'reg_no' => $data->reg_no,
                                 'chrSmartcard' => $data->chrSmartcard,
                                 'varSpeciality' => $data->varSpeciality,
+                                'bio_handle' => $data->bio_handle,
+                                'varDescription' => $data->varDescription,
                                 'varExperience' => $data->varExperience,
                                 'varPostGraduation' => $data->varPostGraduation,
                                 'varPostGraduationYear' => $data->varPostGraduationYear,
@@ -161,6 +163,8 @@
                     <div><div class="detail-label">Reg No</div><div class="detail-value" id="modalRegNo">-</div></div>
                     <div><div class="detail-label">Smartcard</div><div class="detail-value" id="modalChrSmartcard">-</div></div>
                     <div><div class="detail-label">Speciality</div><div class="detail-value" id="modalSpeciality">-</div></div>
+                    <div><div class="detail-label">Bio Handle</div><div class="detail-value" id="modalBioHandle">-</div></div>
+                    <div><div class="detail-label">Experience Description</div><div class="detail-value" id="modalExperienceDescription">-</div></div>
                     <div><div class="detail-label">Experience</div><div class="detail-value" id="modalExperience">-</div></div>
                     <div><div class="detail-label">Post Graduation</div><div class="detail-value" id="modalPostGraduation">-</div></div>
                     <div><div class="detail-label">Post Graduation Year</div><div class="detail-value" id="modalPostGraduationYear">-</div></div>
@@ -279,6 +283,8 @@
         document.getElementById('modalRegNo').innerText = data.reg_no || '-';
         document.getElementById('modalChrSmartcard').innerText = data.chrSmartcard || '-';
         document.getElementById('modalSpeciality').innerText = data.varSpeciality || '-';
+        document.getElementById('modalBioHandle').innerText = data.bio_handle || '-';
+        document.getElementById('modalExperienceDescription').innerText = data.varDescription || '-';
         document.getElementById('modalExperience').innerText = data.varExperience || '-';
         document.getElementById('modalPostGraduation').innerText = data.varPostGraduation || '-';
         document.getElementById('modalPostGraduationYear').innerText = data.varPostGraduationYear || '-';
