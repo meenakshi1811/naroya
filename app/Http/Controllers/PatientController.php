@@ -1378,6 +1378,7 @@ class PatientController extends Controller
                         'users.varGraduation as graduation',
                         'users.varGraduationYear as graduation_year',
                         'users.varFees as fees',
+                        'users.bio_handle as biography',
                         'users.varTimeDuration as consultation_time'
                     )
                         ->join('dr_category', 'users.category', 'dr_category.id')

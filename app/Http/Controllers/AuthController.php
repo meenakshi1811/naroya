@@ -328,6 +328,7 @@ class AuthController extends Controller
             'users.varGraduationYear as graduation_year',
             'users.varFees as fees',
             'users.varTimeDuration as consultation_time',
+            'users.bio_handle',
             'users.language_ids',
             'users.localization_id',
             'language_master.language_name as localization_language_name'
