@@ -312,6 +312,7 @@ class AuthController extends Controller
             'users.country',
             'users.state',
             'users.email',
+            'users.phoneNumber',
             'users.gmc_registration_no',
             'users.indemnity_insurance_provider',
             'users.policy_no',
@@ -722,6 +723,7 @@ class AuthController extends Controller
             $user->country = $request->country;
             $user->state = $request->state;
             $user->email = $request->email;
+            $user->phoneNumber = $request->phoneNumber;
             $user->password = bcrypt($request->password);
             $user->gmc_registration_no = $request->gmc_registration_no;
             $user->indemnity_insurance_provider = $request->indemnity_insurance_provider;
@@ -836,6 +838,7 @@ class AuthController extends Controller
             $user->category = $request->category;
             $user->country = $request->country;
             $user->state = $request->state;
+            $user->phoneNumber = $request->phoneNumber;
             $user->gmc_registration_no = $request->gmc_registration_no;
             $user->indemnity_insurance_provider = $request->indemnity_insurance_provider;
             $user->policy_no = $request->policy_no;
