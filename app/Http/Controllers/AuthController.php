@@ -26,6 +26,43 @@ use App\Models\DoctorActivity;
 
 class AuthController extends Controller
 {
+    private function getPhoneNumberFromRequest(Request $request): ?string
+    {
+        $phoneKeys = ['phoneNumber', 'phone_number', 'phone', 'mobile', 'contact_number'];
+
+        foreach ($request->all() as $key => $value) {
+            $normalizedKey = strtolower(str_replace(['_', '-', ' '], '', trim((string) $key)));
+
+            foreach ($phoneKeys as $phoneKey) {
+                $normalizedPhoneKey = strtolower(str_replace(['_', '-', ' '], '', $phoneKey));
+
+                if ($normalizedKey === $normalizedPhoneKey) {
+                    return is_null($value) ? null : trim((string) $value);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function requestHasPhoneNumber(Request $request): bool
+    {
+        $phoneKeys = ['phoneNumber', 'phone_number', 'phone', 'mobile', 'contact_number'];
+
+        foreach (array_keys($request->all()) as $key) {
+            $normalizedKey = strtolower(str_replace(['_', '-', ' '], '', trim((string) $key)));
+
+            foreach ($phoneKeys as $phoneKey) {
+                $normalizedPhoneKey = strtolower(str_replace(['_', '-', ' '], '', $phoneKey));
+
+                if ($normalizedKey === $normalizedPhoneKey) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
     public function login(Request $request)
     {
         try {
@@ -676,6 +713,7 @@ class AuthController extends Controller
                 'password' => 'required|string',
                 'language_ids' => 'nullable',
                 'bio_handle' => 'nullable|string',
+                'phoneNumber' => 'nullable|string|max:30',
                 // 'fcm_token' => 'required|string',
             ]);
 
@@ -723,7 +761,7 @@ class AuthController extends Controller
             $user->country = $request->country;
             $user->state = $request->state;
             $user->email = $request->email;
-            $user->phoneNumber = $request->phoneNumber;
+            $user->phoneNumber = $this->getPhoneNumberFromRequest($request);
             $user->password = bcrypt($request->password);
             $user->gmc_registration_no = $request->gmc_registration_no;
             $user->indemnity_insurance_provider = $request->indemnity_insurance_provider;
@@ -838,7 +876,9 @@ class AuthController extends Controller
             $user->category = $request->category;
             $user->country = $request->country;
             $user->state = $request->state;
-            $user->phoneNumber = $request->phoneNumber;
+            if ($this->requestHasPhoneNumber($request)) {
+                $user->phoneNumber = $this->getPhoneNumberFromRequest($request);
+            }
             $user->gmc_registration_no = $request->gmc_registration_no;
             $user->indemnity_insurance_provider = $request->indemnity_insurance_provider;
             $user->policy_no = $request->policy_no;
