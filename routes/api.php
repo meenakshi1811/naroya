@@ -4,11 +4,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\AuthenticateToken;
 
-
-header('Access-Control-Allow-Origin:  *');
-header('Access-Control-Allow-Methods:  POST, GET, OPTIONS, PUT, DELETE');
-header('Access-Control-Allow-Headers:  Content-Type, X-Auth-Token, Origin, Authorization');
-
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -34,6 +29,11 @@ Route::get('/speciality', [App\Http\Controllers\AuthController::class, 'speciali
 Route::post('/stripe/webhook', [App\Http\Controllers\StripeWebhookController::class, 'handle']);
 Route::post('/refund', [App\Http\Controllers\PaymentController::class, 'processRefund'])->middleware('throttle:payment');
 Route::post('/generate-agora-details', [App\Http\Controllers\AgoraController::class, 'generateAgoraDetails']);
+
+// Allow browser preflight requests for all doctor APIs before auth middleware runs.
+Route::options('/doctor/{any?}', function () {
+    return response()->noContent();
+})->where('any', '.*');
 
 Route::middleware('auth:api')->group(function () {
     Route::get('/user', [App\Http\Controllers\AuthController::class, 'getUserData']);
