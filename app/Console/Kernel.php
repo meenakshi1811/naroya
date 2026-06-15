@@ -13,6 +13,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('meeting:reminder')->everyMinute();
+        $schedule->command('appointment:review-reminder')->everyMinute(); 
         $schedule->command('reset:bookcount')->daily();
     }
 

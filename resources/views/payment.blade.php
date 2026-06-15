@@ -77,6 +77,9 @@
         </form>
     </div>
 
+
+
+
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script>
         document.getElementById('pay-now').addEventListener('click', function () {
@@ -84,7 +87,7 @@
             const amountInPaise = Math.round(amount * 100);
 
             const options = {
-                key: 'rzp_test_dummy123456',
+                key: 'rzp_test_SjoKZvUGAqoLgZ',
                 amount: amountInPaise,
                 currency: document.getElementById('currency').value || 'INR',
                 name: 'Naroya Demo',
