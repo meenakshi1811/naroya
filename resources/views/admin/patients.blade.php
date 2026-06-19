@@ -19,6 +19,7 @@
                             <th style="width: 10px">#</th>
                             <th>Name</th>
                             <th>Email</th>
+                            <th>Phone</th>
                             <th>Country</th>
                             <th>Profile</th>
                              <th>Actions</th>
@@ -32,6 +33,7 @@
                             <td>{{ $data->id }}</td>
                            <td>{{ $data->name .' '. $data->lastname }}</td>
                             <td>{{ $data->email }}</td>
+                            <td>{{ !empty($data->phone) ? $data->phone : '-' }}</td>
                             @if(!empty($data->country))
                             @php
                             $countryName = DB::table('country_master')->select('countryname')->where('id',$data->country)->first();
@@ -55,7 +57,7 @@
                         @endforeach
                         @else
                         <tr>
-                            <td colspan="4" class="text-center">No records found</td>
+                            <td colspan="7" class="text-center">No records found</td>
                         </tr>
                         @endif
 
