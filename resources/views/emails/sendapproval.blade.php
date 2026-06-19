@@ -59,14 +59,6 @@
 
         }
 
-        .info-card {
-            margin: 22px 0;
-            padding: 16px 18px;
-            background-color: #f2fbf3;
-            border-left: 4px solid #109014;
-            border-radius: 8px;
-        }
-
         .closing {
             margin-top: 24px;
         }
@@ -102,11 +94,7 @@
 
                 <p>Your registration with {{ config('app.name') }} has been approved.</p>
 
-                <div class="info-card">
-                    As part of your setup, you will receive an email invitation from SignatureRx to create online prescriptions for your patients. Please follow the instructions in that invitation to enable prescribing through {{ config('app.name') }}.
-                </div>
-
-                <p>To assist you, we’ve attached an <strong>Issuing Prescription Guide</strong> with step-by-step instructions for prescribing medication through the SignatureRx dashboard.</p>
+                <p>Your profile is now live on {{ config('app.name') }} — patients can now find and connect with you. Log in to manage your profile and view incoming requests.</p>
 
                 <p>If you have any questions or need support, feel free to contact us at
                     <a class="support-link" href="mailto:contactnoraya@gmail.com">contactnoraya@gmail.com</a>.
