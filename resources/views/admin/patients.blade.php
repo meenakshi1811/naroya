@@ -19,6 +19,7 @@
                             <th style="width: 10px">#</th>
                             <th>Name</th>
                             <th>Email</th>
+                            <th>Phone</th>
                             <th>Profile</th>
                              <th>Actions</th>
                         </tr>
@@ -31,6 +32,7 @@
                             <td>{{ $data->id }}</td>
                            <td>{{ $data->name .' '. $data->lastname }}</td>
                             <td>{{ $data->email }}</td>
+                            <td>{{ !empty($data->phone) ? $data->phone : '-' }}</td>
                             @if(!empty($data->varProfile))
                             @php
                             $profileImage = config('app.url').'api/patientprofile/'.$data->varProfile;
@@ -47,7 +49,7 @@
                         @endforeach
                         @else
                         <tr>
-                            <td colspan="5" class="text-center">No records found</td>
+                            <td colspan="6" class="text-center">No records found</td>
                         </tr>
                         @endif
 

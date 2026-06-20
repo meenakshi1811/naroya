@@ -99,6 +99,7 @@ class PatientController extends Controller
                             'lastname' => $patient->lastname,
                             'country' => $patient->country,
                             'email' => $patient->email,
+                            'phone' => $patient->phone,
                             'profile' => !empty($patient->varProfile) ? config('app.url') . 'api/patientprofile/' . $patient->varProfile : 'null'
                         ],
                         'token_type' => "Bearer",
@@ -179,6 +180,7 @@ class PatientController extends Controller
                 'first_name' => 'required|string',
                 'email' => 'required|string|email|unique:patients|valid_email_domain',
                 'password' => 'required|string',
+                'phone' => 'required|string|max:20',
                 'fcm_token' => 'nullable|string', // Capture FCM token if provided
             ]);
             $patients = new Patients();
@@ -187,6 +189,7 @@ class PatientController extends Controller
             $patients->country = $request->country;
             $patients->state = $request->state;
             $patients->email = $request->email;
+            $patients->phone = $request->phone;
             $patients->password = bcrypt($request->password);
             $patients->fcm_token = $request->fcm_token; // Store FCM token if provided
             if ($request->hasFile('profile_picture') && !empty($request->file('profile_picture'))) {
@@ -219,6 +222,7 @@ class PatientController extends Controller
                         'country' => $patients->country,
                         'state' => $patients->state,
                         'email' => $patients->email,
+                        'phone' => $patients->phone,
                         'varProfile' => !empty($patients->varProfile) ? config('app.url') . 'api/patientprofile/' . $patients->varProfile : 'null'
                     ]
                 ]
@@ -339,6 +343,9 @@ class PatientController extends Controller
                     $patients->lastname = $request->last_name;
                     $patients->country = $request->country;
                     $patients->state = $request->state;
+                    if ($request->has('phone')) {
+                        $patients->phone = $request->phone;
+                    }
                     if ($request->hasFile('profile_picture') && !empty($request->file('profile_picture'))) {
                         $destinationPath = '/api/patientprofile/';
                         $file_path = public_path() . $destinationPath . $patients->varProfile;
@@ -362,6 +369,7 @@ class PatientController extends Controller
                                 'country' => $patients->lastname,
                                 'state' => $patients->state,
                                 'email' => $patients->email,
+                                'phone' => $patients->phone,
                                 'varProfile' => !empty($patients->varProfile) ? config('app.url') . 'api/patientprofile/' . $patients->varProfile : 'null'
                             ]
                         ]
