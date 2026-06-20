@@ -4,7 +4,7 @@
 
     Header always set Access-Control-Allow-Origin "%{CORS_ALLOW_ORIGIN}e" env=CORS_ALLOW_ORIGIN
     Header always set Access-Control-Allow-Methods "GET, HEAD, OPTIONS" env=CORS_ALLOW_ORIGIN
-    Header always set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization" env=CORS_ALLOW_ORIGIN
+    Header always set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Device-Id" env=CORS_ALLOW_ORIGIN
     Header always set Access-Control-Max-Age "86400" env=CORS_ALLOW_ORIGIN
     Header merge Vary Origin env=CORS_ALLOW_ORIGIN
 </IfModule>
