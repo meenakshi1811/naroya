@@ -46,7 +46,7 @@
                 <div class="form-group">
                     <label for="reset_book_date" class="form-label">Reset Book Count Date & Time</label>
                     <input type="datetime-local" class="form-control" id="reset_book_date" name="reset_book_date"
-                        value="{{ isset($settings['reset_book_date']) ? \Carbon\Carbon::parse($settings['reset_book_date'])->format('Y-m-d\TH:i') : '' }}"
+                        value="{{ !empty($settings['reset_book_date']) ? \Carbon\Carbon::parse($settings['reset_book_date'])->format('Y-m-d\TH:i') : '' }}"
                         required>
                 </div>
         </div>

@@ -28,8 +28,8 @@ class ResetBookCount extends Command
             //  Clear the book_count table
             DB::table('book_count')->truncate();
 
-            // Optional: Clear the reset date so it doesn't repeat
-            $resetSetting->update(['field_value' => null]);
+            // Clear the reset date so it doesn't repeat (empty string; column is NOT NULL)
+            $resetSetting->update(['field_value' => '']);
 
             $this->info('book_count table has been reset successfully.');
         } else {
