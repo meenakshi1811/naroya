@@ -1309,7 +1309,7 @@ class PatientController extends Controller
                                 $doctor->fcm_token,
                                 'New Appointment Request',
                                 'You have a new appointment request from ' . $patient->name,
-                        'patient'
+                        'doctor'
                             );
                         }
                         

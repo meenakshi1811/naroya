@@ -1029,7 +1029,7 @@ class AuthController extends Controller
                         $patient->fcm_token, // Assuming `fcm_token` is stored in the patient table
                             'Appointment Accepted',
                             'Your appointment request has been accepted by Dr. ' . $user->name,
-                    'doctor'
+                    'patient'
                         );
                         $message = "Appointment Accepted Successfully";
                         

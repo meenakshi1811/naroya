@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Log;
 
 class NotificationController extends Controller
 {
-    private string $serviceAccountPath = 'firebase/noraya-88c87-firebase-adminsdk-fbsvc-8263e6f2c8.json';
+    private string $serviceAccountPath;
 
     public function sendPushNotification($token, $title, $body, $appType, array $data = [])
     {
@@ -17,6 +17,12 @@ class NotificationController extends Controller
         }
 
         try {
+            $this->serviceAccountPath = match ($appType) {
+                'doctor' => 'firebase/doctor-app-firebase-adminsdk.json',
+                'patient' => 'firebase/patient-app-firebase-adminsdk.json',
+                default => throw new \InvalidArgumentException('Invalid app type specified.'),
+            };
+
             $message = [
                 'token' => $token,
                 'notification' => [
@@ -30,12 +36,13 @@ class NotificationController extends Controller
             }
 
             $accessToken = $this->getAccessToken();
+            $projectId = $this->getProjectId();
 
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer '.$accessToken,
                 'Content-Type' => 'application/json',
             ])->post(
-                'https://fcm.googleapis.com/v1/projects/'.env('FIREBASE_PROJECT_ID').'/messages:send',
+                'https://fcm.googleapis.com/v1/projects/'.$projectId.'/messages:send',
                 [
                     'validate_only' => false,
                     'message' => $message,
@@ -67,5 +74,17 @@ class NotificationController extends Controller
         $accessToken = $client->fetchAccessTokenWithAssertion();
 
         return $accessToken['access_token'];
+    }
+
+    private function getProjectId(): string
+    {
+        $config = json_decode(
+            file_get_contents(storage_path('app/'.$this->serviceAccountPath)),
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
+
+        return $config['project_id'];
     }
 }
