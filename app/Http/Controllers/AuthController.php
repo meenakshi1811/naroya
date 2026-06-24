@@ -99,7 +99,6 @@ class AuthController extends Controller
                     'message' => 'Your account is currently pending approval. Please contact your administration for further assistance.'
                 ], 200);
             }
-            $user->tokens()->delete();
             $http = new \GuzzleHttp\Client;
             $response = $http->post(config('app.url') . 'oauth/token', [
                 'form_params' => [
