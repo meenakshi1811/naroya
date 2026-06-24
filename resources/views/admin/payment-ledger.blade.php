@@ -12,6 +12,36 @@
     #markPaidModal .modal-footer {
         border: 0;
     }
+
+    .bank-detail-btn {
+        min-width: 115px;
+        font-weight: 600;
+    }
+
+    .bank-detail-modal-content {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 15px 45px rgba(28, 39, 60, 0.14);
+    }
+
+    .bank-detail-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .bank-detail-grid > div {
+        background: #f8f9fb;
+        border: 1px solid #e7ebf2;
+        border-radius: 10px;
+        padding: 10px 12px;
+    }
+
+    @media (min-width: 768px) {
+        .bank-detail-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
 </style>
 
 <div class="container-fluid">
@@ -57,7 +87,10 @@
                         <thead>
                             <tr>
                                 <th>Month</th>
+                                <th>Profile</th>
                                 <th>Doctor</th>
+                                <th>Email</th>
+                                <th>Bank Details</th>
                                 <th>No. of Appointments</th>
                                 <th>Transaction Entries</th>
                                 <th>Gross Amount (INR)</th>
@@ -72,9 +105,35 @@
                         </thead>
                         <tbody>
                             @forelse($monthlySummaries as $summary)
+                                @php
+                                    $bankModalData = [
+                                        'bank_name' => $summary['bank_name'],
+                                        'account_holder_name' => $summary['account_holder_name'],
+                                        'account_type' => $summary['account_type'],
+                                        'account_number' => $summary['account_number'],
+                                        'ifsc_code' => $summary['ifsc_code'],
+                                    ];
+                                @endphp
                                 <tr>
                                     <td><span class="badge badge-warning text-dark">{{ $summary['month_label'] }}</span></td>
+                                    <td>
+                                        @if(!empty($summary['doctor_profile']))
+                                            <img src="{{ config('app.url').'api/docterprofile/'.$summary['doctor_profile'] }}" alt="{{ $summary['doctor_name'] }}" width="64" height="64" class="doctor-avatar" />
+                                        @else
+                                            <span class="text-muted">N/A</span>
+                                        @endif
+                                    </td>
                                     <td>{{ $summary['doctor_name'] }}</td>
+                                    <td>{{ $summary['doctor_email'] }}</td>
+                                    <td>
+                                        <button
+                                            type="button"
+                                            class="btn btn-outline-primary btn-sm bank-detail-btn"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#bankDetailModal"
+                                            onclick='openBankModal(@json($bankModalData))'
+                                        >View Details</button>
+                                    </td>
                                     <td>{{ $summary['appointment_count'] }}</td>
                                     <td>{{ $summary['transaction_count'] }}</td>
                                     <td>₹{{ number_format($summary['gross_amount'], 2) }}</td>
@@ -106,7 +165,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="12" class="text-center">No monthly payout records found</td>
+                                    <td colspan="15" class="text-center">No monthly payout records found</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -116,6 +175,29 @@
         </div>
     </div>
 
+</div>
+
+<div class="modal fade" id="bankDetailModal" tabindex="-1" role="dialog" aria-labelledby="bankDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content bank-detail-modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bankDetailModalLabel">Doctor Bank Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="bank-detail-grid">
+                    <div><div class="detail-label">Bank Name</div><div class="detail-value" id="bankModalBankName">-</div></div>
+                    <div><div class="detail-label">Account Holder Name</div><div class="detail-value" id="bankModalAccountHolderName">-</div></div>
+                    <div><div class="detail-label">Account Type</div><div class="detail-value" id="bankModalAccountType">-</div></div>
+                    <div><div class="detail-label">Account Number</div><div class="detail-value" id="bankModalAccountNumber">-</div></div>
+                    <div><div class="detail-label">IFSC Code</div><div class="detail-value" id="bankModalIfscCode">-</div></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="modal fade" id="markPaidModal" tabindex="-1" role="dialog" aria-labelledby="markPaidModalLabel" aria-hidden="true">
@@ -138,6 +220,14 @@
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
+    function openBankModal(data) {
+        document.getElementById('bankModalBankName').innerText = data.bank_name || '-';
+        document.getElementById('bankModalAccountHolderName').innerText = data.account_holder_name || '-';
+        document.getElementById('bankModalAccountType').innerText = data.account_type || '-';
+        document.getElementById('bankModalAccountNumber').innerText = data.account_number || '-';
+        document.getElementById('bankModalIfscCode').innerText = data.ifsc_code || '-';
+    }
+
     $(function () {
         let selectedForm = null;
         const markPaidModalElement = document.getElementById('markPaidModal');

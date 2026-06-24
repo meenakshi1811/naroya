@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\PaymentLog;
 use App\Models\Payment;
 use App\Models\User;
+use App\Models\DoctorBankDetail;
 use App\Models\GeneralSetting;
 use Carbon\Carbon;
 
@@ -25,7 +26,7 @@ class PaymentLogController extends Controller
     public function showDoctorPaymentLedger(Request $request, $id)
     {
         [$selectedYear, $selectedMonth, $startOfMonth, $endOfMonth] = $this->resolveLedgerMonthSelection($request);
-        $selectedDoctor = User::select('id', 'name', 'surname', 'email')->find($id);
+        $selectedDoctor = User::select('id', 'name', 'surname', 'email', 'varProfile')->find($id);
         $commissionPercentage = $this->getCommissionPercentage();
         $monthlySummaries = $this->buildMonthlySummariesForDoctors($startOfMonth, $endOfMonth, $commissionPercentage, (int) $id);
         [$yearOptions, $monthOptions] = $this->buildYearAndMonthOptions($selectedYear);
@@ -106,7 +107,7 @@ class PaymentLogController extends Controller
     private function buildMonthlySummariesForDoctors(Carbon $startOfMonth, Carbon $endOfMonth, float $commissionPercentage, ?int $doctorId = null)
     {
         $doctorsQuery = User::query()
-            ->select('id', 'name', 'surname', 'monthly_payout')
+            ->select('id', 'name', 'surname', 'email', 'varProfile', 'monthly_payout')
             ->where('chrApproval', 'Y');
 
         if (!is_null($doctorId)) {
@@ -114,10 +115,14 @@ class PaymentLogController extends Controller
         }
 
         $doctors = $doctorsQuery->orderBy('name')->get();
+        $bankDetails = DoctorBankDetail::whereIn('doctor_id', $doctors->pluck('id'))
+            ->get()
+            ->keyBy('doctor_id');
         $monthKey = $startOfMonth->format('Y-m');
         $monthLabel = $startOfMonth->format('F Y');
 
-        return $doctors->map(function ($doctor) use ($startOfMonth, $endOfMonth, $commissionPercentage, $monthKey, $monthLabel) {
+        return $doctors->map(function ($doctor) use ($startOfMonth, $endOfMonth, $commissionPercentage, $monthKey, $monthLabel, $bankDetails) {
+                $bankDetail = $bankDetails->get($doctor->id);
                 $paymentRows = Payment::query()
                     ->leftJoin('appointment', 'payments.appointment_id', '=', 'appointment.id')
                     ->where('payments.doctor_id', $doctor->id)
@@ -158,6 +163,13 @@ class PaymentLogController extends Controller
                 return [
                     'doctor_id' => $doctor->id,
                     'doctor_name' => trim(($doctor->name ?? '') . ' ' . ($doctor->surname ?? '')) ?: 'Unknown Doctor',
+                    'doctor_email' => $doctor->email ?? '-',
+                    'doctor_profile' => $doctor->varProfile,
+                    'bank_name' => $bankDetail->bank_name ?? null,
+                    'account_holder_name' => $bankDetail->account_holder_name ?? null,
+                    'account_type' => $bankDetail->account_type ?? null,
+                    'account_number' => $bankDetail->account_number ?? null,
+                    'ifsc_code' => $bankDetail->ifsc_code ?? null,
                     'month_key' => $monthKey,
                     'month_label' => $monthLabel,
                     'appointment_count' => $appointmentCount,
