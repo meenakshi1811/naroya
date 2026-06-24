@@ -950,8 +950,8 @@ class PatientController extends Controller
                         )
                             ->where('chrApproval', 'Y')  // Only approved doctors
                             ->join('dr_category', 'users.category', '=', 'dr_category.id')
-                            ->where('country', $patient->country)
-                            ->where('users.category', $request->category)
+                            // ->where('country', $patient->country)
+                            // ->where('users.category', $request->category)
                             ->orderBy('rattings');
     
                         // Exclude doctors who are blocked by the current patient
