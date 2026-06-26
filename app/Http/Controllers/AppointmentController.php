@@ -62,6 +62,77 @@ class AppointmentController extends Controller
         return $this->errorResponse();
     }
 
+    public function clearConflictAppointment(Request $request)
+    {
+        $tokenData = $this->getTokenData($request);
+
+        if (!$tokenData) {
+            return $this->unauthorized();
+        }
+
+        $request->validate([
+            'appointment_id' => 'required|integer',
+        ]);
+
+        try {
+            $patient = Patients::find($tokenData['id']);
+            $appointment = Appointment::with('doctor')->find($request->appointment_id);
+
+            if (!$patient || !$appointment || (int) $appointment->patient_id !== (int) $patient->id) {
+                return response()->json([
+                    'message' => 'Appointment not found.',
+                    'data' => ['error' => 'Invalid appointment'],
+                ], 404);
+            }
+
+            if ($appointment->charIsPaid === 'Y') {
+                return response()->json([
+                    'message' => 'Paid appointments cannot be cleared.',
+                    'data' => ['error' => 'Already paid'],
+                ], 400);
+            }
+
+            if ($appointment->chrIsCanceled === 'Y') {
+                return response()->json([
+                    'message' => 'Appointment already cleared.',
+                    'data' => [
+                        'cleared' => true,
+                        'appointment_id' => $appointment->id,
+                    ],
+                ], 200);
+            }
+
+            $cancelReason = 'Time slot already booked by another patient.';
+
+            $appointment->update([
+                'chrIsCanceled' => 'Y',
+                'varCancelReason' => $cancelReason,
+            ]);
+
+            $doctor = $appointment->doctor;
+
+            if ($doctor && $doctor->fcm_token) {
+                (new NotificationController())->sendPushNotification(
+                    $doctor->fcm_token,
+                    'Appointment Removed',
+                    "The appointment with {$patient->name} was removed because the time slot was already booked.",
+                    'doctor'
+                );
+            }
+
+            return response()->json([
+                'message' => 'Appointment cleared successfully.',
+                'data' => [
+                    'cleared' => true,
+                    'appointment_id' => $appointment->id,
+                    'user' => $this->formatPatient($patient),
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            return $this->errorResponse();
+        }
+    }
+
     public function handlePrescription(Request $request)
     {
         try {

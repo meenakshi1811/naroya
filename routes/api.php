@@ -72,6 +72,7 @@ Route::post('/patient/doctor-profile',[App\Http\Controllers\PatientController::c
 Route::post('/patient/doctor-profile',[App\Http\Controllers\PatientController::class, 'getDoctorData']);
 Route::post('/patient/feedback',[App\Http\Controllers\PatientController::class, 'handleFeedback']);
 Route::post('/patient/cancel-appointment', [App\Http\Controllers\AppointmentController::class, 'cancelAppointment']);
+Route::post('/patient/clear-conflict-appointment', [App\Http\Controllers\AppointmentController::class, 'clearConflictAppointment']);
 Route::post('/patient/process-payment', [App\Http\Controllers\PaymentController::class, 'ProcessPayment'])->middleware('throttle:payment');
 Route::get('/patient/my-appointment', [App\Http\Controllers\AppointmentController::class, 'getAppointmentData']);
 Route::post('patient/logout', [App\Http\Controllers\PatientController::class, 'logout']);

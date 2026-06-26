@@ -27,7 +27,9 @@ class Appointment extends Model
         'varSymptondesc',
         'chrIsAccepted',
         'chrIsRejected',
+        'chrIsCanceled',
         'varReason',
+        'varCancelReason',
         'charIsPaid',
         'created_at',
         'updated_at'
@@ -166,5 +168,22 @@ class Appointment extends Model
     public function doctor()
     {
         return $this->belongsTo(User::class, 'dr_id');
+    }
+
+    public function hasPaidSlotConflict(): bool
+    {
+        return static::query()
+            ->where('dr_id', $this->dr_id)
+            ->where('varAppointment', $this->varAppointment)
+            ->where('id', '!=', $this->id)
+            ->where('chrIsCanceled', 'N')
+            ->where('chrIsRejected', 'N')
+            ->where('charIsPaid', 'Y')
+            ->where('chrIsAccepted', 'Y')
+            ->where(function ($query) {
+                $query->where('startTime', '<=', $this->startTime)
+                    ->where('endTime', '>=', $this->endTime);
+            })
+            ->exists();
     }
 }
