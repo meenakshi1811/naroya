@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Google\Client;
+use Google\Auth\Credentials\ServiceAccountCredentials;
+use Google\Auth\HttpHandler\HttpHandlerFactory;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 
 class NotificationController extends Controller
 {
@@ -60,7 +62,10 @@ class NotificationController extends Controller
 
             return response()->json(['message' => 'Notification sent successfully.']);
         } catch (\Exception $e) {
-            Log::error('Error sending push notification: '.$e->getMessage());
+            Log::error('Error sending push notification: '.$e->getMessage(), [
+                'app_type' => $appType,
+                'service_account' => $this->serviceAccountPath ?? null,
+            ]);
 
             return response()->json(['error' => 'An error occurred while sending the notification.'], 400);
         }
@@ -68,10 +73,22 @@ class NotificationController extends Controller
 
     private function getAccessToken(): string
     {
-        $client = new Client();
-        $client->setAuthConfig(storage_path('app/'.$this->serviceAccountPath));
-        $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-        $accessToken = $client->fetchAccessTokenWithAssertion();
+        $credentialsPath = storage_path('app/'.$this->serviceAccountPath);
+
+        if (! is_file($credentialsPath)) {
+            throw new RuntimeException("Firebase service account file not found: {$this->serviceAccountPath}");
+        }
+
+        $credentials = new ServiceAccountCredentials(
+            'https://www.googleapis.com/auth/cloud-platform',
+            $credentialsPath
+        );
+
+        $accessToken = $credentials->fetchAuthToken(HttpHandlerFactory::build());
+
+        if (! isset($accessToken['access_token'])) {
+            throw new RuntimeException('Failed to obtain Firebase access token.');
+        }
 
         return $accessToken['access_token'];
     }

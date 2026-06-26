@@ -7,7 +7,10 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use App\Models\Patients;
+use Google\Auth\Credentials\ServiceAccountCredentials;
+use Google\Auth\HttpHandler\HttpHandlerFactory;
 use Illuminate\Support\Facades\Http;
+use RuntimeException;
 
 class SendMeetingReminder extends Command
 {
@@ -122,12 +125,25 @@ $appointments = Appointment::where('varAppointment', $date)
         }
     }
     
-    private function getAccessToken()
+    private function getAccessToken(): string
     {
-        $client = new \Google\Client();
-        $client->setAuthConfig(storage_path('app/' . $this->serviceAccountPath));
-        $client->addScope('https://www.googleapis.com/auth/cloud-platform');
-        $accessToken = $client->fetchAccessTokenWithAssertion();
+        $credentialsPath = storage_path('app/'.$this->serviceAccountPath);
+
+        if (! is_file($credentialsPath)) {
+            throw new RuntimeException("Firebase service account file not found: {$this->serviceAccountPath}");
+        }
+
+        $credentials = new ServiceAccountCredentials(
+            'https://www.googleapis.com/auth/cloud-platform',
+            $credentialsPath
+        );
+
+        $accessToken = $credentials->fetchAuthToken(HttpHandlerFactory::build());
+
+        if (! isset($accessToken['access_token'])) {
+            throw new RuntimeException('Failed to obtain Firebase access token.');
+        }
+
         return $accessToken['access_token'];
     }
 

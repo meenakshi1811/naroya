@@ -1,0 +1,82 @@
+{
+  "info": {
+    "_postman_id": "noraya-public-doctor-detail",
+    "name": "Noraya - Public Doctor Detail",
+    "description": "Public doctor profile API (no authentication required). Returns the same payload as POST /api/patient/doctor-profile.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost/api"
+    },
+    {
+      "key": "doctor_id",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Get Public Doctor Detail",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/public/doctor/{{doctor_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "public",
+            "doctor",
+            "{{doctor_id}}"
+          ]
+        },
+        "description": "Fetch full doctor profile, experience, languages, and reviews by doctor ID. No login required. Only approved doctors are returned."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Public Doctor Detail (Paginated Reviews)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/public/doctor/{{doctor_id}}?reviewPageNumber=1&reviewPageSize=10",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "public",
+            "doctor",
+            "{{doctor_id}}"
+          ],
+          "query": [
+            {
+              "key": "reviewPageNumber",
+              "value": "1",
+              "description": "Review page number (optional)"
+            },
+            {
+              "key": "reviewPageSize",
+              "value": "10",
+              "description": "Reviews per page, max 100 (optional)"
+            }
+          ]
+        },
+        "description": "Same as doctor detail with paginated reviews. Also accepts pageSize as an alias for reviewPageSize."
+      },
+      "response": []
+    }
+  ]
+}

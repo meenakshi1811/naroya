@@ -1349,13 +1349,30 @@ class PatientController extends Controller
     }
 
 
+    public function getPublicDoctorDetail(Request $request, $doctorId)
+    {
+        $doctorId = (int) $doctorId;
+
+        if ($doctorId <= 0) {
+            return response()->json(['message' => 'Invalid doctor id'], 400);
+        }
+
+        $data = $this->buildDoctorDetailData($doctorId, $request, approvedOnly: true);
+
+        if ($data === null) {
+            return response()->json(['message' => 'Doctor not found'], 404);
+        }
+
+        return response()->json([
+            'message' => 'success',
+            'data' => $data,
+        ], 200);
+    }
+
     public function getDoctorData(Request $request)
     {
         $headers = $request->header('Authorization');
         $headerArray = explode('Bearer ', $headers);
-        $reviewPageSize = max(1, min((int) $request->input('reviewPageSize', $request->input('pageSize', 10)), 100));
-        $reviewPage = max(1, (int) $request->input('reviewPageNumber', 1));
-        $shouldPaginateReviews = $request->filled('reviewPageNumber') || $request->filled('reviewPageSize') || $request->filled('pageSize');
         if (!empty($headerArray[1])) {
             try {
                 $request->validate([
@@ -1363,153 +1380,164 @@ class PatientController extends Controller
                 ]);
                 $tokenData = decrypt($headerArray[1]);
                 if (!empty($tokenData['id'])) {
-                    $doctor = User::select(
-                        'users.id',
-                        'users.name as first_name',
-                        'users.surname',
-                        'dr_category.title as category',
-                        'users.country',
-                        'users.state',
-                        'users.email',
-                        'users.phoneNumber',
-                        'users.gmc_registration_no',
-                        'users.indemnity_insurance_provider',
-                        'users.policy_no',
-                        'users.india_registration_no',
-                        'users.dha_reg',
-                        'users.reg_no',
-                        'users.chrSmartcard',
-                        'users.varProfile as profile_picture',
-                        'users.varSpeciality as speciality',
-                        'users.varExperience as total_experience',
-                        'users.varPostGraduation as post_graduation',
-                        'users.varPostGraduationYear as pg_year',
-                        'users.varGraduation as graduation',
-                        'users.varGraduationYear as graduation_year',
-                        'users.varFees as fees',
-                        'users.bio_handle as biography',
-                        'users.varTimeDuration as consultation_time'
-                    )
-                        ->join('dr_category', 'users.category', 'dr_category.id')
-                        ->leftJoin('appointment','users.id','appointment.dr_id')
-                        ->leftJoin('ratings', 'ratings.doctor_id', '=', 'users.id')
-                        ->selectRaw('IFNULL(AVG(ratings.rating), 0) as ratings')
-                        ->selectRaw('IFNULL(COUNT(ratings.rating), 0) as review_count')
-                        ->selectRaw('IFNULL(COUNT(DISTINCT appointment.patient_id), 0) as patient_count')
-                        ->where('users.id', $request->doctor)
-                        ->groupBy(
-                            'users.id',
-                            'users.name',
-                            'users.surname',
-                            'users.country',
-                            'users.state',
-                            'users.email',
-                            'users.phoneNumber',
-                            'users.gmc_registration_no',
-                            'users.indemnity_insurance_provider',
-                            'users.policy_no',
-                            'users.india_registration_no',
-                            'users.dha_reg',
-                            'users.reg_no',
-                            'users.chrSmartcard',
-                            'users.varProfile',
-                            'users.varSpeciality',
-                            'users.varExperience',
-                            'users.varPostGraduation',
-                            'users.varPostGraduationYear',
-                            'users.varGraduation',
-                            'users.varGraduationYear',
-                            'users.varFees',
-                            'users.varTimeDuration',
-                            'dr_category.title'
-                        )
-                        ->first();
-                   
-                   
-                    if (!$doctor) {
+                    $data = $this->buildDoctorDetailData((int) $request->doctor, $request);
+
+                    if ($data === null) {
                         return response()->json(['message' => 'Doctor not found'], 404);
                     }
-                    if(!empty($doctor)){
-                        $ratingData = Rating::selectRaw('IFNULL(AVG(ratings.rating), 0) as ratings')
-                                            ->selectRaw('IFNULL(COUNT(ratings.id), 0) as review_count')
-                                            ->where('doctor_id', $doctor->id)
-                                            ->first();
-                        $doctor->ratings = $ratingData->ratings;
-                        $doctor->review_count = $ratingData->review_count;
-                    
-                    }
 
-                    if (is_null($ratingData)) {
-                        $doctor->ratings = 0;
-                        $doctor->review_count = 0;
-                    }
-                    // Structure the ratings as an object with keys 'ratings' and 'review_count' inside an array
-                    $doctor->ratings = [
-                        [
-                            'ratings' => $doctor->ratings,
-                            'review_count' => $doctor->review_count
-                        ]
-                    ];
-
-                    // Remove the review_count field from the root object (optional)
-                    unset($doctor->review_count);
-
-
-
-                    $doctorModel = User::find($request->doctor);
-                    $current_work_org = $doctorModel?->experiences()
-                        ->select('title as org_name', 'startYear as start_year', 'endYear as end_year', 'varDescription as description', 'isCurrentworkOrg')
-                        ->get() ?? collect();
-                    $doctor->current_work_org = $current_work_org->toJson();
-                    $doctor->language = $doctorModel?->languageDetails() ?? collect();
-                    if (!empty($doctor)) {
-                        $doctor->profile_picture =  !empty($doctor->profile_picture) ? config('app.url') . 'api/docterprofile/' . $doctor->profile_picture : 'null';
-                        $doctor->biography =  !empty($doctor->biography) ? $doctor->biography : 'null';
-
-                        $reviewQuery = Rating::select('rating', 'varShortTitle as title', 'varReview as review','ratings.created_at as date' , 'patients.name', 'patients.lastname', 'patients.varProfile')
-                            ->join('patients', 'ratings.patinet_id', 'patients.id')
-                            ->where('doctor_id', $doctor->id)
-                            ->orderBy('ratings.created_at', 'desc');
-                        $reviews = $shouldPaginateReviews
-                            ? $reviewQuery->paginate($reviewPageSize, ['*'], 'reviewPage', $reviewPage)
-                            : $reviewQuery->get();
-                        $reviewItems = $shouldPaginateReviews ? $reviews->items() : $reviews;
-                        if (isset($reviewItems) && !empty($reviewItems)) {
-                            foreach ($reviewItems as $review) {
-                                $review->profile_picture =  !empty($review->varProfile) ? config('app.url') . 'api/patientprofile/' . $review->varProfile : 'null';
-                            }
-                        }
-                        return response()->json([
-                            'message' => 'success',
-                            'data' => [
-                                'doctor' => [$doctor],
-                                'reviews' => isset($reviewItems) && !empty($reviewItems) ? $reviewItems : [],
-                                'reviewsPagination' => $shouldPaginateReviews ? [
-                                    'current_page' => $reviews->currentPage(),
-                                    'per_page' => $reviews->perPage(),
-                                    'total' => $reviews->total(),
-                                    'last_page' => $reviews->lastPage(),
-                                ] : new \stdClass()
-                            ]
-                        ], 200);
-                    }
+                    return response()->json([
+                        'message' => 'success',
+                        'data' => $data,
+                    ], 200);
                 }
             } catch (\Exception $e) {
-                dd($e);
                 return response()->json([
                     'message' => 'Unauthorized request',
                     'data' => [
-                        'error' => 'Unauthorized request'
-                    ]
+                        'error' => 'Unauthorized request',
+                    ],
                 ], 401);
             }
         }
+
         return response()->json([
             'message' => 'Unauthorized request',
             'data' => [
-                'error' => 'Unauthorized request'
-            ]
+                'error' => 'Unauthorized request',
+            ],
         ], 401);
+    }
+
+    private function buildDoctorDetailData(int $doctorId, Request $request, bool $approvedOnly = false): ?array
+    {
+        $reviewPageSize = max(1, min((int) $request->input('reviewPageSize', $request->input('pageSize', 10)), 100));
+        $reviewPage = max(1, (int) $request->input('reviewPageNumber', 1));
+        $shouldPaginateReviews = $request->filled('reviewPageNumber') || $request->filled('reviewPageSize') || $request->filled('pageSize');
+
+        $doctorQuery = User::select(
+            'users.id',
+            'users.name as first_name',
+            'users.surname',
+            'dr_category.title as category',
+            'users.country',
+            'users.state',
+            'users.email',
+            'users.phoneNumber',
+            'users.gmc_registration_no',
+            'users.indemnity_insurance_provider',
+            'users.policy_no',
+            'users.india_registration_no',
+            'users.dha_reg',
+            'users.reg_no',
+            'users.chrSmartcard',
+            'users.varProfile as profile_picture',
+            'users.varSpeciality as speciality',
+            'users.varExperience as total_experience',
+            'users.varPostGraduation as post_graduation',
+            'users.varPostGraduationYear as pg_year',
+            'users.varGraduation as graduation',
+            'users.varGraduationYear as graduation_year',
+            'users.varFees as fees',
+            'users.bio_handle as biography',
+            'users.varTimeDuration as consultation_time'
+        )
+            ->join('dr_category', 'users.category', 'dr_category.id')
+            ->leftJoin('appointment', 'users.id', 'appointment.dr_id')
+            ->leftJoin('ratings', 'ratings.doctor_id', '=', 'users.id')
+            ->selectRaw('IFNULL(AVG(ratings.rating), 0) as ratings')
+            ->selectRaw('IFNULL(COUNT(ratings.rating), 0) as review_count')
+            ->selectRaw('IFNULL(COUNT(DISTINCT appointment.patient_id), 0) as patient_count')
+            ->where('users.id', $doctorId);
+
+        if ($approvedOnly) {
+            $doctorQuery->where('users.chrApproval', 'Y');
+        }
+
+        $doctor = $doctorQuery->groupBy(
+            'users.id',
+            'users.name',
+            'users.surname',
+            'users.country',
+            'users.state',
+            'users.email',
+            'users.phoneNumber',
+            'users.gmc_registration_no',
+            'users.indemnity_insurance_provider',
+            'users.policy_no',
+            'users.india_registration_no',
+            'users.dha_reg',
+            'users.reg_no',
+            'users.chrSmartcard',
+            'users.varProfile',
+            'users.varSpeciality',
+            'users.varExperience',
+            'users.varPostGraduation',
+            'users.varPostGraduationYear',
+            'users.varGraduation',
+            'users.varGraduationYear',
+            'users.varFees',
+            'users.bio_handle',
+            'users.varTimeDuration',
+            'dr_category.title'
+        )->first();
+
+        if (!$doctor) {
+            return null;
+        }
+
+        $ratingData = Rating::selectRaw('IFNULL(AVG(ratings.rating), 0) as ratings')
+            ->selectRaw('IFNULL(COUNT(ratings.id), 0) as review_count')
+            ->where('doctor_id', $doctor->id)
+            ->first();
+
+        $doctor->ratings = [
+            [
+                'ratings' => $ratingData?->ratings ?? 0,
+                'review_count' => $ratingData?->review_count ?? 0,
+            ],
+        ];
+
+        unset($doctor->review_count);
+
+        $doctorModel = User::find($doctorId);
+        $current_work_org = $doctorModel?->experiences()
+            ->select('title as org_name', 'startYear as start_year', 'endYear as end_year', 'varDescription as description', 'isCurrentworkOrg')
+            ->get() ?? collect();
+        $doctor->current_work_org = $current_work_org->toJson();
+        $doctor->language = $doctorModel?->languageDetails() ?? collect();
+        $doctor->profile_picture = !empty($doctor->profile_picture)
+            ? config('app.url') . 'api/docterprofile/' . $doctor->profile_picture
+            : 'null';
+        $doctor->biography = !empty($doctor->biography) ? $doctor->biography : 'null';
+
+        $reviewQuery = Rating::select('rating', 'varShortTitle as title', 'varReview as review', 'ratings.created_at as date', 'patients.name', 'patients.lastname', 'patients.varProfile')
+            ->join('patients', 'ratings.patinet_id', 'patients.id')
+            ->where('doctor_id', $doctor->id)
+            ->orderBy('ratings.created_at', 'desc');
+        $reviews = $shouldPaginateReviews
+            ? $reviewQuery->paginate($reviewPageSize, ['*'], 'reviewPage', $reviewPage)
+            : $reviewQuery->get();
+        $reviewItems = $shouldPaginateReviews ? $reviews->items() : $reviews;
+
+        if (!empty($reviewItems)) {
+            foreach ($reviewItems as $review) {
+                $review->profile_picture = !empty($review->varProfile)
+                    ? config('app.url') . 'api/patientprofile/' . $review->varProfile
+                    : 'null';
+            }
+        }
+
+        return [
+            'doctor' => [$doctor],
+            'reviews' => !empty($reviewItems) ? $reviewItems : [],
+            'reviewsPagination' => $shouldPaginateReviews ? [
+                'current_page' => $reviews->currentPage(),
+                'per_page' => $reviews->perPage(),
+                'total' => $reviews->total(),
+                'last_page' => $reviews->lastPage(),
+            ] : new \stdClass(),
+        ];
     }
 
 

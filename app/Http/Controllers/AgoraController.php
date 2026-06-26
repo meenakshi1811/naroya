@@ -189,12 +189,27 @@ class AgoraController extends Controller
         }
     }
 
-    private function getAccessToken()
+    private function getAccessToken(): string
     {
-        $client = new \Google\Client();
-        $client->setAuthConfig(storage_path('app/' . $this->serviceAccountPath));
-        $client->addScope('https://www.googleapis.com/auth/cloud-platform');
+        $credentialsPath = storage_path('app/'.$this->serviceAccountPath);
 
-        return $client->fetchAccessTokenWithAssertion()['access_token'];
+        if (! is_file($credentialsPath)) {
+            throw new \RuntimeException("Firebase service account file not found: {$this->serviceAccountPath}");
+        }
+
+        $credentials = new \Google\Auth\Credentials\ServiceAccountCredentials(
+            'https://www.googleapis.com/auth/cloud-platform',
+            $credentialsPath
+        );
+
+        $accessToken = $credentials->fetchAuthToken(
+            \Google\Auth\HttpHandler\HttpHandlerFactory::build()
+        );
+
+        if (! isset($accessToken['access_token'])) {
+            throw new \RuntimeException('Failed to obtain Firebase access token.');
+        }
+
+        return $accessToken['access_token'];
     }
 }

@@ -26,6 +26,7 @@ Route::post('/forget-password',[App\Http\Controllers\ForgetPasswordController::c
 Route::get('/state-list',[App\Http\Controllers\AuthController::class, 'stateList']);
 
 Route::get('/speciality', [App\Http\Controllers\AuthController::class, 'speciality']);
+Route::get('/public/doctor/{doctorId}', [App\Http\Controllers\PatientController::class, 'getPublicDoctorDetail']);
 Route::post('/stripe/webhook', [App\Http\Controllers\StripeWebhookController::class, 'handle']);
 Route::post('/refund', [App\Http\Controllers\PaymentController::class, 'processRefund'])->middleware('throttle:payment');
 Route::post('/generate-agora-details', [App\Http\Controllers\AgoraController::class, 'generateAgoraDetails']);
