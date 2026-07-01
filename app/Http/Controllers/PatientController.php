@@ -282,6 +282,7 @@ class PatientController extends Controller
                         $review->varReview = $request->review;
 
                         $review->save();
+                        Rating::syncDoctorAverage((int) $request->doctor);
 
                         return response()->json([
                             'message' => 'Reviewed Succsessfully!',
@@ -477,12 +478,8 @@ class PatientController extends Controller
                                      ->where('block.patient_id', '=', $patient->id)
                                      ->where('block.chrIsBlock', '=', 'Y'); // Only blocked doctors
                             })
-                            ->whereNull('block.id')
-                            ->orderByDesc(
-                                DB::table('ratings')
-                                    ->selectRaw('IFNULL(AVG(rating), 0)')
-                                    ->whereColumn('ratings.doctor_id', 'users.id')
-                            )
+                            ->whereNull('block.id');
+                        $topDoctor = Rating::orderByAverageRatingDesc($topDoctor)
                             ->limit('5')
                             ->get();
                         $favDoctor = DB::table('favourite')
@@ -954,14 +951,9 @@ class PatientController extends Controller
                             'dr_category.title as categoryName'
                         )
                             ->where('chrApproval', 'Y')  // Only approved doctors
-                            ->join('dr_category', 'users.category', '=', 'dr_category.id')
+                            ->join('dr_category', 'users.category', '=', 'dr_category.id');
                             // ->where('country', $patient->country)
                             // ->where('users.category', $request->category)
-                            ->orderByDesc(
-                                DB::table('ratings')
-                                    ->selectRaw('IFNULL(AVG(rating), 0)')
-                                    ->whereColumn('ratings.doctor_id', 'users.id')
-                            );
     
                         // Exclude doctors who are blocked by the current patient
                         $searchDoctor->leftJoin('block', function($join) use ($patient) {
@@ -979,9 +971,9 @@ class PatientController extends Controller
                                       ->orWhere('users.email', 'like', '%' . $search . '%');
                             });
                         }
-    
-                        // Paginate the results
-                        $searchDoctor = $searchDoctor->paginate($limit, ['*'], 'page', $page);
+
+                        $searchDoctor = Rating::orderByAverageRatingDesc($searchDoctor)
+                            ->paginate($limit, ['*'], 'page', $page);
                     }
     
                     // Format topDoctor profiles
@@ -1495,15 +1487,15 @@ class PatientController extends Controller
             return null;
         }
 
-        $ratingData = Rating::selectRaw('IFNULL(AVG(ratings.rating), 0) as ratings')
-            ->selectRaw('IFNULL(COUNT(ratings.id), 0) as review_count')
-            ->where('doctor_id', $doctor->id)
-            ->first();
+        $ratingData = Rating::statsForDoctorIds([(int) $doctor->id])[(int) $doctor->id] ?? [
+            'ratings' => 0,
+            'review_count' => 0,
+        ];
 
         $doctor->ratings = [
             [
-                'ratings' => $ratingData?->ratings ?? 0,
-                'review_count' => $ratingData?->review_count ?? 0,
+                'ratings' => $ratingData['ratings'],
+                'review_count' => $ratingData['review_count'],
             ],
         ];
 

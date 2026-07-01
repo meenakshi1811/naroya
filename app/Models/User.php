@@ -78,20 +78,7 @@ class User extends Authenticatable
 
         $doctorIds = $doctorCollection->pluck('id')->filter()->unique()->values()->all();
 
-        $ratingsMap = Rating::query()
-            ->selectRaw('doctor_id, IFNULL(AVG(rating), 0) as ratings, IFNULL(COUNT(id), 0) as review_count')
-            ->whereIn('doctor_id', $doctorIds)
-            ->groupBy('doctor_id')
-            ->get()
-            ->mapWithKeys(function ($item) {
-                return [
-                    $item->doctor_id => [
-                        'ratings' => (float) $item->ratings,
-                        'review_count' => (int) $item->review_count,
-                    ],
-                ];
-            })
-            ->toArray();
+        $ratingsMap = Rating::statsForDoctorIds($doctorIds);
 
         $favouriteMap = [];
         if (!is_null($patientId)) {
@@ -107,7 +94,7 @@ class User extends Authenticatable
                 ? config('app.url') . 'api/docterprofile/' . $doctor->varProfile
                 : 'null';
 
-            $ratingData = $ratingsMap[$doctor->id] ?? ['ratings' => 0, 'review_count' => 0];
+            $ratingData = $ratingsMap[(int) $doctor->id] ?? ['ratings' => 0, 'review_count' => 0];
             $doctor->ratings = [
                 [
                     'ratings' => $ratingData['ratings'],
