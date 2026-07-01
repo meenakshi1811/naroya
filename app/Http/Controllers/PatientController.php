@@ -957,7 +957,11 @@ class PatientController extends Controller
                             ->join('dr_category', 'users.category', '=', 'dr_category.id')
                             // ->where('country', $patient->country)
                             // ->where('users.category', $request->category)
-                            ->orderBy('rattings');
+                            ->orderByDesc(
+                                DB::table('ratings')
+                                    ->selectRaw('IFNULL(AVG(rating), 0)')
+                                    ->whereColumn('ratings.doctor_id', 'users.id')
+                            );
     
                         // Exclude doctors who are blocked by the current patient
                         $searchDoctor->leftJoin('block', function($join) use ($patient) {
