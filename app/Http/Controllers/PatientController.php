@@ -478,6 +478,11 @@ class PatientController extends Controller
                                      ->where('block.chrIsBlock', '=', 'Y'); // Only blocked doctors
                             })
                             ->whereNull('block.id')
+                            ->orderByDesc(
+                                DB::table('ratings')
+                                    ->selectRaw('IFNULL(AVG(rating), 0)')
+                                    ->whereColumn('ratings.doctor_id', 'users.id')
+                            )
                             ->limit('5')
                             ->get();
                         $favDoctor = DB::table('favourite')
