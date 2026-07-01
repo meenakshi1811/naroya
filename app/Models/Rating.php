@@ -12,9 +12,12 @@ class Rating extends Model
 
     protected $fillable = ['patient_id', 'doctor_id', 'rating', 'varShortTitle', 'varReview'];
 
+    /**
+     * Total stars divided by number of reviews, e.g. (5+5+5+5+5+5) / 6 = 5.0
+     */
     public static function averageRatingExpression(): string
     {
-        return 'ROUND(IFNULL(AVG(CAST(rating AS DECIMAL(10,2))), 0), 1)';
+        return 'ROUND(IFNULL(SUM(CAST(rating AS DECIMAL(10,2))) / NULLIF(COUNT(id), 0), 0), 1)';
     }
 
     public static function scopeWithValidRating(Builder $query): Builder
@@ -51,10 +54,15 @@ class Rating extends Model
     public static function orderByAverageRatingDesc(Builder $query, string $userTable = 'users'): Builder
     {
         $averageExpression = static::averageRatingExpression();
+        $validRatingsCondition = "ratings.doctor_id = {$userTable}.id AND rating IS NOT NULL AND rating != ''";
 
-        return $query->orderByRaw(
-            "(SELECT {$averageExpression} FROM ratings WHERE ratings.doctor_id = {$userTable}.id AND rating IS NOT NULL AND rating != '') DESC"
-        );
+        return $query
+            ->orderByRaw(
+                "(SELECT {$averageExpression} FROM ratings WHERE {$validRatingsCondition}) DESC"
+            )
+            ->orderByRaw(
+                "(SELECT COUNT(id) FROM ratings WHERE {$validRatingsCondition}) DESC"
+            );
     }
 
     public static function syncDoctorAverage(int $doctorId): void
