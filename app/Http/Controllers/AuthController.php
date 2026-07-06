@@ -68,7 +68,9 @@ class AuthController extends Controller
         try {
             $request->validate([
                 'email' => 'required|string|email',
-                'password' => 'required|string'
+                'password' => 'required|string',
+                'fcm_token' => 'nullable|string',
+                'is_web' => 'nullable|in:0,1',
             ]);
     
             $credentials = request(['email', 'password']);
@@ -118,9 +120,12 @@ class AuthController extends Controller
             //     $this->sendPushNotification($user->fcm_token, 'Login Successful', 'You have successfully logged in.');
             // }
 
-        if (isset($request->fcm_token) && !empty($request->fcm_token)) {
+        $isWeb = (string) $request->input('is_web', '0') === '1';
+
+        if (!$isWeb) {
+            if (isset($request->fcm_token) && !empty($request->fcm_token)) {
                 $notificationController = new NotificationController();
-            
+
                 if ($request->fcm_token === $user->fcm_token) {
                     $notificationController->sendPushNotification(
                         $user->fcm_token,
@@ -132,26 +137,26 @@ class AuthController extends Controller
                     $message = $user->fcm_token
                         ? 'Your account was logged in from a new device. If this was not you, please contact support.'
                         : 'You have successfully logged in.';
-            
+
                     $notificationController->sendPushNotification(
                         $user->fcm_token ?: $request->fcm_token,
                         $user->fcm_token ? 'New Device Login' : 'Login Successful!',
                         $message,
                         'doctor'
                     );
-            
+
                     $user->fcm_token = $request->fcm_token;
                     $user->save();
-
+                }
+            } elseif (!empty($user->fcm_token)) {
+                $notificationController = new NotificationController();
+                $notificationController->sendPushNotification(
+                    $user->fcm_token,
+                    'Login Successful!',
+                    'You have successfully logged in.',
+                    'doctor'
+                );
             }
-        } elseif (!empty($user->fcm_token)) {
-            $notificationController = new NotificationController();
-            $notificationController->sendPushNotification(
-                $user->fcm_token,
-                'Login Successful!',
-                'You have successfully logged in.',
-                'doctor'
-            );
         }
 
             $user->varProfile = config('app.url') . 'api/docterprofile/' . $user->varProfile;
