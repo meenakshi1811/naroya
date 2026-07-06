@@ -25,18 +25,15 @@ class SendMeetingReminder extends Command
 
     public function handle()
     {
-        $now = Carbon::now();
-        $reminderTime = $now->addMinutes(15)->format('Y-m-d H:i:00'); // Get reminder timestamp
-        
-        $date = Carbon::now()->format('Y-m-d'); // Get today's date
-        $time = Carbon::now()->addMinutes(15)->format('H:i'); // Get time 15 mins from now
+        $reminderAt = Carbon::now()->addMinutes(15);
+        $date = $reminderAt->format('Y-m-d');
+        $time = $reminderAt->format('H:i');
 
-// Get appointments where the date matches today's date and time matches 15 mins from now
-$appointments = Appointment::where('varAppointment', $date)
-                           ->where('startTime', $time)
-                           ->where('charIsPaid', 'Y')
-                           ->where('chrIsCanceled', 'N')
-                           ->get();
+        $appointments = Appointment::where('varAppointment', $date)
+            ->where('startTime', $time)
+            ->where('charIsPaid', 'Y')
+            ->where('chrIsCanceled', 'N')
+            ->get();
                            
 
         foreach ($appointments as $appointment) {

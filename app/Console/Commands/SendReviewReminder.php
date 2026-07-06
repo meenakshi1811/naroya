@@ -16,8 +16,9 @@ class SendReviewReminder extends Command
 
     public function handle(): void
     {
-        $date = Carbon::now()->format('Y-m-d');
-        $endTime = Carbon::now()->subMinutes(15)->format('H:i');
+        $reviewAt = Carbon::now()->subMinutes(15);
+        $date = $reviewAt->format('Y-m-d');
+        $endTime = $reviewAt->format('H:i');
 
         $appointments = Appointment::where('varAppointment', $date)
             ->where('endTime', $endTime)
