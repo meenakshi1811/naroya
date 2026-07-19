@@ -15,7 +15,10 @@
                                 }}                           
                                 </p>
                             </li> <!--end::User Image--> <!--begin::Menu Body-->                           
-                            <li class="user-footer"> <a href="{{url('/admin/logout')}}" class="btn btn-primarybtn-flat float-start">Sign out</a> </li> <!--end::Menu Footer-->
+                            <li class="user-footer">
+                                <a href="{{ route('admin.profile') }}" class="btn btn-default btn-flat float-start">Profile</a>
+                                <a href="{{url('/admin/logout')}}" class="btn btn-primary btn-flat float-end">Sign out</a>
+                            </li> <!--end::Menu Footer-->
                         </ul>
                     </li> <!--end::User Menu Dropdown-->
                 </ul> <!--end::End Navbar Links-->

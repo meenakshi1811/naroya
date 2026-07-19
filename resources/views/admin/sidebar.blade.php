@@ -39,13 +39,18 @@
                             <p>Payment Ledger</p>
                         </a> </li> 
                                                                         
-                                                                           <li class="nav-item">
+                        <li class="nav-item">
                             <a href="{{ url('/admin/settings') }}" class="nav-link {{ (Request::segment('2') == 'settings') ? 'active' : '' }}">
                                 <i class="nav-icon bi bi-gear"></i>
                                 <p>Settings</p>
                             </a>
-                        </li>                                                       
-                                                                                         
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.profile') }}" class="nav-link {{ (Request::segment('2') == 'profile') ? 'active' : '' }}">
+                                <i class="nav-icon bi bi-person"></i>
+                                <p>Profile</p>
+                            </a>
+                        </li>
                     </ul> <!--end::Sidebar Menu-->
                 </nav>
             </div> <!--end::Sidebar Wrapper-->

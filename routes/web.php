@@ -103,6 +103,10 @@ Route::delete('/admin/delete-patient/{id}', [App\Http\Controllers\PatientControl
     //Setting
     Route::get('/admin/settings',[App\Http\Controllers\Admin\SettingController::class, 'index'])->name('admin.settings');
     Route::post('/admin/settings/update',[App\Http\Controllers\Admin\SettingController::class, 'update'])->name('admin.settings.update');
+
+    // Admin profile
+    Route::get('/admin/profile', [App\Http\Controllers\Admin\ProfileController::class, 'index'])->name('admin.profile');
+    Route::put('/admin/profile', [App\Http\Controllers\Admin\ProfileController::class, 'update'])->name('admin.profile.update');
     
     
     //PaymentLogs
