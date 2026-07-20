@@ -1,14 +1,10 @@
 <IfModule mod_headers.c>
-    # Allow Noraya frontends to read public API-hosted images across subdomains.
+    # Flutter web (CanvasKit) requires CORS on cross-origin images.
     # Scoped to static assets only; API CORS is handled by Laravel (config/cors.php).
-    SetEnvIfNoCase Origin "^https://(app|doctor|patient)\.noraya\.in$" CORS_ALLOW_ORIGIN=$0
-
     <FilesMatch "\.(jpe?g|png|gif|webp|svg|ico|pdf|bmp|avif)$">
-        Header always set Access-Control-Allow-Origin "%{CORS_ALLOW_ORIGIN}e" env=CORS_ALLOW_ORIGIN
-        Header always set Access-Control-Allow-Methods "GET, HEAD, OPTIONS" env=CORS_ALLOW_ORIGIN
-        Header always set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization" env=CORS_ALLOW_ORIGIN
-        Header always set Access-Control-Max-Age "86400" env=CORS_ALLOW_ORIGIN
-        Header merge Vary Origin env=CORS_ALLOW_ORIGIN
+        Header always set Access-Control-Allow-Origin "*"
+        Header always set Access-Control-Allow-Methods "GET, OPTIONS"
+        Header always set Access-Control-Allow-Headers "*"
     </FilesMatch>
 </IfModule>
 
