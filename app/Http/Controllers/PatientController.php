@@ -1160,8 +1160,8 @@ class PatientController extends Controller
         }
 
         $today = Carbon::today();
-        $startTime = $request->input('start_time', '08:00');
-        $endTime = $request->input('end_time', '20:00');
+        $startTime = $request->input('start_time', '09:00');
+        $endTime = $request->input('end_time', '21:00');
         $date = $request->input('date', now()->format('Y-m-d'));
 
         $start = Carbon::createFromFormat('Y-m-d H:i', "{$date} {$startTime}");
