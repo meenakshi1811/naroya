@@ -1,4 +1,8 @@
 <IfModule mod_headers.c>
+    # Allow iframe embedding from Noraya app (Terms / policy pages).
+    Header always unset X-Frame-Options
+    Header always set Content-Security-Policy "frame-ancestors 'self' https://app.noraya.in"
+
     # Flutter web (CanvasKit) requires CORS on cross-origin images.
     # Scoped to static assets only; API CORS is handled by Laravel (config/cors.php).
     <FilesMatch "\.(jpe?g|png|gif|webp|svg|ico|pdf|bmp|avif)$">
