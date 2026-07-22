@@ -128,3 +128,15 @@ Route::post('password/reset', [\App\Http\Controllers\ResePasswordController::cla
 // Route::get('/admin', function () {
 //     return view('admin.dashboard'); // Create a dashboard view
 // });
+
+// Flutter / SPA fallback: serve index.html for client-side routes only.
+// Exclude static asset extensions so Laravel does not swallow .js/.json/etc.
+Route::get('/{any}', function () {
+    $indexPath = public_path('index.html');
+
+    if (! file_exists($indexPath)) {
+        abort(404);
+    }
+
+    return response()->file($indexPath);
+})->where('any', '^(?!.*\.(js|json|css|png|jpg|jpeg|gif|webp|ico|svg|wasm|woff|woff2|ttf|map)$).*$');
