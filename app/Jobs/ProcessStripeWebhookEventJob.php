@@ -159,7 +159,9 @@ class ProcessStripeWebhookEventJob implements ShouldQueue
                 $patient->fcm_token,
                 'Payment Failed',
                 'Your payment could not be processed. Please try again.',
-                'patient'
+                'patient',
+                ['type' => 'payment_failed'],
+                'payment_failed'
             );
         }
     }
@@ -217,7 +219,9 @@ class ProcessStripeWebhookEventJob implements ShouldQueue
                 $patient->fcm_token,
                 'Refund Processed',
                 'Your refund has been successfully processed.',
-                'patient'
+                'patient',
+                ['type' => 'refund_processed'],
+                'refund_processed'
             );
         }
     }

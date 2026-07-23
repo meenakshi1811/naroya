@@ -79,7 +79,9 @@ class PatientController extends Controller
                         $patient->fcm_token,
                         'New Device Login',
                         'Your account was logged in from a new device. If this was not you, please contact support.',
-                        'patient'
+                        'patient',
+                        [],
+                        'patient_new_device_login'
                     );
                 }
 
@@ -208,7 +210,9 @@ class PatientController extends Controller
                     $patients->fcm_token,
                     'Welcome to Our Application!',
                     'Thank you for registering with us. We are glad to have you onboard!',
-                        'patient'
+                    'patient',
+                    [],
+                    'patient_register'
                 );
             }
             
@@ -1310,7 +1314,12 @@ class PatientController extends Controller
                                 $doctor->fcm_token,
                                 'New Appointment Request',
                                 'You have a new appointment request from ' . $patient->name,
-                        'doctor'
+                                'doctor',
+                                [
+                                    'type' => 'new_appointment_request',
+                                    'appointmentId' => (string) $appointment->id,
+                                ],
+                                'new_appointment_request'
                             );
                         }
                         

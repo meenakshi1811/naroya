@@ -43,7 +43,12 @@ class AppointmentController extends Controller
                         $doctor->fcm_token,
                         "Appointment Canceled",
                         "The appointment with {$patient->name} has been canceled. Reason: {$request->reason}",
-                        'doctor'
+                        'doctor',
+                        [
+                            'type' => 'appointment_canceled',
+                            'appointmentId' => (string) $appointment->id,
+                        ],
+                        'appointment_canceled'
                     );
                 }
 
@@ -116,7 +121,12 @@ class AppointmentController extends Controller
                     $doctor->fcm_token,
                     'Appointment Removed',
                     "The appointment with {$patient->name} was removed because the time slot was already booked.",
-                    'doctor'
+                    'doctor',
+                    [
+                        'type' => 'appointment_removed',
+                        'appointmentId' => (string) $appointment->id,
+                    ],
+                    'appointment_removed'
                 );
             }
 

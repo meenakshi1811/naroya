@@ -7,12 +7,10 @@ use Illuminate\Http\Request;
 use App\Models\Appointment;
 use App\Models\VideoSession;
 use Exception;
-use Illuminate\Support\Facades\Http;
 
 class AgoraController extends Controller
 {
     protected $agoraService;
-    private $serviceAccountPath = 'firebase/wellora-ltd-firebase-adminsdk-npep8-88debc3422.json';
 
     public function __construct(AgoraService $agoraService)
     {
@@ -116,100 +114,38 @@ class AgoraController extends Controller
     private function notifyPatient($patient, $channelName, $token, $uid)
     {
         if (!empty($patient->fcm_token)) {
-            $this->sendFCMNotification(
+            (new NotificationController())->sendPushNotification(
                 $patient->fcm_token,
                 'Doctor Started the Meeting',
                 'Your doctor has started the video call. Please join now.',
-                $channelName,
-                $token,
-                $uid,
-                'patient'
+                'patient',
+                [
+                    'type' => 'meeting',
+                    'channelId' => (string) $channelName,
+                    'token' => (string) $token,
+                    'uid' => (string) $uid,
+                ],
+                'doctor_started_meeting'
             );
         }
     }
 
-    
     private function notifyDoctor($doctor, $channelName, $token, $uid)
     {
         if (!empty($doctor->fcm_token)) {
-            $this->sendFCMNotification(
+            (new NotificationController())->sendPushNotification(
                 $doctor->fcm_token,
                 'Patient Started the Meeting',
                 'Your patient has started the video call. Please join now.',
-                $channelName,
-                $token,
-                $uid,
-                'doctor'
-            );
-        }
-    }
-
-    
-    private function sendFCMNotification($deviceToken, $title, $body, $channelId, $token, $uid, $appType)
-    {
-        try {
-            $this->serviceAccountPath = match ($appType) {
-                'doctor' => 'firebase/doctor-app-firebase-adminsdk.json',
-                'patient' => 'firebase/patient-app-firebase-adminsdk.json',
-                default => throw new \Exception('Invalid app type specified.')
-            };
-
-            $accessToken = $this->getAccessToken();
-
-            $payload = [
-                'message' => [
-                    'token' => $deviceToken,
-                    'notification' => [
-                        'title' => $title,
-                        'body' => $body,
-                    ],
-                    'data' => [
-                        'type' => 'meeting',
-                        'channelId' => (string) $channelId,
-                        'token' => (string) $token,
-                        'uid' => (string) $uid,
-                    ],
+                'doctor',
+                [
+                    'type' => 'meeting',
+                    'channelId' => (string) $channelName,
+                    'token' => (string) $token,
+                    'uid' => (string) $uid,
                 ],
-            ];
-
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $accessToken,
-                'Content-Type' => 'application/json',
-            ])->post(
-                "https://fcm.googleapis.com/v1/projects/" . env('FIREBASE_PROJECT_ID') . "/messages:send",
-                $payload
+                'patient_started_meeting'
             );
-
-            if (!$response->successful()) {
-                \Log::error('FCM Error: ' . $response->body());
-            }
-
-        } catch (\Exception $e) {
-            \Log::error('FCM Exception: ' . $e->getMessage());
         }
-    }
-
-    private function getAccessToken(): string
-    {
-        $credentialsPath = storage_path('app/'.$this->serviceAccountPath);
-
-        if (! is_file($credentialsPath)) {
-            throw new \RuntimeException("Firebase service account file not found: {$this->serviceAccountPath}");
-        }
-
-        $credentials = new \Google\Auth\Credentials\ServiceAccountCredentials(
-            'https://www.googleapis.com/auth/cloud-platform',
-            $credentialsPath
-        );
-
-        $accessToken = $credentials->fetchAuthToken(
-            \Google\Auth\HttpHandler\HttpHandlerFactory::build()
-        );
-
-        if (! isset($accessToken['access_token'])) {
-            throw new \RuntimeException('Failed to obtain Firebase access token.');
-        }
-
-        return $accessToken['access_token'];
     }
 }

@@ -44,7 +44,8 @@ class SendReviewReminder extends Command
                     'type' => 'review_request',
                     'appointmentId' => (string) $appointment->id,
                     'doctorId' => (string) $appointment->dr_id,
-                ]
+                ],
+                'review_request'
             );
         }
     }

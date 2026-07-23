@@ -131,18 +131,23 @@ class AuthController extends Controller
                         $user->fcm_token,
                         'Login Successful!',
                         'You have successfully logged in.',
-                        'doctor'
+                        'doctor',
+                        [],
+                        'doctor_login'
                     );
                 } else {
                     $message = $user->fcm_token
                         ? 'Your account was logged in from a new device. If this was not you, please contact support.'
                         : 'You have successfully logged in.';
+                    $action = $user->fcm_token ? 'doctor_new_device_login' : 'doctor_login';
 
                     $notificationController->sendPushNotification(
                         $user->fcm_token ?: $request->fcm_token,
                         $user->fcm_token ? 'New Device Login' : 'Login Successful!',
                         $message,
-                        'doctor'
+                        'doctor',
+                        [],
+                        $action
                     );
 
                     $user->fcm_token = $request->fcm_token;
@@ -154,7 +159,9 @@ class AuthController extends Controller
                     $user->fcm_token,
                     'Login Successful!',
                     'You have successfully logged in.',
-                    'doctor'
+                    'doctor',
+                    [],
+                    'doctor_login'
                 );
             }
         }
@@ -822,7 +829,9 @@ class AuthController extends Controller
                     $user->fcm_token,
                     'Welcome to the platform!',
                     'Your registration was successful sent for approval.',
-                    'doctor'
+                    'doctor',
+                    [],
+                    'doctor_register'
                 );
             }
 
@@ -1028,27 +1037,40 @@ class AuthController extends Controller
                     if(isset($request->isAccept) && $request->isAccept == 'Y'){
                         $requestData->chrIsAccepted = $request->isAccept;
                         
-                          $notificationController = new NotificationController();
-                        $notificationController->sendPushNotification(
-                        $patient->fcm_token, // Assuming `fcm_token` is stored in the patient table
-                            'Appointment Accepted',
-                            'Your appointment request has been accepted by Dr. ' . $user->name,
-                    'patient'
-                        );
+                        if (! empty($patient->fcm_token)) {
+                            $notificationController = new NotificationController();
+                            $notificationController->sendPushNotification(
+                                $patient->fcm_token,
+                                'Appointment Accepted',
+                                'Your appointment request has been accepted by Dr. ' . $user->name,
+                                'patient',
+                                [
+                                    'type' => 'appointment_accepted',
+                                    'appointmentId' => (string) $requestData->id,
+                                ],
+                                'appointment_accepted'
+                            );
+                        }
                         $message = "Appointment Accepted Successfully";
                         
                     }else{
                         $requestData->chrIsAccepted = 'N';
                         $requestData->chrIsRejected = 'Y';
                         
-                        
-                        $notificationController = new NotificationController();
-                        $notificationController->sendPushNotification(
-                        $patient->fcm_token,
-                            'Appointment Rejected',
-                            'Your appointment request has been rejected by Dr. ' . $user->name . '. Reason: ' . $request->reason,
-                            'patient'
-                        );
+                        if (! empty($patient->fcm_token)) {
+                            $notificationController = new NotificationController();
+                            $notificationController->sendPushNotification(
+                                $patient->fcm_token,
+                                'Appointment Rejected',
+                                'Your appointment request has been rejected by Dr. ' . $user->name . '. Reason: ' . $request->reason,
+                                'patient',
+                                [
+                                    'type' => 'appointment_rejected',
+                                    'appointmentId' => (string) $requestData->id,
+                                ],
+                                'appointment_rejected'
+                            );
+                        }
                         $message = "Appointment Declined Successfully";
                     }
                     $requestData->varReason = $request->reason;

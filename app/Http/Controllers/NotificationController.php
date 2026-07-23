@@ -12,9 +12,29 @@ class NotificationController extends Controller
 {
     private string $serviceAccountPath;
 
-    public function sendPushNotification($token, $title, $body, $appType, array $data = [])
+    /**
+     * Send an FCM push notification.
+     *
+     * Title/body are sent in both `notification` (system tray) and `data`
+     * so mobile apps can read them in foreground and local-notification handlers.
+     *
+     * @param  string  $token  Device FCM token
+     * @param  string  $title  Notification title
+     * @param  string  $body   Notification body
+     * @param  string  $appType  'doctor' or 'patient'
+     * @param  array   $data   Extra data payload (all values cast to string)
+     * @param  string  $action Logical action name for logging (e.g. appointment_accepted)
+     */
+    public function sendPushNotification($token, $title, $body, $appType, array $data = [], string $action = 'unknown')
     {
         if (empty($token)) {
+            Log::warning('Push notification skipped: no device token.', [
+                'action' => $action,
+                'app_type' => $appType,
+                'title' => $title,
+                'body' => $body,
+            ]);
+
             return response()->json(['message' => 'No device token provided.'], 400);
         }
 
@@ -25,17 +45,30 @@ class NotificationController extends Controller
                 default => throw new \InvalidArgumentException('Invalid app type specified.'),
             };
 
+            // Always include title/body in data so foreground handlers can display them.
+            $dataPayload = array_map('strval', array_merge([
+                'title' => (string) $title,
+                'body' => (string) $body,
+                'action' => $action,
+            ], $data));
+
             $message = [
                 'token' => $token,
                 'notification' => [
                     'title' => $title,
                     'body' => $body,
                 ],
+                'data' => $dataPayload,
             ];
 
-            if ($data !== []) {
-                $message['data'] = array_map('strval', $data);
-            }
+            Log::info('Sending push notification.', [
+                'action' => $action,
+                'app_type' => $appType,
+                'title' => $title,
+                'body' => $body,
+                'data' => $dataPayload,
+                'token_prefix' => substr((string) $token, 0, 12).'...',
+            ]);
 
             $accessToken = $this->getAccessToken();
             $projectId = $this->getProjectId();
@@ -53,17 +86,32 @@ class NotificationController extends Controller
 
             if (! $response->successful()) {
                 Log::error('Failed to send push notification.', [
+                    'action' => $action,
+                    'app_type' => $appType,
+                    'title' => $title,
+                    'body' => $body,
                     'status' => $response->status(),
-                    'body' => $response->body(),
+                    'response' => $response->body(),
                 ]);
 
                 return response()->json(['error' => 'Failed to send notification.'], $response->status());
             }
 
+            Log::info('Push notification sent successfully.', [
+                'action' => $action,
+                'app_type' => $appType,
+                'title' => $title,
+                'body' => $body,
+                'fcm_response' => $response->json(),
+            ]);
+
             return response()->json(['message' => 'Notification sent successfully.']);
         } catch (\Exception $e) {
             Log::error('Error sending push notification: '.$e->getMessage(), [
+                'action' => $action,
                 'app_type' => $appType,
+                'title' => $title,
+                'body' => $body,
                 'service_account' => $this->serviceAccountPath ?? null,
             ]);
 
