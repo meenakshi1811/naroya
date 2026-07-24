@@ -231,23 +231,39 @@ class PaymentController extends Controller
                 ], 422);
             }
 
-           $refundResponse = Http::withBasicAuth($razorpayKey, $razorpaySecret)
-            ->asJson()
-            ->post("https://api.razorpay.com/v1/payments/{$paymentTransactionId}/refund", [
-                'amount' => 50000,
-            ]);
+            // Razorpay amounts are in paise; refund only the remaining unrefunded amount.
+            $capturedAmount = (int) ($paymentDetails['amount'] ?? 0);
+            $alreadyRefunded = (int) ($paymentDetails['amount_refunded'] ?? 0);
+            $refundAmount = $capturedAmount - $alreadyRefunded;
 
-            dd($refundResponse->status(), $refundResponse->json());
+            if ($refundAmount <= 0) {
+                $payment->status = 'refunded';
+                $payment->save();
 
+                return response()->json([
+                    'message' => 'Payment is already fully refunded.',
+                    'payment_transaction_id' => $paymentTransactionId,
+                ], 400);
+            }
 
-            // echo'<pre>';print_r($refundResponse);exit();
+            $refundResponse = Http::withBasicAuth($razorpayKey, $razorpaySecret)
+                ->asJson()
+                ->post("https://api.razorpay.com/v1/payments/{$paymentTransactionId}/refund", [
+                    'amount' => $refundAmount,
+                ]);
 
             if (!$refundResponse->ok()) {
+                $razorpayError = $refundResponse->json();
+                $errorDescription = $razorpayError['error']['description']
+                    ?? $razorpayError['error']['reason']
+                    ?? 'Unable to process refund from Razorpay.';
+
                 return response()->json([
-                    'message' => 'Unable to process refund from Razorpay.',
-                    'error' => $refundResponse->json(),
+                    'message' => $errorDescription,
+                    'error' => $razorpayError,
                     'payment_transaction_id' => $paymentTransactionId,
                     'razorpay_payment_status' => $paymentStatus,
+                    'refund_amount' => $refundAmount,
                 ], 400);
             }
 
@@ -259,8 +275,6 @@ class PaymentController extends Controller
                 'data' => $refundResponse->json(),
             ], 200);
         } catch (\Exception $e) {
-            echo'<pre>';print_r($e->getMessage());exit();
-
             Log::error('Razorpay refund failed.', ['error' => $e->getMessage()]);
 
             return response()->json([
