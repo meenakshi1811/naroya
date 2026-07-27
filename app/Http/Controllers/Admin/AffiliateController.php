@@ -144,6 +144,30 @@ class AffiliateController extends Controller
         return response()->json(['code' => $code]);
     }
 
+    public function updateDefaultCommission(Request $request)
+    {
+        $validated = $request->validate([
+            'affiliate_commission_percentage' => 'required|numeric|min:0|max:100',
+        ]);
+
+        GeneralSetting::updateOrCreate(
+            ['field_name' => 'affiliate_commission_percentage'],
+            ['field_value' => $validated['affiliate_commission_percentage']]
+        );
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Default commission rate updated.',
+                'rate' => (float) $validated['affiliate_commission_percentage'],
+            ]);
+        }
+
+        return redirect()
+            ->route('admin.affiliate', $request->only(['month', 'year']))
+            ->with('success', 'Default commission rate updated.');
+    }
+
     private function validateAffiliate(Request $request, ?int $affiliateId = null): array
     {
         $rules = [

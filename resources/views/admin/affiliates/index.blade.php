@@ -181,22 +181,122 @@
         padding: 1.25rem 1.5rem;
     }
 
-    .affiliate-source-tabs {
-        display: flex;
-        gap: 0.5rem;
-        margin-bottom: 1rem;
+    .affiliate-type-switch {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.35rem;
+        background: #eef2ef;
+        border: 1px solid #dce8dd;
+        border-radius: 12px;
+        padding: 0.35rem;
+        margin-bottom: 1.35rem;
     }
 
-    .affiliate-source-tabs .btn {
-        flex: 1;
+    .affiliate-type-option {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        color: #6b7280;
+        font-weight: 600;
+        font-size: 0.92rem;
+        padding: 0.7rem 0.85rem;
+        border-radius: 9px;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+        line-height: 1.2;
+    }
+
+    .affiliate-type-option:hover {
+        color: var(--affiliate-green);
+    }
+
+    .affiliate-type-option.is-active {
+        background: #fff;
+        color: var(--affiliate-green);
+        box-shadow: 0 1px 4px rgba(15, 127, 19, 0.12);
+    }
+
+    .affiliate-form-section {
+        margin-bottom: 1.1rem;
+    }
+
+    .affiliate-form-section-title {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #9ca3af;
+        margin-bottom: 0.65rem;
+    }
+
+    .affiliate-default-commission {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.65rem;
+        background: #fff;
+        border: 1px solid #dce8dd;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .affiliate-default-commission label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #374151;
+        margin: 0;
+        white-space: nowrap;
+    }
+
+    .affiliate-default-commission .commission-input-wrap {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .affiliate-default-commission input {
+        width: 72px;
+        text-align: center;
+        border: 1px solid #d1d5db;
         border-radius: 8px;
+        padding: 0.35rem 0.5rem;
         font-weight: 600;
     }
 
-    .affiliate-source-tabs .btn.active {
-        background: var(--affiliate-green);
+    .affiliate-default-commission .save-default-btn {
+        margin-left: auto;
+    }
+
+    .affiliate-modal .form-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.35rem;
+    }
+
+    .affiliate-modal .form-control,
+    .affiliate-modal .form-select {
+        border-radius: 10px;
+        border-color: #d1d5db;
+        padding: 0.65rem 0.85rem;
+    }
+
+    .affiliate-modal .form-control:focus,
+    .affiliate-modal .form-select:focus {
         border-color: var(--affiliate-green);
-        color: #fff;
+        box-shadow: 0 0 0 0.2rem rgba(16, 144, 20, 0.15);
+    }
+
+    .affiliate-modal .input-group-text {
+        background: #f3f4f6;
+        border-color: #d1d5db;
+        font-weight: 600;
+        color: #6b7280;
+    }
+
+    .affiliate-modal .modal-footer {
+        border-top: 1px solid #eef2ef;
+        padding: 1rem 1.5rem;
     }
 
     .affiliate-code-input-group .btn {
@@ -258,6 +358,21 @@
                 <i class="bi bi-plus-lg me-1"></i> Add Affiliate
             </button>
         </div>
+    </div>
+
+    <div class="affiliate-default-commission">
+        <label for="defaultCommissionRate">Default commission rate</label>
+        <form method="POST" action="{{ route('admin.affiliate.default-commission') }}" id="defaultCommissionForm" class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
+            @csrf
+            <input type="hidden" name="month" value="{{ $selectedMonth }}">
+            <input type="hidden" name="year" value="{{ $selectedYear }}">
+            <div class="commission-input-wrap">
+                <input type="number" step="0.01" min="0" max="100" name="affiliate_commission_percentage" id="defaultCommissionRate" value="{{ rtrim(rtrim(number_format($defaultCommissionRate, 2), '0'), '.') }}" required>
+                <span class="text-muted fw-semibold">%</span>
+            </div>
+            <small class="text-muted">Applied to affiliates without a custom rate.</small>
+            <button type="submit" class="btn btn-sm btn-outline-primary save-default-btn">Save default</button>
+        </form>
     </div>
 
     <div class="affiliate-stat-grid">
@@ -385,13 +500,21 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="affiliate-source-tabs">
-                        <button type="button" class="btn btn-outline-primary active" data-source="existing_doctor" data-form="add">Existing Doctor</button>
-                        <button type="button" class="btn btn-outline-primary" data-source="custom" data-form="add">New Affiliate</button>
+                    <div class="affiliate-form-section">
+                        <div class="affiliate-form-section-title">Affiliate type</div>
+                        <div class="affiliate-type-switch" role="tablist" aria-label="Affiliate type">
+                            <button type="button" class="affiliate-type-option is-active" data-source="existing_doctor" data-form="add">
+                                Existing Doctor
+                            </button>
+                            <button type="button" class="affiliate-type-option" data-source="custom" data-form="add">
+                                New Affiliate
+                            </button>
+                        </div>
                     </div>
 
-                    <div id="addExistingDoctorBlock">
-                        <div class="mb-3">
+                    <div class="affiliate-form-section" id="addExistingDoctorBlock">
+                        <div class="affiliate-form-section-title">Doctor details</div>
+                        <div class="mb-0">
                             <label for="addDoctorId" class="form-label">Select Doctor <span class="text-danger">*</span></label>
                             <select class="form-select" name="doctor_id" id="addDoctorId">
                                 <option value="">Choose an approved doctor...</option>
@@ -404,26 +527,36 @@
                         </div>
                     </div>
 
-                    <div id="addCustomBlock" class="d-none">
-                        <div class="mb-3">
+                    <div class="affiliate-form-section d-none" id="addCustomBlock">
+                        <div class="affiliate-form-section-title">Affiliate details</div>
+                        <div class="mb-0">
                             <label for="addAffiliateName" class="form-label">Affiliate / Clinic Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="name" id="addAffiliateName" placeholder="e.g. Dr. Sharma Clinic">
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="addAffiliateCode" class="form-label">Affiliate Code</label>
-                        <div class="input-group affiliate-code-input-group">
-                            <input type="text" class="form-control text-uppercase" name="code" id="addAffiliateCode" placeholder="Leave blank to auto-generate" maxlength="50" pattern="[A-Za-z0-9_-]+">
-                            <button type="button" class="btn btn-outline-secondary generate-code-btn" data-target="#addAffiliateCode">Generate</button>
+                    <div class="affiliate-form-section">
+                        <div class="affiliate-form-section-title">Referral code</div>
+                        <div class="mb-0">
+                            <label for="addAffiliateCode" class="form-label">Affiliate Code</label>
+                            <div class="input-group affiliate-code-input-group">
+                                <input type="text" class="form-control text-uppercase" name="code" id="addAffiliateCode" placeholder="Leave blank to auto-generate" maxlength="50" pattern="[A-Za-z0-9_-]+">
+                                <button type="button" class="btn btn-outline-secondary generate-code-btn" data-target="#addAffiliateCode">Generate</button>
+                            </div>
+                            <small class="text-muted d-block mt-1">Enter a custom code or click Generate for a unique code.</small>
                         </div>
-                        <small class="text-muted">Enter a custom code or click Generate for a unique code.</small>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="addCommissionRate" class="form-label">Commission Rate (%)</label>
-                        <input type="number" step="0.01" min="0" max="100" class="form-control" name="commission_rate" id="addCommissionRate" placeholder="Default: {{ $defaultCommissionRate }}%">
-                        <small class="text-muted">Leave blank to use the default rate.</small>
+                    <div class="affiliate-form-section mb-0">
+                        <div class="affiliate-form-section-title">Commission</div>
+                        <div class="mb-0">
+                            <label for="addCommissionRate" class="form-label">Commission Rate</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" min="0" max="100" class="form-control" name="commission_rate" id="addCommissionRate" placeholder="{{ rtrim(rtrim(number_format($defaultCommissionRate, 2), '0'), '.') }}">
+                                <span class="input-group-text">%</span>
+                            </div>
+                            <small class="text-muted d-block mt-1">Leave blank to use the default rate (currently {{ rtrim(rtrim(number_format($defaultCommissionRate, 2), '0'), '.') }}%).</small>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -451,13 +584,21 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="affiliate-source-tabs">
-                        <button type="button" class="btn btn-outline-primary active" data-source="existing_doctor" data-form="edit">Existing Doctor</button>
-                        <button type="button" class="btn btn-outline-primary" data-source="custom" data-form="edit">Custom Affiliate</button>
+                    <div class="affiliate-form-section">
+                        <div class="affiliate-form-section-title">Affiliate type</div>
+                        <div class="affiliate-type-switch" role="tablist" aria-label="Affiliate type">
+                            <button type="button" class="affiliate-type-option is-active" data-source="existing_doctor" data-form="edit">
+                                Existing Doctor
+                            </button>
+                            <button type="button" class="affiliate-type-option" data-source="custom" data-form="edit">
+                                Custom Affiliate
+                            </button>
+                        </div>
                     </div>
 
-                    <div id="editExistingDoctorBlock">
-                        <div class="mb-3">
+                    <div class="affiliate-form-section" id="editExistingDoctorBlock">
+                        <div class="affiliate-form-section-title">Doctor details</div>
+                        <div class="mb-0">
                             <label for="editDoctorId" class="form-label">Linked Doctor</label>
                             <select class="form-select" name="doctor_id" id="editDoctorId">
                                 <option value="">None</option>
@@ -468,29 +609,40 @@
                         </div>
                     </div>
 
-                    <div id="editCustomBlock" class="d-none">
-                        <div class="mb-3">
+                    <div class="affiliate-form-section d-none" id="editCustomBlock">
+                        <div class="affiliate-form-section-title">Affiliate details</div>
+                        <div class="mb-0">
                             <label for="editAffiliateName" class="form-label">Affiliate / Clinic Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="name" id="editAffiliateName">
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="editAffiliateCode" class="form-label">Affiliate Code</label>
-                        <div class="input-group affiliate-code-input-group">
-                            <input type="text" class="form-control text-uppercase" name="code" id="editAffiliateCode" maxlength="50" pattern="[A-Za-z0-9_-]+">
-                            <button type="button" class="btn btn-outline-secondary generate-code-btn" data-target="#editAffiliateCode">Generate</button>
+                    <div class="affiliate-form-section">
+                        <div class="affiliate-form-section-title">Referral code</div>
+                        <div class="mb-0">
+                            <label for="editAffiliateCode" class="form-label">Affiliate Code</label>
+                            <div class="input-group affiliate-code-input-group">
+                                <input type="text" class="form-control text-uppercase" name="code" id="editAffiliateCode" maxlength="50" pattern="[A-Za-z0-9_-]+">
+                                <button type="button" class="btn btn-outline-secondary generate-code-btn" data-target="#editAffiliateCode">Generate</button>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="editCommissionRate" class="form-label">Commission Rate (%)</label>
-                        <input type="number" step="0.01" min="0" max="100" class="form-control" name="commission_rate" id="editCommissionRate">
-                    </div>
+                    <div class="affiliate-form-section">
+                        <div class="affiliate-form-section-title">Commission</div>
+                        <div class="mb-3">
+                            <label for="editCommissionRate" class="form-label">Commission Rate</label>
+                            <div class="input-group">
+                                <input type="number" step="0.01" min="0" max="100" class="form-control" name="commission_rate" id="editCommissionRate" placeholder="{{ rtrim(rtrim(number_format($defaultCommissionRate, 2), '0'), '.') }}">
+                                <span class="input-group-text">%</span>
+                            </div>
+                            <small class="text-muted d-block mt-1">Leave blank to use the default rate (currently {{ rtrim(rtrim(number_format($defaultCommissionRate, 2), '0'), '.') }}%).</small>
+                        </div>
 
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="is_active" value="1" id="editIsActive" checked>
-                        <label class="form-check-label" for="editIsActive">Active</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_active" value="1" id="editIsActive" checked>
+                            <label class="form-check-label" for="editIsActive">Active</label>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -538,9 +690,9 @@
         const isExisting = sourceType === 'existing_doctor';
         $(`#${formPrefix}SourceType`).val(sourceType);
 
-        const tabs = $(`.affiliate-source-tabs button[data-form="${formPrefix}"]`);
-        tabs.removeClass('active');
-        tabs.filter(`[data-source="${sourceType}"]`).addClass('active');
+        const tabs = $(`.affiliate-type-option[data-form="${formPrefix}"]`);
+        tabs.removeClass('is-active');
+        tabs.filter(`[data-source="${sourceType}"]`).addClass('is-active');
 
         if (formPrefix === 'add') {
             $('#addExistingDoctorBlock').toggleClass('d-none', !isExisting);
@@ -573,7 +725,7 @@
     }
 
     $(function () {
-        $('.affiliate-source-tabs button').on('click', function () {
+        $('.affiliate-type-option').on('click', function () {
             setSourceType($(this).data('form'), $(this).data('source'));
         });
 
