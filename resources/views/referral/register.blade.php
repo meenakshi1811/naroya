@@ -104,17 +104,20 @@
             color: #374151;
         }
 
-        .form-group input {
+        .form-group input,
+        .form-group select {
             width: 100%;
             padding: 0.7rem 0.85rem;
             border: 1px solid #d1d5db;
             border-radius: 10px;
             font-size: 0.95rem;
             font-family: inherit;
+            background: #fff;
             transition: border-color 0.15s, box-shadow 0.15s;
         }
 
-        .form-group input:focus {
+        .form-group input:focus,
+        .form-group select:focus {
             outline: none;
             border-color: var(--green);
             box-shadow: 0 0 0 3px rgba(16, 144, 20, 0.15);
@@ -176,15 +179,29 @@
 
         .referral-footer {
             text-align: center;
-            margin-top: 1.5rem;
-            font-size: 0.82rem;
-            color: var(--muted);
+            margin-top: 1.75rem;
         }
 
-        .referral-footer a {
-            color: var(--green-dark);
-            text-decoration: none;
-            font-weight: 600;
+        .referral-footer p {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin: 0 0 1rem;
+        }
+
+        .google-play-link {
+            display: inline-block;
+            line-height: 0;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+
+        .google-play-link:hover {
+            transform: translateY(-1px);
+            opacity: 0.92;
+        }
+
+        .google-play-link img {
+            height: 52px;
+            width: auto;
         }
     </style>
 </head>
@@ -216,6 +233,8 @@
             <form method="POST" action="{{ route('referral.register', $affiliate->code) }}">
                 @csrf
 
+                <input type="hidden" name="country" value="{{ old('country', $indiaCountryId) }}">
+
                 <div class="form-row">
                     <div class="form-group">
                         <label for="first_name">First Name *</label>
@@ -243,6 +262,33 @@
 
                 <div class="form-row">
                     <div class="form-group">
+                        <label for="state">State *</label>
+                        <select id="state" name="state" required>
+                            <option value="">Select state</option>
+                            @foreach($states as $state)
+                                <option value="{{ $state->id }}" {{ (string) old('state') === (string) $state->id ? 'selected' : '' }}>
+                                    {{ $state->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('state')<div class="form-error">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="form-group">
+                        <label for="language_id">Language *</label>
+                        <select id="language_id" name="language_id" required>
+                            <option value="">Select language</option>
+                            @foreach($languages as $language)
+                                <option value="{{ $language->id }}" {{ (string) old('language_id') === (string) $language->id ? 'selected' : '' }}>
+                                    {{ $language->language_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('language_id')<div class="form-error">{{ $message }}</div>@enderror
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
                         <label for="password">Password *</label>
                         <input type="password" id="password" name="password" required minlength="6">
                         @error('password')<div class="form-error">{{ $message }}</div>@enderror
@@ -253,25 +299,17 @@
                     </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="country">Country</label>
-                        <input type="text" id="country" name="country" value="{{ old('country') }}">
-                    </div>
-                    <div class="form-group">
-                        <label for="state">State</label>
-                        <input type="text" id="state" name="state" value="{{ old('state') }}">
-                    </div>
-                </div>
-
                 <button type="submit" class="submit-btn">Register as Patient</button>
             </form>
         </div>
 
         <div class="referral-footer">
-            Already have an account? Download the Noraya patient app to sign in.<br>
-            <a href="{{ url('/privacy-policy') }}">Privacy Policy</a> ·
-            <a href="{{ url('/terms-and-conditions-patient') }}">Terms &amp; Conditions</a>
+            <p>Already have an account? Download the Noraya patient app to sign in.</p>
+            @if(!empty($googlePlayUrl))
+                <a href="{{ $googlePlayUrl }}" class="google-play-link" target="_blank" rel="noopener noreferrer">
+                    <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play">
+                </a>
+            @endif
         </div>
     </div>
 </body>

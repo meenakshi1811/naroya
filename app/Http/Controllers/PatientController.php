@@ -9,7 +9,7 @@ use Laravel\Passport\Http\Controllers\AccessTokenController;
 use Illuminate\Support\Facades\Http;
 use App\Models\Patients;
 use App\Models\Appointment;
-use App\Models\Affiliate;
+use App\Services\PatientRegistrationService;
 use App\Models\Favourite;
 use App\Models\GeneralSetting;
 use App\Models\User;
@@ -179,66 +179,26 @@ class PatientController extends Controller
     public function register(Request $request)
     {
         try {
-            $request->validate([
-                'first_name' => 'required|string',
-                'email' => 'required|string|email|unique:patients|valid_email_domain',
-                'password' => 'required|string',
-                'phone' => 'required|string|max:20',
-                'fcm_token' => 'nullable|string',
-                'affiliate_code' => 'nullable|string|exists:affiliates,code',
-            ]);
-            $patients = new Patients();
-            $patients->name = $request->first_name;
-            $patients->lastname = $request->last_name;
-            $patients->country = $request->country;
-            $patients->state = $request->state;
-            $patients->email = $request->email;
-            $patients->phone = $request->phone;
-            $patients->password = bcrypt($request->password);
-            $patients->fcm_token = $request->fcm_token;
-
-            if ($request->filled('affiliate_code')) {
-                $affiliate = Affiliate::where('code', strtoupper($request->affiliate_code))
-                    ->where('is_active', true)
-                    ->first();
-                if ($affiliate) {
-                    $patients->affiliate_id = $affiliate->id;
-                }
-            }
-            if ($request->hasFile('profile_picture') && !empty($request->file('profile_picture'))) {
-                $destinationPath = 'api/patientprofile';
-                $myimage = time() . '_' . $request->profile_picture->getClientOriginalName();
-                $request->profile_picture->move(public_path($destinationPath), $myimage);
-                $patients->varProfile =  $myimage;
+            if (! $request->filled('country')) {
+                $registrationService = app(PatientRegistrationService::class);
+                $request->merge(['country' => $registrationService->indiaCountryId()]);
             }
 
-            $patients->save();
-            
-            // Send push notification if FCM token is provided
-            if (!empty($patients->fcm_token)) {
-                $notificationController = new NotificationController();
-                $notificationController->sendPushNotification(
-                    $patients->fcm_token,
-                    'Welcome to Our Application!',
-                    'Thank you for registering with us. We are glad to have you onboard!',
-                    'patient',
-                    [],
-                    'patient_register'
-                );
-            }
-            
+            $patient = app(PatientRegistrationService::class)->createFromRequest($request);
+
             return response()->json([
                 'message' => 'Successfully created user!',
                 'data' => [
                     'user' => [
-                        'id' => $patients->id,
-                        'name' => $patients->name,
-                        'lastname' => $patients->lastname,
-                        'country' => $patients->country,
-                        'state' => $patients->state,
-                        'email' => $patients->email,
-                        'phone' => $patients->phone,
-                        'varProfile' => !empty($patients->varProfile) ? config('app.url') . 'api/patientprofile/' . $patients->varProfile : 'null'
+                        'id' => $patient->id,
+                        'name' => $patient->name,
+                        'lastname' => $patient->lastname,
+                        'country' => $patient->country,
+                        'state' => $patient->state,
+                        'language_id' => $patient->language_id,
+                        'email' => $patient->email,
+                        'phone' => $patient->phone,
+                        'varProfile' => ! empty($patient->varProfile) ? config('app.url') . 'api/patientprofile/' . $patient->varProfile : 'null'
                     ]
                 ]
             ], 200);

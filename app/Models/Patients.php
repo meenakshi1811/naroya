@@ -26,6 +26,7 @@ class Patients extends Authenticatable
         'state',
         'phone',
         'affiliate_id',
+        'language_id',
         'localization_id',
         'email_verified_at',
         'remember_token',
