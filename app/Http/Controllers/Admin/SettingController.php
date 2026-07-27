@@ -31,6 +31,11 @@ class SettingController extends Controller
         );
 
         GeneralSetting::updateOrCreate(
+            ['field_name' => 'affiliate_commission_percentage'],
+            ['field_value' => $request->affiliate_commission_percentage ?? '3']
+        );
+
+        GeneralSetting::updateOrCreate(
             ['field_name' => 'reset_book_date'],
             ['field_value' => $request->reset_book_date]
         );

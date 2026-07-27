@@ -51,6 +51,10 @@ Route::get('/refund-policy', function () {
 Route::get('/disclaimer', function () {
     return view('disclaimer');
 });
+
+// Affiliate referral (public)
+Route::get('/refer/{code}', [App\Http\Controllers\ReferralController::class, 'show'])->name('referral.show');
+Route::post('/refer/{code}', [App\Http\Controllers\ReferralController::class, 'register'])->name('referral.register');
 Route::get('admin/login', [App\Http\Controllers\AdminAuthController::class, 'showLoginForm'])->name('admin.login');
 Route::post('admin/login', [App\Http\Controllers\AdminAuthController::class, 'login']);
 Route::get('admin/logout', [App\Http\Controllers\AdminAuthController::class, 'logout'])->name('admin.logout');
@@ -116,7 +120,12 @@ Route::delete('/admin/delete-patient/{id}', [App\Http\Controllers\PatientControl
     Route::post('/admin/payment-ledger/mark-monthly-paid',[App\Http\Controllers\Admin\PaymentLogController::class, 'markMonthlyPayoutAsPaid'])->name('admin.payment-ledger.mark-monthly-paid');
     Route::post('/admin/refund', [PaymentController::class, 'processRefund']);
 
-    
+    // Affiliates
+    Route::get('/admin/affiliate', [App\Http\Controllers\Admin\AffiliateController::class, 'index'])->name('admin.affiliate');
+    Route::get('/admin/affiliate/generate-code', [App\Http\Controllers\Admin\AffiliateController::class, 'generateCode'])->name('admin.affiliate.generate-code');
+    Route::post('/admin/affiliate', [App\Http\Controllers\Admin\AffiliateController::class, 'store'])->name('admin.affiliate.store');
+    Route::put('/admin/affiliate/{affiliate}', [App\Http\Controllers\Admin\AffiliateController::class, 'update'])->name('admin.affiliate.update');
+    Route::delete('/admin/affiliate/{affiliate}', [App\Http\Controllers\Admin\AffiliateController::class, 'destroy'])->name('admin.affiliate.destroy');
 
 });
 

@@ -25,12 +25,18 @@ class Patients extends Authenticatable
         'country',
         'state',
         'phone',
+        'affiliate_id',
         'localization_id',
         'email_verified_at',
         'remember_token',
         'created_at',
         'updated_at',
     ];
+
+    public function affiliate()
+    {
+        return $this->belongsTo(Affiliate::class, 'affiliate_id');
+    }
 
     /**
      * The attributes that should be hidden for serialization.

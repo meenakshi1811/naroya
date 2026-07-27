@@ -44,6 +44,10 @@
                     <input type="text" class="form-control" id="percentage" name="percentage" value="{{ $settings['percentage'] ?? '' }}" placeholder="Enter Percentage" required>
                 </div>
                 <div class="form-group">
+                    <label for="affiliate_commission_percentage" class="form-label">Affiliate Commission Percentage</label>
+                    <input type="text" class="form-control" id="affiliate_commission_percentage" name="affiliate_commission_percentage" value="{{ $settings['affiliate_commission_percentage'] ?? '3' }}" placeholder="Enter affiliate commission %" required>
+                </div>
+                <div class="form-group">
                     <label for="reset_book_date" class="form-label">Reset Book Count Date & Time</label>
                     <input type="datetime-local" class="form-control" id="reset_book_date" name="reset_book_date"
                         value="{{ !empty($settings['reset_book_date']) ? \Carbon\Carbon::parse($settings['reset_book_date'])->format('Y-m-d\TH:i') : '' }}"
