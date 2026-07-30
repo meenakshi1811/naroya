@@ -7,7 +7,6 @@ use App\Models\Affiliate;
 use App\Models\Appointment;
 use App\Models\GeneralSetting;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -16,30 +15,41 @@ class AffiliateController extends Controller
 {
     public function index(Request $request)
     {
-        $selectedMonth = (int) $request->input('month', now()->month);
-        $selectedYear = (int) $request->input('year', now()->year);
-
-        $monthStart = Carbon::create($selectedYear, $selectedMonth, 1)->startOfMonth();
-        $monthEnd = $monthStart->copy()->endOfMonth();
-
+        $search = trim((string) $request->input('search', ''));
         $defaultCommissionRate = $this->defaultCommissionRate();
 
-        $affiliates = Affiliate::with('doctor:id,name,surname,email')
+        $affiliatesQuery = Affiliate::with('doctor:id,name,surname,email')
+            ->withCount('patients')
             ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
+            ->orderBy('name');
+
+        if ($search !== '') {
+            $affiliatesQuery->where(function ($query) use ($search) {
+                $query->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('code', 'like', '%' . $search . '%')
+                    ->orWhereHas('doctor', function ($doctorQuery) use ($search) {
+                        $doctorQuery->where('email', 'like', '%' . $search . '%')
+                            ->orWhere('name', 'like', '%' . $search . '%')
+                            ->orWhere('surname', 'like', '%' . $search . '%');
+                    });
+            });
+        }
+
+        $affiliates = $affiliatesQuery->get();
 
         $affiliateStats = [];
         $totalBookings = 0;
         $totalValue = 0.0;
         $totalCommission = 0.0;
+        $totalUsers = 0;
 
         foreach ($affiliates as $affiliate) {
-            $stats = $this->statsForAffiliate($affiliate, $monthStart, $monthEnd, $defaultCommissionRate);
+            $stats = $this->statsForAffiliate($affiliate, $defaultCommissionRate);
             $affiliateStats[] = array_merge(['affiliate' => $affiliate], $stats);
             $totalBookings += $stats['bookings'];
             $totalValue += $stats['total_value'];
             $totalCommission += $stats['commission_owed'];
+            $totalUsers += $stats['users'];
         }
 
         $approvedDoctors = User::where('chrApproval', 'Y')
@@ -54,10 +64,8 @@ class AffiliateController extends Controller
             'totalBookings' => $totalBookings,
             'totalValue' => $totalValue,
             'totalCommission' => $totalCommission,
-            'selectedMonth' => $selectedMonth,
-            'selectedYear' => $selectedYear,
-            'monthOptions' => $this->monthOptions(),
-            'yearOptions' => $this->yearOptions(),
+            'totalUsers' => $totalUsers,
+            'search' => $search,
             'approvedDoctors' => $approvedDoctors,
             'existingDoctorIds' => $existingDoctorIds,
             'defaultCommissionRate' => $defaultCommissionRate,
@@ -85,7 +93,7 @@ class AffiliateController extends Controller
         ]);
 
         return redirect()
-            ->route('admin.affiliate', ['month' => $request->input('month'), 'year' => $request->input('year')])
+            ->route('admin.affiliate')
             ->with('success', 'Affiliate added successfully. QR code is ready to share.');
     }
 
@@ -113,7 +121,7 @@ class AffiliateController extends Controller
         ]);
 
         return redirect()
-            ->route('admin.affiliate', ['month' => $request->input('month'), 'year' => $request->input('year')])
+            ->route('admin.affiliate')
             ->with('success', 'Affiliate updated successfully.');
     }
 
@@ -164,7 +172,7 @@ class AffiliateController extends Controller
         }
 
         return redirect()
-            ->route('admin.affiliate', $request->only(['month', 'year']))
+            ->route('admin.affiliate')
             ->with('success', 'Default commission rate updated.');
     }
 
@@ -204,15 +212,15 @@ class AffiliateController extends Controller
         return $validated;
     }
 
-    private function statsForAffiliate(Affiliate $affiliate, Carbon $monthStart, Carbon $monthEnd, float $defaultRate): array
+    private function statsForAffiliate(Affiliate $affiliate, float $defaultRate): array
     {
         $patientIds = $affiliate->patients()->pluck('id');
+        $users = (int) ($affiliate->patients_count ?? $affiliate->patients()->count());
 
         $bookingQuery = Appointment::query()
             ->whereIn('patient_id', $patientIds)
             ->where('charIsPaid', 'Y')
-            ->where('chrIsCanceled', 'N')
-            ->whereBetween('created_at', [$monthStart, $monthEnd]);
+            ->where('chrIsCanceled', 'N');
 
         $bookings = (clone $bookingQuery)->count();
         $totalValue = (float) (clone $bookingQuery)->sum(DB::raw('COALESCE(amount, 0)'));
@@ -220,6 +228,7 @@ class AffiliateController extends Controller
         $commissionOwed = round($totalValue * ($rate / 100), 2);
 
         return [
+            'users' => $users,
             'bookings' => $bookings,
             'total_value' => $totalValue,
             'commission_rate' => $rate,
@@ -236,21 +245,5 @@ class AffiliateController extends Controller
         }
 
         return 3.0;
-    }
-
-    private function monthOptions(): array
-    {
-        return [
-            1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
-            5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
-            9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December',
-        ];
-    }
-
-    private function yearOptions(): array
-    {
-        $currentYear = (int) now()->year;
-
-        return range($currentYear - 2, $currentYear + 1);
     }
 }

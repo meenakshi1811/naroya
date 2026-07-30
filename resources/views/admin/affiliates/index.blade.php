@@ -30,31 +30,42 @@
         font-size: 0.95rem;
     }
 
-    .affiliate-month-picker {
+    .affiliate-search-bar {
         background: #fff;
         border: 1px solid #d7e7d8;
         border-radius: 999px;
-        padding: 0.45rem 1rem;
+        padding: 0.35rem 0.35rem 0.35rem 1rem;
         display: flex;
         align-items: center;
         gap: 0.5rem;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        min-width: 280px;
     }
 
-    .affiliate-month-picker select {
+    .affiliate-search-bar input {
         border: 0;
         background: transparent;
-        font-weight: 600;
-        color: #374151;
         outline: none;
-        cursor: pointer;
+        flex: 1;
+        min-width: 0;
+        color: #374151;
+    }
+
+    .affiliate-search-bar input::placeholder {
+        color: #9ca3af;
     }
 
     .affiliate-stat-grid {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         gap: 1rem;
         margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 1199px) {
+        .affiliate-stat-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
     }
 
     @media (max-width: 991px) {
@@ -325,6 +336,36 @@
         font-size: 0.82rem;
         word-break: break-all;
         color: #374151;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        max-width: 100%;
+    }
+
+    .affiliate-referral-url-text {
+        flex: 1;
+        min-width: 0;
+        text-align: left;
+    }
+
+    .affiliate-referral-url-open {
+        color: var(--affiliate-green);
+        text-decoration: none;
+        flex-shrink: 0;
+        line-height: 1;
+        font-size: 1rem;
+    }
+
+    .affiliate-referral-url-open:hover {
+        color: #0a5c0d;
+    }
+
+    .affiliate-qr-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 0.75rem;
     }
 </style>
 
@@ -339,20 +380,16 @@
     <div class="affiliate-dashboard-header">
         <div>
             <h1>Affiliate commission dashboard</h1>
-            <p>Bookings and commission owed, tracked month by month.</p>
+            <p>All affiliate bookings, referred users, and commission owed.</p>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
-            <form method="GET" action="{{ route('admin.affiliate') }}" class="affiliate-month-picker">
-                <select name="month" onchange="this.form.submit()">
-                    @foreach($monthOptions as $monthNumber => $monthLabel)
-                        <option value="{{ $monthNumber }}" {{ (int) $selectedMonth === (int) $monthNumber ? 'selected' : '' }}>{{ $monthLabel }}</option>
-                    @endforeach
-                </select>
-                <select name="year" onchange="this.form.submit()">
-                    @foreach($yearOptions as $yearOption)
-                        <option value="{{ $yearOption }}" {{ (int) $selectedYear === (int) $yearOption ? 'selected' : '' }}>{{ $yearOption }}</option>
-                    @endforeach
-                </select>
+            <form method="GET" action="{{ route('admin.affiliate') }}" class="affiliate-search-bar">
+                <i class="bi bi-search text-muted"></i>
+                <input type="text" name="search" value="{{ $search }}" placeholder="Search affiliate, code, or email">
+                @if($search !== '')
+                    <a href="{{ route('admin.affiliate') }}" class="btn btn-sm btn-light rounded-pill">Clear</a>
+                @endif
+                <button type="submit" class="btn btn-sm btn-primary rounded-pill">Search</button>
             </form>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAffiliateModal">
                 <i class="bi bi-plus-lg me-1"></i> Add Affiliate
@@ -364,8 +401,6 @@
         <label for="defaultCommissionRate">Default commission rate</label>
         <form method="POST" action="{{ route('admin.affiliate.default-commission') }}" id="defaultCommissionForm" class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
             @csrf
-            <input type="hidden" name="month" value="{{ $selectedMonth }}">
-            <input type="hidden" name="year" value="{{ $selectedYear }}">
             <div class="commission-input-wrap">
                 <input type="number" step="0.01" min="0" max="100" name="affiliate_commission_percentage" id="defaultCommissionRate" value="{{ rtrim(rtrim(number_format($defaultCommissionRate, 2), '0'), '.') }}" required>
                 <span class="text-muted fw-semibold">%</span>
@@ -381,7 +416,11 @@
             <div class="value">{{ $activeAffiliates }}</div>
         </div>
         <div class="affiliate-stat-card">
-            <div class="label">Bookings This Month</div>
+            <div class="label">Referred Users</div>
+            <div class="value">{{ number_format($totalUsers) }}</div>
+        </div>
+        <div class="affiliate-stat-card">
+            <div class="label">Total Bookings</div>
             <div class="value">{{ number_format($totalBookings) }}</div>
         </div>
         <div class="affiliate-stat-card">
@@ -401,6 +440,7 @@
                     <tr>
                         <th>Affiliate</th>
                         <th>Code</th>
+                        <th>Users</th>
                         <th>Bookings</th>
                         <th>Total Value</th>
                         <th>Commission Owed</th>
@@ -415,12 +455,13 @@
                         @endphp
                         <tr>
                             <td>
-                                <div class="fw-semibold">{{ $affiliate->name }}</div>
+                                <div>{{ $affiliate->name }}</div>
                                 @if($affiliate->doctor)
                                     <small class="text-muted">{{ $affiliate->doctor->email }}</small>
                                 @endif
                             </td>
                             <td><span class="affiliate-code-pill">{{ $affiliate->code }}</span></td>
+                            <td>{{ number_format($row['users']) }}</td>
                             <td>{{ number_format($row['bookings']) }}</td>
                             <td>₹{{ number_format($row['total_value'], 0) }}</td>
                             <td><span class="affiliate-commission-value">₹{{ number_format($row['commission_owed'], 0) }}</span></td>
@@ -456,7 +497,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center py-4 text-muted">
+                            <td colspan="8" class="text-center py-4 text-muted">
                                 No affiliates yet. Click <strong>Add Affiliate</strong> to register a doctor or clinic.
                             </td>
                         </tr>
@@ -467,6 +508,7 @@
                         <tr class="affiliate-total-row">
                             <td>Total</td>
                             <td></td>
+                            <td>{{ number_format($totalUsers) }}</td>
                             <td>{{ number_format($totalBookings) }}</td>
                             <td>₹{{ number_format($totalValue, 0) }}</td>
                             <td>₹{{ number_format($totalCommission, 0) }}</td>
@@ -479,7 +521,7 @@
     </div>
 
     <p class="affiliate-footer-note">
-        Snapshot of affiliate commission for {{ $monthOptions[$selectedMonth] ?? '' }} {{ $selectedYear }}.
+        All-time snapshot of affiliate commission and referred users.
         Commission is calculated on paid booking value at each affiliate's rate (default {{ rtrim(rtrim(number_format($defaultCommissionRate, 2), '0'), '.') }}%).
         Patients who register via an affiliate QR code are linked to that affiliate for tracking.
     </p>
@@ -491,8 +533,6 @@
         <div class="modal-content">
             <form method="POST" action="{{ route('admin.affiliate.store') }}" id="addAffiliateForm">
                 @csrf
-                <input type="hidden" name="month" value="{{ $selectedMonth }}">
-                <input type="hidden" name="year" value="{{ $selectedYear }}">
                 <input type="hidden" name="source_type" id="addSourceType" value="existing_doctor">
 
                 <div class="modal-header">
@@ -575,8 +615,6 @@
             <form method="POST" id="editAffiliateForm">
                 @csrf
                 @method('PUT')
-                <input type="hidden" name="month" value="{{ $selectedMonth }}">
-                <input type="hidden" name="year" value="{{ $selectedYear }}">
                 <input type="hidden" name="source_type" id="editSourceType" value="existing_doctor">
 
                 <div class="modal-header">
@@ -663,14 +701,19 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center">
-                <p class="text-muted mb-2" id="qrModalSubtitle"></p>
+                <div class="affiliate-qr-name" id="qrModalAffiliateName"></div>
                 <div id="qrModalCanvas"></div>
-                <div class="affiliate-referral-url mt-2" id="qrModalUrl"></div>
+                <div class="affiliate-referral-url mt-2">
+                    <span class="affiliate-referral-url-text" id="qrModalUrl"></span>
+                    <a href="#" id="openReferralUrlBtn" target="_blank" rel="noopener noreferrer" class="affiliate-referral-url-open" title="Open link">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                </div>
                 <p class="small text-muted mt-2 mb-0">Scan to open the patient referral registration page.</p>
             </div>
             <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-outline-primary" id="downloadQrBtn">
-                    <i class="bi bi-download me-1"></i> Download QR
+                <button type="button" class="btn btn-outline-primary" id="printQrBtn">
+                    <i class="bi bi-printer me-1"></i> Print QR
                 </button>
                 <button type="button" class="btn btn-primary" id="copyReferralUrlBtn">
                     <i class="bi bi-clipboard me-1"></i> Copy Link
@@ -685,6 +728,7 @@
 <script>
     let qrInstance = null;
     let currentReferralUrl = '';
+    let currentAffiliateName = '';
 
     function setSourceType(formPrefix, sourceType) {
         const isExisting = sourceType === 'existing_doctor';
@@ -706,11 +750,13 @@
         }
     }
 
-    function renderQr(url, title, subtitle) {
+    function renderQr(url, name) {
         currentReferralUrl = url;
-        $('#qrModalTitle').text(title);
-        $('#qrModalSubtitle').text(subtitle);
+        currentAffiliateName = name;
+        $('#qrModalTitle').text('QR Code');
+        $('#qrModalAffiliateName').text(name);
         $('#qrModalUrl').text(url);
+        $('#openReferralUrlBtn').attr('href', url);
 
         const container = document.getElementById('qrModalCanvas');
         container.innerHTML = '';
@@ -722,6 +768,91 @@
             colorLight: '#ffffff',
             correctLevel: QRCode.CorrectLevel.H
         });
+    }
+
+    function printAffiliateQr() {
+        const canvas = document.querySelector('#qrModalCanvas canvas');
+        if (!canvas || !currentReferralUrl) {
+            return;
+        }
+
+        const qrDataUrl = canvas.toDataURL('image/png');
+        const printWindow = window.open('', '_blank');
+
+        if (!printWindow) {
+            alert('Please allow pop-ups to print the QR code.');
+            return;
+        }
+
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Affiliate QR - ${currentAffiliateName}</title>
+                <style>
+                    * { box-sizing: border-box; }
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 0;
+                        padding: 40px 24px;
+                        text-align: center;
+                        color: #111827;
+                    }
+                    .print-card {
+                        max-width: 420px;
+                        margin: 0 auto;
+                        border: 1px solid #dce8dd;
+                        border-radius: 16px;
+                        padding: 32px 24px;
+                    }
+                    h1 {
+                        color: #0f7f13;
+                        font-size: 28px;
+                        margin: 0 0 12px;
+                    }
+                    .referral-url {
+                        color: #374151;
+                        font-size: 14px;
+                        line-height: 1.5;
+                        word-break: break-all;
+                        margin-bottom: 24px;
+                    }
+                    .qr-image {
+                        width: 220px;
+                        height: 220px;
+                        margin: 0 auto 20px;
+                        display: block;
+                    }
+                    .hint {
+                        color: #6b7280;
+                        font-size: 13px;
+                        margin: 0;
+                    }
+                    @media print {
+                        body { padding: 0; }
+                        .print-card {
+                            border: 0;
+                            padding: 0;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="print-card">
+                    <h1>${currentAffiliateName}</h1>
+                    <div class="referral-url">${currentReferralUrl}</div>
+                    <img src="${qrDataUrl}" alt="Affiliate QR Code" class="qr-image">
+                    <p class="hint">Scan to open the patient referral registration page.</p>
+                </div>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+
+        setTimeout(function () {
+            printWindow.focus();
+            printWindow.print();
+        }, 300);
     }
 
     $(function () {
@@ -740,9 +871,8 @@
 
         $('.show-qr-btn').on('click', function () {
             const name = $(this).data('name');
-            const code = $(this).data('code');
             const url = $(this).data('url');
-            renderQr(url, 'QR Code — ' + name, 'Code: ' + code);
+            renderQr(url, name);
             new bootstrap.Modal(document.getElementById('qrModal')).show();
         });
 
@@ -755,13 +885,8 @@
             });
         });
 
-        $('#downloadQrBtn').on('click', function () {
-            const canvas = document.querySelector('#qrModalCanvas canvas');
-            if (!canvas) return;
-            const link = document.createElement('a');
-            link.download = 'affiliate-qr.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+        $('#printQrBtn').on('click', function () {
+            printAffiliateQr();
         });
 
         $('.edit-affiliate-btn').on('click', function () {
