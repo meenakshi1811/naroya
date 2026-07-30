@@ -55,13 +55,18 @@ class PatientController extends Controller
     {
         try {
             $request->validate([
-                'email' => 'required|string|email',
+                'email' => 'required|string',
                 'password' => 'required|string',
                 'fcm_token' => 'nullable|string', // Optional FCM token
             ]);
 
-            // Find the patient by email
-            $patient = Patients::where('email', $request->email)->first();
+            $loginIdentifier = trim($request->email);
+
+            if (filter_var($loginIdentifier, FILTER_VALIDATE_EMAIL)) {
+                $patient = Patients::where('email', $loginIdentifier)->first();
+            } else {
+                $patient = Patients::where('phone', $loginIdentifier)->first();
+            }
 
             // Check if the patient exists and the password is correct
             if ($patient && Hash::check($request->password, $patient->password)) {
