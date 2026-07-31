@@ -45,6 +45,22 @@ class PatientRegistrationService
         ];
     }
 
+    public function referralValidationRules(bool $requirePasswordConfirmation = false): array
+    {
+        $passwordRule = 'required|string|min:6';
+        if ($requirePasswordConfirmation) {
+            $passwordRule .= '|confirmed';
+        }
+
+        return [
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'nullable|string|max:255',
+            'password' => $passwordRule,
+            'phone' => ['required', 'digits:10', 'unique:patients,phone'],
+            'country' => 'nullable|integer|exists:country_master,id',
+        ];
+    }
+
     public function formOptions(): array
     {
         return [
@@ -64,6 +80,20 @@ class PatientRegistrationService
         return $this->createPatient($validated, $affiliateId, $request);
     }
 
+    public function createFromReferralRequest(Request $request, ?int $affiliateId = null): Patients
+    {
+        $request->merge([
+            'phone' => $this->normalizePhone((string) $request->input('phone', '')),
+        ]);
+
+        $validated = $request->validate($this->referralValidationRules(true));
+        $validated['email'] = $this->referralEmailForPhone($validated['phone']);
+        $validated['state'] = null;
+        $validated['language_id'] = null;
+
+        return $this->createPatient($validated, $affiliateId, $request);
+    }
+
     public function createPatient(array $data, ?int $affiliateId = null, ?Request $request = null): Patients
     {
         $patient = new Patients();
@@ -72,9 +102,9 @@ class PatientRegistrationService
         $patient->email = $data['email'];
         $patient->phone = $data['phone'];
         $patient->country = $data['country'] ?? $this->indiaCountryId();
-        $patient->state = $data['state'];
-        $patient->language_id = $data['language_id'];
-        $patient->localization_id = $data['language_id'];
+        $patient->state = $data['state'] ?? null;
+        $patient->language_id = $data['language_id'] ?? null;
+        $patient->localization_id = $data['language_id'] ?? null;
         $patient->password = Hash::make($data['password']);
         $patient->fcm_token = $data['fcm_token'] ?? null;
 
@@ -118,5 +148,29 @@ class PatientRegistrationService
             [],
             'patient_register'
         );
+    }
+
+    private function normalizePhone(string $phone): string
+    {
+        $digits = preg_replace('/\D/', '', $phone);
+
+        if (strlen($digits) === 12 && str_starts_with($digits, '91')) {
+            $digits = substr($digits, 2);
+        }
+
+        return $digits;
+    }
+
+    private function referralEmailForPhone(string $phone): string
+    {
+        $email = $phone . '@refer.noraya.in';
+        $suffix = 1;
+
+        while (Patients::where('email', $email)->exists()) {
+            $email = $phone . '+' . $suffix . '@refer.noraya.in';
+            $suffix++;
+        }
+
+        return $email;
     }
 }
