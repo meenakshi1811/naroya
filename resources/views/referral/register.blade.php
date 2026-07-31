@@ -40,10 +40,11 @@
             margin-bottom: 1.5rem;
         }
 
-        .referral-brand img {
-            width: 48px;
-            height: 48px;
+        .referral-brand-logo {
+            width: 64px;
+            height: 64px;
             margin-bottom: 0.75rem;
+            border-radius: 12px;
         }
 
         .referral-brand h1 {
@@ -227,6 +228,33 @@
             .form-row { grid-template-columns: 1fr; }
             .referral-card { padding: 1.25rem; }
             .referral-wrap { padding: 1.25rem 0.85rem 2rem; }
+
+            .referral-brand {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.85rem;
+                text-align: left;
+            }
+
+            .referral-brand-logo {
+                width: 56px;
+                height: 56px;
+                margin-bottom: 0;
+                flex-shrink: 0;
+            }
+
+            .referral-brand-text {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .referral-brand h1 {
+                font-size: 1.25rem;
+            }
+
+            .referral-affiliate-badge {
+                margin-top: 0.5rem;
+            }
         }
 
         .form-error {
@@ -466,11 +494,13 @@
 <body>
     <div class="referral-wrap">
         <div class="referral-brand">
-            <img src="{{ asset('assets/img/fav.png') }}" alt="Noraya">
-            <h1>Noraya</h1>
-            <p>Register as a patient and connect with trusted doctors.</p>
-            <div class="referral-affiliate-badge">
-                Referred by {{ $affiliate->name }}
+            <img src="{{ asset('assets/img/patient-logo.png') }}" alt="Noraya" class="referral-brand-logo">
+            <div class="referral-brand-text">
+                <h1>Noraya</h1>
+                <p>Register as a patient and connect with trusted doctors.</p>
+                <div class="referral-affiliate-badge">
+                    Referred by {{ $affiliate->name }}
+                </div>
             </div>
         </div>
 
