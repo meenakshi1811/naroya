@@ -843,8 +843,13 @@
             <!DOCTYPE html>
             <html>
             <head>
-                <title>Affiliate QR - ${currentAffiliateName}</title>
+                <title>Noraya</title>
                 <style>
+                    @page {
+                        margin: 0;
+                        size: auto;
+                    }
+
                     * { box-sizing: border-box; }
                     body {
                         font-family: Arial, sans-serif;
@@ -903,7 +908,12 @@
                         margin: 0;
                     }
                     @media print {
-                        body { padding: 0; }
+                        html, body {
+                            margin: 0;
+                            padding: 32px 24px;
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                        }
                         .print-card {
                             border: 0;
                             padding: 0;
