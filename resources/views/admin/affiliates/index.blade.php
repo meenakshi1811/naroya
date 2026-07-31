@@ -365,7 +365,56 @@
         font-size: 1.1rem;
         font-weight: 600;
         color: #111827;
+        margin-bottom: 0;
+    }
+
+    .affiliate-qr-brand {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
         margin-bottom: 0.75rem;
+    }
+
+    .affiliate-qr-logo {
+        width: 64px;
+        height: 64px;
+        border-radius: 12px;
+        flex-shrink: 0;
+    }
+
+    .affiliate-qr-brand-text {
+        text-align: center;
+    }
+
+    .affiliate-qr-brand-title {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: var(--affiliate-green);
+        margin: 0 0 0.25rem;
+    }
+
+    @media (max-width: 480px) {
+        .affiliate-qr-brand {
+            flex-direction: row;
+            align-items: flex-start;
+            text-align: left;
+        }
+
+        .affiliate-qr-logo {
+            width: 56px;
+            height: 56px;
+        }
+
+        .affiliate-qr-brand-text {
+            flex: 1;
+            min-width: 0;
+            text-align: left;
+        }
+
+        .affiliate-qr-brand-title {
+            font-size: 1.15rem;
+        }
     }
 </style>
 
@@ -701,7 +750,13 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-center">
-                <div class="affiliate-qr-name" id="qrModalAffiliateName"></div>
+                <div class="affiliate-qr-brand">
+                    <img src="{{ asset('assets/img/patient-logo.png') }}" alt="Noraya" class="affiliate-qr-logo">
+                    <div class="affiliate-qr-brand-text">
+                        <h2 class="affiliate-qr-brand-title">Noraya</h2>
+                        <div class="affiliate-qr-name" id="qrModalAffiliateName"></div>
+                    </div>
+                </div>
                 <div id="qrModalCanvas"></div>
                 <div class="affiliate-referral-url mt-2">
                     <span class="affiliate-referral-url-text" id="qrModalUrl"></span>
@@ -805,9 +860,28 @@
                         border-radius: 16px;
                         padding: 32px 24px;
                     }
-                    h1 {
+                    .print-brand {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        gap: 12px;
+                        margin-bottom: 20px;
+                    }
+                    .print-brand-logo {
+                        width: 72px;
+                        height: 72px;
+                        border-radius: 12px;
+                    }
+                    .print-brand-title {
                         color: #0f7f13;
                         font-size: 28px;
+                        font-weight: 700;
+                        margin: 0;
+                    }
+                    h1 {
+                        color: #111827;
+                        font-size: 20px;
+                        font-weight: 600;
                         margin: 0 0 12px;
                     }
                     .referral-url {
@@ -839,6 +913,10 @@
             </head>
             <body>
                 <div class="print-card">
+                    <div class="print-brand">
+                        <img src="{{ asset('assets/img/patient-logo.png') }}" alt="Noraya" class="print-brand-logo">
+                        <h2 class="print-brand-title">Noraya</h2>
+                    </div>
                     <h1>${currentAffiliateName}</h1>
                     <div class="referral-url">${currentReferralUrl}</div>
                     <img src="${qrDataUrl}" alt="Affiliate QR Code" class="qr-image">
