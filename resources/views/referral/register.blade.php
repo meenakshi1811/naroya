@@ -121,6 +121,61 @@
             box-shadow: 0 0 0 3px rgba(16, 144, 20, 0.15);
         }
 
+        .password-input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .password-input-wrap input {
+            padding-right: 2.75rem;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 0.55rem;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 0;
+            background: transparent;
+            color: #6b7280;
+            cursor: pointer;
+            width: 2rem;
+            height: 2rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            padding: 0;
+        }
+
+        .password-toggle:hover {
+            color: var(--green-dark);
+            background: #f3f4f6;
+        }
+
+        .password-toggle svg {
+            width: 1.15rem;
+            height: 1.15rem;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .password-toggle .icon-eye-off {
+            display: none;
+        }
+
+        .password-toggle.is-visible .icon-eye {
+            display: none;
+        }
+
+        .password-toggle.is-visible .icon-eye-off {
+            display: block;
+        }
+
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -259,6 +314,7 @@
             justify-content: center;
             padding: 1rem;
             z-index: 1000;
+            overflow-y: auto;
         }
 
         .phone-modal-overlay.is-open {
@@ -271,7 +327,6 @@
             background: #fff;
             border-radius: 18px;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
-            overflow: hidden;
             animation: modalIn 0.2s ease;
         }
 
@@ -281,21 +336,30 @@
         }
 
         .phone-modal-header {
-            padding: 1.25rem 1.25rem 0.75rem;
+            padding: 1.5rem 1.5rem 0.5rem;
             text-align: center;
         }
 
         .phone-modal-icon {
-            width: 52px;
-            height: 52px;
-            margin: 0 auto 0.85rem;
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 1rem;
             border-radius: 50%;
             background: var(--green-light);
             color: var(--green-dark);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.4rem;
+        }
+
+        .phone-modal-icon svg {
+            width: 26px;
+            height: 26px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
 
         .phone-modal-header h3 {
@@ -311,15 +375,21 @@
         }
 
         .phone-modal-body {
-            padding: 0.75rem 1.25rem 1.25rem;
+            padding: 0.5rem 1.5rem 1rem;
         }
 
         .phone-modal-body label {
             display: block;
-            font-size: 0.82rem;
+            font-size: 0.85rem;
             font-weight: 600;
             color: #374151;
-            margin-bottom: 0.4rem;
+            margin-bottom: 0.45rem;
+        }
+
+        .phone-modal-body .phone-input-wrap input {
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+            font-size: 1rem;
         }
 
         .phone-modal-error {
@@ -340,8 +410,8 @@
         .phone-modal-actions {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 0.65rem;
-            padding: 0 1.25rem 1.25rem;
+            gap: 0.75rem;
+            padding: 0 1.5rem 1.5rem;
         }
 
         .modal-btn {
@@ -374,12 +444,21 @@
         }
 
         @media (max-width: 480px) {
+            .phone-modal-overlay {
+                align-items: flex-start;
+                padding-top: 1.25rem;
+            }
+
             .phone-modal-actions {
                 grid-template-columns: 1fr;
             }
 
             .phone-modal-header h3 {
                 font-size: 1.1rem;
+            }
+
+            .modal-btn-primary {
+                order: -1;
             }
         }
     </style>
@@ -455,12 +534,40 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="password">Password *</label>
-                        <input type="password" id="password" name="password" required minlength="6" autocomplete="new-password">
+                        <div class="password-input-wrap">
+                            <input type="password" id="password" name="password" required minlength="6" autocomplete="new-password">
+                            <button type="button" class="password-toggle" data-target="password" aria-label="Show password">
+                                <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                <svg class="icon-eye-off" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+                                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+                                    <path d="M1 1l22 22"></path>
+                                    <path d="M14.12 14.12a3 3 0 0 1-4.24-4.24"></path>
+                                </svg>
+                            </button>
+                        </div>
                         @error('password')<div class="form-error">{{ $message }}</div>@enderror
                     </div>
                     <div class="form-group">
                         <label for="password_confirmation">Confirm Password *</label>
-                        <input type="password" id="password_confirmation" name="password_confirmation" required minlength="6" autocomplete="new-password">
+                        <div class="password-input-wrap">
+                            <input type="password" id="password_confirmation" name="password_confirmation" required minlength="6" autocomplete="new-password">
+                            <button type="button" class="password-toggle" data-target="password_confirmation" aria-label="Show password">
+                                <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                <svg class="icon-eye-off" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"></path>
+                                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"></path>
+                                    <path d="M1 1l22 22"></path>
+                                    <path d="M14.12 14.12a3 3 0 0 1-4.24-4.24"></path>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -481,7 +588,12 @@
     <div class="phone-modal-overlay" id="phoneConfirmModal" aria-hidden="true">
         <div class="phone-modal" role="dialog" aria-modal="true" aria-labelledby="phoneConfirmTitle">
             <div class="phone-modal-header">
-                <div class="phone-modal-icon">📱</div>
+                <div class="phone-modal-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="7" y="2.5" width="10" height="19" rx="2.5"></rect>
+                        <line x1="11" y1="19" x2="13" y2="19"></line>
+                    </svg>
+                </div>
                 <h3 id="phoneConfirmTitle">Confirm your phone number</h3>
                 <p>You can edit it below before completing registration.</p>
             </div>
@@ -536,6 +648,20 @@
 
         bindPhoneInput(phoneInput);
         bindPhoneInput(confirmPhoneInput);
+
+        document.querySelectorAll('.password-toggle').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const input = document.getElementById(button.dataset.target);
+                if (!input) {
+                    return;
+                }
+
+                const isPassword = input.type === 'password';
+                input.type = isPassword ? 'text' : 'password';
+                button.classList.toggle('is-visible', isPassword);
+                button.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+            });
+        });
 
         function isValidPhone(value) {
             return /^[0-9]{10}$/.test(value);
