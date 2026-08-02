@@ -34,9 +34,9 @@ class PatientRegistrationService
         return [
             'first_name' => 'required|string|max:255',
             'last_name' => 'nullable|string|max:255',
-            'email' => 'required|string|email|unique:patients,email|valid_email_domain',
+            'email' => 'nullable|string|email|unique:patients,email|valid_email_domain',
             'password' => $passwordRule,
-            'phone' => 'required|string|max:20',
+            'phone' => 'required|string|max:20|unique:patients,phone',
             'state' => 'required|integer|exists:states,id',
             'language_id' => 'required|integer|exists:language_master,id',
             'country' => 'nullable|integer|exists:country_master,id',
@@ -75,7 +75,15 @@ class PatientRegistrationService
 
     public function createFromRequest(Request $request, ?int $affiliateId = null, bool $requirePasswordConfirmation = false): Patients
     {
+        if (! $request->filled('email')) {
+            $request->merge(['email' => null]);
+        }
+
         $validated = $request->validate($this->validationRules($requirePasswordConfirmation));
+
+        if (empty($validated['email'])) {
+            $validated['email'] = $this->referralEmailForPhone($validated['phone']);
+        }
 
         return $this->createPatient($validated, $affiliateId, $request);
     }

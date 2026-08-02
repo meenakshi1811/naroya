@@ -1,0 +1,220 @@
+{
+  "info": {
+    "_postman_id": "noraya-patients-register",
+    "name": "Noraya - Patient Register",
+    "description": "Patient registration API. Email is optional; phone must be unique.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost/api"
+    }
+  ],
+  "item": [
+    {
+      "name": "Register Patient (with email)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "first_name",
+              "value": "John",
+              "type": "text"
+            },
+            {
+              "key": "last_name",
+              "value": "Doe",
+              "type": "text"
+            },
+            {
+              "key": "email",
+              "value": "john.doe@gmail.com",
+              "type": "text",
+              "description": "Optional. Allowed domains: gmail.com, yahoo.com, outlook.com, hotmail.com"
+            },
+            {
+              "key": "password",
+              "value": "secret123",
+              "type": "text"
+            },
+            {
+              "key": "phone",
+              "value": "9876543210",
+              "type": "text",
+              "description": "Required. Must be unique."
+            },
+            {
+              "key": "state",
+              "value": "1",
+              "type": "text",
+              "description": "State ID from /api/state-list"
+            },
+            {
+              "key": "language_id",
+              "value": "1",
+              "type": "text",
+              "description": "Language ID from /api/languages"
+            },
+            {
+              "key": "country",
+              "value": "",
+              "type": "text",
+              "description": "Optional. Defaults to India if omitted."
+            },
+            {
+              "key": "fcm_token",
+              "value": "",
+              "type": "text",
+              "description": "Optional push notification token"
+            },
+            {
+              "key": "affiliate_code",
+              "value": "",
+              "type": "text",
+              "description": "Optional affiliate referral code"
+            },
+            {
+              "key": "profile_picture",
+              "type": "file",
+              "description": "Optional profile image",
+              "src": []
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/patients-register",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "patients-register"
+          ]
+        },
+        "description": "Register a patient with email and phone."
+      },
+      "response": []
+    },
+    {
+      "name": "Register Patient (without email)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "first_name",
+              "value": "Jane",
+              "type": "text"
+            },
+            {
+              "key": "last_name",
+              "value": "Smith",
+              "type": "text"
+            },
+            {
+              "key": "password",
+              "value": "secret123",
+              "type": "text"
+            },
+            {
+              "key": "phone",
+              "value": "9123456789",
+              "type": "text",
+              "description": "Required. Must be unique."
+            },
+            {
+              "key": "state",
+              "value": "1",
+              "type": "text"
+            },
+            {
+              "key": "language_id",
+              "value": "1",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/patients-register",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "patients-register"
+          ]
+        },
+        "description": "Register without email. A placeholder email is generated from the phone number internally."
+      },
+      "response": []
+    },
+    {
+      "name": "Register Patient (duplicate phone - error)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "first_name",
+              "value": "Test",
+              "type": "text"
+            },
+            {
+              "key": "password",
+              "value": "secret123",
+              "type": "text"
+            },
+            {
+              "key": "phone",
+              "value": "9876543210",
+              "type": "text",
+              "description": "Same phone as an existing patient"
+            },
+            {
+              "key": "state",
+              "value": "1",
+              "type": "text"
+            },
+            {
+              "key": "language_id",
+              "value": "1",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/patients-register",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "patients-register"
+          ]
+        },
+        "description": "Returns 400 when phone is already registered."
+      },
+      "response": []
+    }
+  ]
+}

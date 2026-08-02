@@ -209,7 +209,6 @@ class PatientController extends Controller
             ], 200);
         } catch (\Exception $e) {
             if ($e instanceof \Illuminate\Validation\ValidationException) {
-                // Check for the specific error on the email field
                 $errors = $e->errors();
                 if (isset($errors['email']) && in_array('The email has already been taken.', $errors['email'])) {
                     return response()->json([
@@ -219,7 +218,16 @@ class PatientController extends Controller
                         ]
                     ], 400);
                 }
-        
+
+                if (isset($errors['phone']) && in_array('The phone has already been taken.', $errors['phone'])) {
+                    return response()->json([
+                        'message' => 'This phone number is already registered!',
+                        'data' => [
+                            'error' => 'This phone number is already registered!',
+                        ]
+                    ], 400);
+                }
+
                 // Handle all other validation errors
                 return response()->json([
                     'message' => 'Please Provide Valid details!',
