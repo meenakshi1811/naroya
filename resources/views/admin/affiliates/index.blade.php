@@ -317,15 +317,16 @@
     }
 
     #qrModal .modal-dialog {
-        max-width: 400px;
+        max-width: 420px;
+        margin: 1rem auto;
     }
 
     #qrModal .modal-content {
         border: 0;
-        border-radius: 0;
-        overflow: visible;
-        background: transparent;
-        box-shadow: none;
+        border-radius: 16px;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
     }
 
     #qrModal .modal-header {
@@ -333,19 +334,26 @@
     }
 
     #qrModal .modal-body {
-        padding: 0;
-        background: transparent;
+        padding: 1.5rem 1.25rem 1.25rem;
+        background: #fff;
+    }
+
+    .affiliate-qr-modal-shell {
+        position: relative;
+        width: 100%;
+        max-width: 360px;
+        margin: 0 auto;
+        padding-top: 28px;
     }
 
     .affiliate-qr-card {
         position: relative;
         width: 100%;
-        max-width: 340px;
         margin: 0 auto;
         background: #fff;
         border-radius: 0;
-        padding: 32px 16px 28px;
-        overflow: hidden;
+        padding: 8px 0 0;
+        overflow: visible;
         text-align: center;
         font-family: 'Inter', 'Figtree', Arial, sans-serif;
         color: #000;
@@ -355,13 +363,12 @@
     .affiliate-qr-card-watermark {
         position: absolute;
         left: 50%;
-        top: 52%;
-        width: 240px;
-        height: 240px;
+        top: 50%;
+        width: 340px;
+        height: 340px;
         transform: translate(-50%, -50%);
         pointer-events: none;
         z-index: 0;
-        opacity: 0.05;
     }
 
     .affiliate-qr-card-watermark img {
@@ -369,6 +376,20 @@
         height: 100%;
         object-fit: contain;
         display: block;
+        opacity: 0.05;
+    }
+
+    .affiliate-qr-card-lower {
+        position: relative;
+        width: 100%;
+        padding-bottom: 4px;
+        min-height: 380px;
+    }
+
+    .affiliate-qr-card-lower .affiliate-qr-card-watermark {
+        top: 44%;
+        width: 360px;
+        height: 360px;
     }
 
     .affiliate-qr-card-content {
@@ -420,6 +441,7 @@
         position: relative;
         width: 100%;
         margin-bottom: 23px;
+        z-index: 1;
     }
 
     .affiliate-qr-card-qr-wrap {
@@ -464,21 +486,37 @@
         line-height: 1.35;
         max-width: 100%;
         padding: 0 4px;
+        position: relative;
+        z-index: 1;
     }
 
     .affiliate-qr-modal-actions {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 0.65rem;
-        margin-top: 1rem;
-        padding: 0 0.5rem;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        width: 100%;
+        max-width: 360px;
+        margin: 1.25rem auto 0;
+        padding: 0;
+    }
+
+    .affiliate-qr-modal-actions .btn {
+        width: 100%;
+        margin: 0;
+        white-space: nowrap;
+    }
+
+    .affiliate-qr-modal-actions #openReferralUrlBtn {
+        grid-column: 1 / -1;
+        justify-self: center;
+        width: auto;
+        min-width: 44px;
     }
 
     .affiliate-qr-modal-close {
         position: absolute;
-        top: 10px;
-        right: 10px;
+        top: 0;
+        right: 0;
         z-index: 5;
         width: 32px;
         height: 32px;
@@ -885,40 +923,42 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="position-relative mx-auto" style="max-width: 340px;">
+                <div class="affiliate-qr-modal-shell">
                     <button type="button" class="affiliate-qr-modal-close" data-bs-dismiss="modal" aria-label="Close">
                         <i class="bi bi-x-lg"></i>
                     </button>
                     <div class="affiliate-qr-card" id="affiliateQrCard">
-                        <div class="affiliate-qr-card-watermark" aria-hidden="true">
-                            <img src="{{ asset('assets/img/affiliate-qr/watermark.svg') }}" alt="" crossorigin="anonymous">
-                        </div>
                         <div class="affiliate-qr-card-content">
                             <div class="affiliate-qr-card-logo-wrap">
                                 <img src="{{ asset('assets/img/affiliate-qr/logo-circle.svg') }}" alt="" class="affiliate-qr-card-logo-circle" crossorigin="anonymous">
                                 <img src="{{ asset('assets/img/affiliate-qr/logo-icon.svg') }}" alt="Noraya" class="affiliate-qr-card-logo-icon" crossorigin="anonymous">
                             </div>
                             <p class="affiliate-qr-card-name" id="qrModalAffiliateName"></p>
-                        <div class="affiliate-qr-card-qr-section">
-                            <div class="affiliate-qr-card-qr-wrap">
-                                <div id="qrModalCanvas"></div>
+                            <div class="affiliate-qr-card-lower">
+                                <div class="affiliate-qr-card-watermark" aria-hidden="true">
+                                    <img src="{{ asset('assets/img/affiliate-qr/watermark.svg') }}" alt="" crossorigin="anonymous">
+                                </div>
+                                <div class="affiliate-qr-card-qr-section">
+                                    <div class="affiliate-qr-card-qr-wrap">
+                                        <div id="qrModalCanvas"></div>
+                                    </div>
+                                </div>
+                                <p class="affiliate-qr-card-hint">Scan to open the patient referral registration page.</p>
                             </div>
                         </div>
-                        <p class="affiliate-qr-card-hint">Scan to open the patient referral registration page.</p>
-                        </div>
                     </div>
-                </div>
 
-                <div class="affiliate-qr-modal-actions">
-                    <button type="button" class="btn btn-outline-primary" id="downloadQrBtn">
-                        <i class="bi bi-download me-1"></i> Download PNG
-                    </button>
-                    <button type="button" class="btn btn-primary" id="copyReferralUrlBtn">
-                        <i class="bi bi-clipboard me-1"></i> Copy Link
-                    </button>
-                    <a href="#" id="openReferralUrlBtn" target="_blank" rel="noopener noreferrer" class="btn btn-outline-secondary btn-sm align-self-center">
-                        <i class="bi bi-box-arrow-up-right"></i>
-                    </a>
+                    <div class="affiliate-qr-modal-actions">
+                        <button type="button" class="btn btn-outline-primary" id="downloadQrBtn">
+                            <i class="bi bi-download me-1"></i> Download PNG
+                        </button>
+                        <button type="button" class="btn btn-primary" id="copyReferralUrlBtn">
+                            <i class="bi bi-clipboard me-1"></i> Copy Link
+                        </button>
+                        <a href="#" id="openReferralUrlBtn" target="_blank" rel="noopener noreferrer" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
