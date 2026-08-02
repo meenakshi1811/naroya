@@ -317,7 +317,7 @@
     }
 
     #qrModal .modal-dialog {
-        max-width: 420px;
+        max-width: 440px;
         margin: 1rem auto;
     }
 
@@ -341,7 +341,7 @@
     .affiliate-qr-modal-shell {
         position: relative;
         width: 100%;
-        max-width: 360px;
+        max-width: 380px;
         margin: 0 auto;
         padding-top: 28px;
     }
@@ -382,14 +382,14 @@
     .affiliate-qr-card-lower {
         position: relative;
         width: 100%;
-        padding-bottom: 4px;
-        min-height: 380px;
+        padding-bottom: 12px;
     }
 
     .affiliate-qr-card-lower .affiliate-qr-card-watermark {
-        top: 44%;
-        width: 360px;
-        height: 360px;
+        top: 36%;
+        width: 420px;
+        height: 420px;
+        max-width: 115%;
     }
 
     .affiliate-qr-card-content {
@@ -440,7 +440,7 @@
     .affiliate-qr-card-qr-section {
         position: relative;
         width: 100%;
-        margin-bottom: 23px;
+        margin-bottom: 24px;
         z-index: 1;
     }
 
@@ -482,10 +482,34 @@
         color: #000;
         font-size: 1.19rem;
         font-weight: 600;
-        margin: 0;
+        margin: 0 0 44px;
         line-height: 1.35;
         max-width: 100%;
         padding: 0 4px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .affiliate-qr-card-brand {
+        position: relative;
+        z-index: 1;
+        margin-bottom: 7px;
+    }
+
+    .affiliate-qr-card-noraya {
+        height: 29px;
+        width: auto;
+        max-width: 120px;
+        display: inline-block;
+    }
+
+    .affiliate-qr-card-url {
+        color: #444;
+        font-size: 1.25rem;
+        font-weight: 500;
+        margin: 0;
+        line-height: 1.35;
+        word-break: break-all;
         position: relative;
         z-index: 1;
     }
@@ -495,7 +519,7 @@
         grid-template-columns: 1fr 1fr;
         gap: 0.75rem;
         width: 100%;
-        max-width: 360px;
+        max-width: 380px;
         margin: 1.25rem auto 0;
         padding: 0;
     }
@@ -944,6 +968,10 @@
                                     </div>
                                 </div>
                                 <p class="affiliate-qr-card-hint">Scan to open the patient referral registration page.</p>
+                                <div class="affiliate-qr-card-brand">
+                                    <img src="{{ asset('assets/img/affiliate-qr/noraya-wordmark.svg') }}" alt="Noraya" class="affiliate-qr-card-noraya" crossorigin="anonymous">
+                                </div>
+                                <p class="affiliate-qr-card-url" id="qrModalReferralUrl"></p>
                             </div>
                         </div>
                     </div>
@@ -1007,6 +1035,7 @@
         currentAffiliateName = name;
         currentAffiliateCode = code || '';
         $('#qrModalAffiliateName').text(name);
+        $('#qrModalReferralUrl').text(url);
         $('#openReferralUrlBtn').attr('href', url);
 
         const container = document.getElementById('qrModalCanvas');
