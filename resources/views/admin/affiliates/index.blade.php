@@ -316,52 +316,53 @@
         white-space: nowrap;
     }
 
+    #qrModal .modal-dialog {
+        max-width: 400px;
+    }
+
     #qrModal .modal-content {
         border: 0;
-        border-radius: 16px;
-        overflow: hidden;
+        border-radius: 0;
+        overflow: visible;
+        background: transparent;
+        box-shadow: none;
     }
 
     #qrModal .modal-header {
-        border-bottom: 1px solid #eef2ef;
-        padding: 1rem 1.25rem;
+        display: none;
     }
 
     #qrModal .modal-body {
-        padding: 1.25rem;
-        background: #eef2ef;
+        padding: 0;
+        background: transparent;
     }
 
     .affiliate-qr-card {
         position: relative;
         width: 100%;
-        max-width: 360px;
+        max-width: 340px;
         margin: 0 auto;
         background: #fff;
-        border-radius: 20px;
-        padding: 48px 32px 40px;
+        border-radius: 24px;
+        padding: 56px 28px 44px;
         overflow: hidden;
         text-align: center;
         font-family: 'Figtree', Arial, sans-serif;
         color: #111827;
+        box-shadow: 0 18px 48px rgba(15, 127, 19, 0.12);
     }
 
     .affiliate-qr-card-watermark {
         position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        left: 50%;
+        top: 58%;
+        width: 300px;
+        height: 300px;
+        transform: translate(-50%, -50%);
         pointer-events: none;
         z-index: 0;
-    }
-
-    .affiliate-qr-card-watermark img {
-        width: 290px;
-        height: 290px;
-        opacity: 0.08;
-        border-radius: 50%;
-        object-fit: cover;
+        opacity: 0.07;
+        background: url('{{ asset('assets/img/patient-logo.png') }}') center center / contain no-repeat;
     }
 
     .affiliate-qr-card-content {
@@ -373,28 +374,35 @@
     }
 
     .affiliate-qr-card-logo {
-        width: 88px;
-        height: 88px;
+        width: 80px;
+        height: 80px;
         border-radius: 50%;
         object-fit: cover;
         flex-shrink: 0;
-        margin-bottom: 16px;
+        margin-bottom: 14px;
     }
 
     .affiliate-qr-card-name {
         color: #111827;
-        font-size: 1.125rem;
+        font-size: 1.25rem;
         font-weight: 700;
-        margin: 0 0 28px;
-        line-height: 1.35;
+        margin: 0 0 32px;
+        line-height: 1.3;
+        letter-spacing: -0.01em;
+    }
+
+    .affiliate-qr-card-qr-section {
+        position: relative;
+        margin-bottom: 28px;
     }
 
     .affiliate-qr-card-qr-wrap {
+        position: relative;
+        z-index: 1;
         background: #fff;
-        border-radius: 20px;
-        padding: 18px;
-        box-shadow: 0 10px 36px rgba(15, 127, 19, 0.14);
-        margin-bottom: 24px;
+        border-radius: 24px;
+        padding: 20px;
+        box-shadow: 0 12px 40px rgba(15, 127, 19, 0.16);
     }
 
     #qrModalCanvas {
@@ -402,6 +410,8 @@
         justify-content: center;
         padding: 0;
         margin: 0;
+        width: 220px;
+        height: 220px;
     }
 
     #qrModalCanvas canvas,
@@ -411,15 +421,17 @@
         padding: 0;
         background: transparent;
         display: block;
+        width: 220px !important;
+        height: 220px !important;
     }
 
     .affiliate-qr-card-hint {
         color: #111827;
-        font-size: 0.875rem;
+        font-size: 0.9375rem;
         font-weight: 400;
         margin: 0;
-        line-height: 1.5;
-        max-width: 280px;
+        line-height: 1.45;
+        max-width: 260px;
     }
 
     .affiliate-qr-modal-actions {
@@ -427,7 +439,30 @@
         flex-wrap: wrap;
         justify-content: center;
         gap: 0.65rem;
-        margin-top: 1.25rem;
+        margin-top: 1rem;
+        padding: 0 0.5rem;
+    }
+
+    .affiliate-qr-modal-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 5;
+        width: 32px;
+        height: 32px;
+        border: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.92);
+        color: #6b7280;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .affiliate-qr-modal-close:hover {
+        color: #111827;
+        background: #fff;
     }
 
     .affiliate-qr-modal-actions .btn-primary {
@@ -818,17 +853,22 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="affiliate-qr-card" id="affiliateQrCard">
-                    <div class="affiliate-qr-card-watermark" aria-hidden="true">
-                        <img src="{{ asset('assets/img/patient-logo.png') }}" alt="" crossorigin="anonymous">
-                    </div>
-                    <div class="affiliate-qr-card-content">
+                <div class="position-relative mx-auto" style="max-width: 340px;">
+                    <button type="button" class="affiliate-qr-modal-close" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                    <div class="affiliate-qr-card" id="affiliateQrCard">
+                        <div class="affiliate-qr-card-watermark" aria-hidden="true"></div>
+                        <div class="affiliate-qr-card-content">
                         <img src="{{ asset('assets/img/patient-logo.png') }}" alt="Noraya" class="affiliate-qr-card-logo" crossorigin="anonymous">
                         <p class="affiliate-qr-card-name" id="qrModalAffiliateName"></p>
-                        <div class="affiliate-qr-card-qr-wrap">
-                            <div id="qrModalCanvas"></div>
+                        <div class="affiliate-qr-card-qr-section">
+                            <div class="affiliate-qr-card-qr-wrap">
+                                <div id="qrModalCanvas"></div>
+                            </div>
                         </div>
                         <p class="affiliate-qr-card-hint">Scan to open the patient referral registration page.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -889,7 +929,6 @@
         currentReferralUrl = url;
         currentAffiliateName = name;
         currentAffiliateCode = code || '';
-        $('#qrModalTitle').text('QR Code — ' + name);
         $('#qrModalAffiliateName').text(name);
         $('#openReferralUrlBtn').attr('href', url);
 
@@ -898,8 +937,8 @@
 
         if (typeof QRCodeStyling !== 'undefined') {
             qrInstance = new QRCodeStyling({
-                width: 232,
-                height: 232,
+                width: 220,
+                height: 220,
                 type: 'canvas',
                 data: url,
                 margin: 0,
@@ -930,8 +969,8 @@
         if (typeof QRCode !== 'undefined') {
             qrInstance = new QRCode(container, {
                 text: url,
-                width: 232,
-                height: 232,
+                width: 220,
+                height: 220,
                 colorDark: '#000000',
                 colorLight: '#ffffff',
                 correctLevel: QRCode.CorrectLevel.H
@@ -966,9 +1005,11 @@
 
             const canvas = await html2canvas(card, {
                 backgroundColor: '#ffffff',
-                scale: 2,
+                scale: 3,
                 useCORS: true,
                 logging: false,
+                width: card.offsetWidth,
+                height: card.offsetHeight,
             });
 
             const link = document.createElement('a');
