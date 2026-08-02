@@ -81,10 +81,6 @@ class PatientRegistrationService
 
         $validated = $request->validate($this->validationRules($requirePasswordConfirmation));
 
-        if (empty($validated['email'])) {
-            $validated['email'] = $this->referralEmailForPhone($validated['phone']);
-        }
-
         return $this->createPatient($validated, $affiliateId, $request);
     }
 
@@ -95,7 +91,7 @@ class PatientRegistrationService
         ]);
 
         $validated = $request->validate($this->referralValidationRules(true));
-        $validated['email'] = $this->referralEmailForPhone($validated['phone']);
+        $validated['email'] = null;
         $validated['state'] = null;
         $validated['language_id'] = null;
 
@@ -107,7 +103,7 @@ class PatientRegistrationService
         $patient = new Patients();
         $patient->name = $data['first_name'];
         $patient->lastname = $data['last_name'] ?? '';
-        $patient->email = $data['email'];
+        $patient->email = ! empty($data['email']) ? $data['email'] : null;
         $patient->phone = $data['phone'];
         $patient->country = $data['country'] ?? $this->indiaCountryId();
         $patient->state = $data['state'] ?? null;
@@ -167,18 +163,5 @@ class PatientRegistrationService
         }
 
         return $digits;
-    }
-
-    private function referralEmailForPhone(string $phone): string
-    {
-        $email = $phone . '@refer.noraya.in';
-        $suffix = 1;
-
-        while (Patients::where('email', $email)->exists()) {
-            $email = $phone . '+' . $suffix . '@refer.noraya.in';
-            $suffix++;
-        }
-
-        return $email;
     }
 }

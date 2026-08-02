@@ -158,7 +158,7 @@
             "patients-register"
           ]
         },
-        "description": "Register without email. A placeholder email is generated from the phone number internally."
+        "description": "Register without email. Email is stored as NULL in the database."
       },
       "response": []
     },
