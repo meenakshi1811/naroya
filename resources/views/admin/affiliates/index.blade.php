@@ -1,7 +1,7 @@
 @extends('admin.admin')
 @section('content')
 <link rel="preconnect" href="https://fonts.bunny.net">
-<link href="https://fonts.bunny.net/css?family=figtree:400,600,700&display=swap" rel="stylesheet" />
+<link href="https://fonts.bunny.net/css?family=figtree:400,600,700|inter:600,700&display=swap" rel="stylesheet" />
 <style>
     .affiliate-dashboard {
         --affiliate-green: #0f7f13;
@@ -343,26 +343,32 @@
         max-width: 340px;
         margin: 0 auto;
         background: #fff;
-        border-radius: 24px;
-        padding: 56px 28px 44px;
+        border-radius: 0;
+        padding: 32px 16px 28px;
         overflow: hidden;
         text-align: center;
-        font-family: 'Figtree', Arial, sans-serif;
-        color: #111827;
-        box-shadow: 0 18px 48px rgba(15, 127, 19, 0.12);
+        font-family: 'Inter', 'Figtree', Arial, sans-serif;
+        color: #000;
+        box-shadow: none;
     }
 
     .affiliate-qr-card-watermark {
         position: absolute;
         left: 50%;
-        top: 58%;
-        width: 300px;
-        height: 300px;
+        top: 52%;
+        width: 240px;
+        height: 240px;
         transform: translate(-50%, -50%);
         pointer-events: none;
         z-index: 0;
-        opacity: 0.07;
-        background: url('{{ asset('assets/img/patient-logo.png') }}') center center / contain no-repeat;
+        opacity: 0.05;
+    }
+
+    .affiliate-qr-card-watermark img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
     }
 
     .affiliate-qr-card-content {
@@ -371,47 +377,70 @@
         display: flex;
         flex-direction: column;
         align-items: center;
+        width: 100%;
     }
 
-    .affiliate-qr-card-logo {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        object-fit: cover;
+    .affiliate-qr-card-logo-wrap {
+        position: relative;
+        width: 84px;
+        height: 84px;
+        margin-bottom: 11px;
         flex-shrink: 0;
-        margin-bottom: 14px;
+    }
+
+    .affiliate-qr-card-logo-circle {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: contain;
+    }
+
+    .affiliate-qr-card-logo-icon {
+        position: absolute;
+        width: 57%;
+        height: 57%;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: block;
+        object-fit: contain;
     }
 
     .affiliate-qr-card-name {
-        color: #111827;
-        font-size: 1.25rem;
+        color: #000;
+        font-size: 1.78rem;
         font-weight: 700;
-        margin: 0 0 32px;
-        line-height: 1.3;
-        letter-spacing: -0.01em;
+        margin: 0 0 21px;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        width: 100%;
     }
 
     .affiliate-qr-card-qr-section {
         position: relative;
-        margin-bottom: 28px;
+        width: 100%;
+        margin-bottom: 23px;
     }
 
     .affiliate-qr-card-qr-wrap {
         position: relative;
         z-index: 1;
+        width: 100%;
         background: #fff;
         border-radius: 24px;
-        padding: 20px;
-        box-shadow: 0 12px 40px rgba(15, 127, 19, 0.16);
+        padding: 8px;
+        box-shadow: 0 4px 25px rgba(16, 144, 20, 0.5);
+        overflow: hidden;
     }
 
     #qrModalCanvas {
         display: flex;
         justify-content: center;
+        align-items: center;
         padding: 0;
-        margin: 0;
-        width: 220px;
-        height: 220px;
+        margin: 0 auto;
+        width: 100%;
+        aspect-ratio: 1;
     }
 
     #qrModalCanvas canvas,
@@ -421,17 +450,20 @@
         padding: 0;
         background: transparent;
         display: block;
-        width: 220px !important;
-        height: 220px !important;
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 292px;
+        max-height: 292px;
     }
 
     .affiliate-qr-card-hint {
-        color: #111827;
-        font-size: 0.9375rem;
-        font-weight: 400;
+        color: #000;
+        font-size: 1.19rem;
+        font-weight: 600;
         margin: 0;
-        line-height: 1.45;
-        max-width: 260px;
+        line-height: 1.35;
+        max-width: 100%;
+        padding: 0 4px;
     }
 
     .affiliate-qr-modal-actions {
@@ -858,10 +890,15 @@
                         <i class="bi bi-x-lg"></i>
                     </button>
                     <div class="affiliate-qr-card" id="affiliateQrCard">
-                        <div class="affiliate-qr-card-watermark" aria-hidden="true"></div>
+                        <div class="affiliate-qr-card-watermark" aria-hidden="true">
+                            <img src="{{ asset('assets/img/affiliate-qr/watermark.svg') }}" alt="" crossorigin="anonymous">
+                        </div>
                         <div class="affiliate-qr-card-content">
-                        <img src="{{ asset('assets/img/patient-logo.png') }}" alt="Noraya" class="affiliate-qr-card-logo" crossorigin="anonymous">
-                        <p class="affiliate-qr-card-name" id="qrModalAffiliateName"></p>
+                            <div class="affiliate-qr-card-logo-wrap">
+                                <img src="{{ asset('assets/img/affiliate-qr/logo-circle.svg') }}" alt="" class="affiliate-qr-card-logo-circle" crossorigin="anonymous">
+                                <img src="{{ asset('assets/img/affiliate-qr/logo-icon.svg') }}" alt="Noraya" class="affiliate-qr-card-logo-icon" crossorigin="anonymous">
+                            </div>
+                            <p class="affiliate-qr-card-name" id="qrModalAffiliateName"></p>
                         <div class="affiliate-qr-card-qr-section">
                             <div class="affiliate-qr-card-qr-wrap">
                                 <div id="qrModalCanvas"></div>
@@ -937,8 +974,8 @@
 
         if (typeof QRCodeStyling !== 'undefined') {
             qrInstance = new QRCodeStyling({
-                width: 220,
-                height: 220,
+                width: 292,
+                height: 292,
                 type: 'canvas',
                 data: url,
                 margin: 0,
@@ -969,8 +1006,8 @@
         if (typeof QRCode !== 'undefined') {
             qrInstance = new QRCode(container, {
                 text: url,
-                width: 220,
-                height: 220,
+                width: 292,
+                height: 292,
                 colorDark: '#000000',
                 colorLight: '#ffffff',
                 correctLevel: QRCode.CorrectLevel.H
