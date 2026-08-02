@@ -849,7 +849,8 @@
 </div>
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qr-code-styling/1.6.0-rc.1/qr-code-styling.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
     let qrInstance = null;
@@ -895,38 +896,50 @@
         const container = document.getElementById('qrModalCanvas');
         container.innerHTML = '';
 
-        if (typeof QRCodeStyling === 'undefined') {
-            alert('QR library failed to load. Please refresh the page.');
+        if (typeof QRCodeStyling !== 'undefined') {
+            qrInstance = new QRCodeStyling({
+                width: 232,
+                height: 232,
+                type: 'canvas',
+                data: url,
+                margin: 0,
+                qrOptions: {
+                    errorCorrectionLevel: 'H',
+                },
+                dotsOptions: {
+                    color: '#000000',
+                    type: 'rounded',
+                },
+                cornersSquareOptions: {
+                    color: '#000000',
+                    type: 'extra-rounded',
+                },
+                cornersDotOptions: {
+                    color: '#000000',
+                    type: 'dot',
+                },
+                backgroundOptions: {
+                    color: '#ffffff',
+                },
+            });
+
+            qrInstance.append(container);
             return;
         }
 
-        qrInstance = new QRCodeStyling({
-            width: 232,
-            height: 232,
-            type: 'canvas',
-            data: url,
-            margin: 0,
-            qrOptions: {
-                errorCorrectionLevel: 'H',
-            },
-            dotsOptions: {
-                color: '#000000',
-                type: 'rounded',
-            },
-            cornersSquareOptions: {
-                color: '#000000',
-                type: 'extra-rounded',
-            },
-            cornersDotOptions: {
-                color: '#000000',
-                type: 'dot',
-            },
-            backgroundOptions: {
-                color: '#ffffff',
-            },
-        });
+        if (typeof QRCode !== 'undefined') {
+            qrInstance = new QRCode(container, {
+                text: url,
+                width: 232,
+                height: 232,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            return;
+        }
 
-        qrInstance.append(container);
+        alert('QR library failed to load. Please refresh the page.');
     }
 
     async function downloadAffiliateQrPng() {
