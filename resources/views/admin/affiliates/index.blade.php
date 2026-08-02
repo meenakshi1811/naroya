@@ -1,5 +1,7 @@
 @extends('admin.admin')
 @section('content')
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link href="https://fonts.bunny.net/css?family=figtree:400,600,700&display=swap" rel="stylesheet" />
 <style>
     .affiliate-dashboard {
         --affiliate-green: #0f7f13;
@@ -314,18 +316,129 @@
         white-space: nowrap;
     }
 
+    #qrModal .modal-content {
+        border: 0;
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    #qrModal .modal-header {
+        border-bottom: 1px solid #eef2ef;
+        padding: 1rem 1.25rem;
+    }
+
+    #qrModal .modal-body {
+        padding: 1.25rem 1.25rem 1.5rem;
+        background: #f4f7f4;
+    }
+
     #qrModalCanvas {
         display: flex;
         justify-content: center;
-        padding: 1rem 0;
+        padding: 0;
+        margin: 0 auto;
     }
 
     #qrModalCanvas canvas,
     #qrModalCanvas img {
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 8px;
+        border: 0;
+        border-radius: 0;
+        padding: 0;
+        background: transparent;
+        display: block;
+    }
+
+    .affiliate-qr-card {
+        width: 100%;
+        max-width: 420px;
+        margin: 0 auto;
         background: #fff;
+        border: 0;
+        border-radius: 0;
+        padding: 40px 40px 36px;
+        box-shadow: none;
+        text-align: center;
+        font-family: 'Figtree', Arial, sans-serif;
+        color: #111827;
+    }
+
+    .affiliate-qr-card-brand {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .affiliate-qr-card-logo {
+        width: 72px;
+        height: 72px;
+        border-radius: 12px;
+        flex-shrink: 0;
+    }
+
+    .affiliate-qr-card-title {
+        color: var(--affiliate-green);
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .affiliate-qr-card-name {
+        color: #111827;
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0 0 12px;
+        line-height: 1.35;
+    }
+
+    .affiliate-qr-card-url {
+        color: #374151;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        word-break: break-all;
+        margin: 0 0 24px;
+    }
+
+    .affiliate-qr-card-hint {
+        color: #6b7280;
+        font-size: 0.8125rem;
+        margin: 20px 0 0;
+        line-height: 1.45;
+        max-width: 320px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .affiliate-qr-modal-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.65rem;
+        margin-top: 1.25rem;
+    }
+
+    .affiliate-qr-modal-actions .btn-primary {
+        background: var(--affiliate-green);
+        border-color: var(--affiliate-green);
+    }
+
+    .affiliate-qr-modal-actions .btn-primary:hover {
+        background: #0a5c0d;
+        border-color: #0a5c0d;
+    }
+
+    .affiliate-qr-modal-actions .btn-outline-primary {
+        color: var(--affiliate-green);
+        border-color: #cfe8d1;
+        background: #fff;
+    }
+
+    .affiliate-qr-modal-actions .btn-outline-primary:hover {
+        color: #0a5c0d;
+        border-color: var(--affiliate-green);
+        background: var(--affiliate-green-light);
     }
 
     .affiliate-referral-url {
@@ -359,62 +472,6 @@
 
     .affiliate-referral-url-open:hover {
         color: #0a5c0d;
-    }
-
-    .affiliate-qr-name {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #111827;
-        margin-bottom: 0;
-    }
-
-    .affiliate-qr-brand {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 0.75rem;
-    }
-
-    .affiliate-qr-logo {
-        width: 64px;
-        height: 64px;
-        border-radius: 12px;
-        flex-shrink: 0;
-    }
-
-    .affiliate-qr-brand-text {
-        text-align: center;
-    }
-
-    .affiliate-qr-brand-title {
-        font-size: 1.35rem;
-        font-weight: 700;
-        color: var(--affiliate-green);
-        margin: 0 0 0.25rem;
-    }
-
-    @media (max-width: 480px) {
-        .affiliate-qr-brand {
-            flex-direction: row;
-            align-items: flex-start;
-            text-align: left;
-        }
-
-        .affiliate-qr-logo {
-            width: 56px;
-            height: 56px;
-        }
-
-        .affiliate-qr-brand-text {
-            flex: 1;
-            min-width: 0;
-            text-align: left;
-        }
-
-        .affiliate-qr-brand-title {
-            font-size: 1.15rem;
-        }
     }
 </style>
 
@@ -749,30 +806,29 @@
                 <h5 class="modal-title" id="qrModalTitle">Affiliate QR Code</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body text-center">
-                <div class="affiliate-qr-brand">
-                    <img src="{{ asset('assets/img/patient-logo.png') }}" alt="Noraya" class="affiliate-qr-logo">
-                    <div class="affiliate-qr-brand-text">
-                        <h2 class="affiliate-qr-brand-title">Noraya</h2>
-                        <div class="affiliate-qr-name" id="qrModalAffiliateName"></div>
+            <div class="modal-body">
+                <div class="affiliate-qr-card" id="affiliateQrCard">
+                    <div class="affiliate-qr-card-brand">
+                        <img src="{{ asset('assets/img/patient-logo.png') }}" alt="Noraya" class="affiliate-qr-card-logo" crossorigin="anonymous">
+                        <h2 class="affiliate-qr-card-title">Noraya</h2>
                     </div>
+                    <p class="affiliate-qr-card-name" id="qrModalAffiliateName"></p>
+                    <p class="affiliate-qr-card-url" id="qrModalUrl"></p>
+                    <div id="qrModalCanvas"></div>
+                    <p class="affiliate-qr-card-hint">Scan to open the patient referral registration page.</p>
                 </div>
-                <div id="qrModalCanvas"></div>
-                <div class="affiliate-referral-url mt-2">
-                    <span class="affiliate-referral-url-text" id="qrModalUrl"></span>
-                    <a href="#" id="openReferralUrlBtn" target="_blank" rel="noopener noreferrer" class="affiliate-referral-url-open" title="Open link">
+
+                <div class="affiliate-qr-modal-actions">
+                    <button type="button" class="btn btn-outline-primary" id="downloadQrBtn">
+                        <i class="bi bi-download me-1"></i> Download PNG
+                    </button>
+                    <button type="button" class="btn btn-primary" id="copyReferralUrlBtn">
+                        <i class="bi bi-clipboard me-1"></i> Copy Link
+                    </button>
+                    <a href="#" id="openReferralUrlBtn" target="_blank" rel="noopener noreferrer" class="btn btn-outline-secondary btn-sm align-self-center">
                         <i class="bi bi-box-arrow-up-right"></i>
                     </a>
                 </div>
-                <p class="small text-muted mt-2 mb-0">Scan to open the patient referral registration page.</p>
-            </div>
-            <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-outline-primary" id="printQrBtn">
-                    <i class="bi bi-printer me-1"></i> Print QR
-                </button>
-                <button type="button" class="btn btn-primary" id="copyReferralUrlBtn">
-                    <i class="bi bi-clipboard me-1"></i> Copy Link
-                </button>
             </div>
         </div>
     </div>
@@ -781,9 +837,49 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
+    const affiliateLogoUrl = @json(asset('assets/img/patient-logo.png'));
     let qrInstance = null;
     let currentReferralUrl = '';
     let currentAffiliateName = '';
+    let currentAffiliateCode = '';
+
+    function sanitizeFilename(value) {
+        return (value || 'affiliate')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '') || 'affiliate';
+    }
+
+    function loadImage(src) {
+        return new Promise(function (resolve, reject) {
+            const image = new Image();
+            image.crossOrigin = 'anonymous';
+            image.onload = function () { resolve(image); };
+            image.onerror = reject;
+            image.src = src;
+        });
+    }
+
+    function wrapCanvasLines(ctx, text, maxWidth) {
+        const lines = [];
+        let currentLine = '';
+
+        for (const char of text) {
+            const testLine = currentLine + char;
+            if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+                lines.push(currentLine);
+                currentLine = char;
+            } else {
+                currentLine = testLine;
+            }
+        }
+
+        if (currentLine) {
+            lines.push(currentLine);
+        }
+
+        return lines.length ? lines : [''];
+    }
 
     function setSourceType(formPrefix, sourceType) {
         const isExisting = sourceType === 'existing_doctor';
@@ -805,10 +901,11 @@
         }
     }
 
-    function renderQr(url, name) {
+    function renderQr(url, name, code) {
         currentReferralUrl = url;
         currentAffiliateName = name;
-        $('#qrModalTitle').text('QR Code');
+        currentAffiliateCode = code || '';
+        $('#qrModalTitle').text('QR Code — ' + name);
         $('#qrModalAffiliateName').text(name);
         $('#qrModalUrl').text(url);
         $('#openReferralUrlBtn').attr('href', url);
@@ -825,122 +922,101 @@
         });
     }
 
-    function printAffiliateQr() {
-        const canvas = document.querySelector('#qrModalCanvas canvas');
-        if (!canvas || !currentReferralUrl) {
+    async function downloadAffiliateQrPng() {
+        const qrCanvas = document.querySelector('#qrModalCanvas canvas');
+        const downloadBtn = document.getElementById('downloadQrBtn');
+
+        if (!qrCanvas || !currentReferralUrl) {
+            alert('Unable to download QR code. Please try again.');
             return;
         }
 
-        const qrDataUrl = canvas.toDataURL('image/png');
-        const printWindow = window.open('', '_blank');
+        const originalHtml = downloadBtn.innerHTML;
+        downloadBtn.disabled = true;
+        downloadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Preparing...';
 
-        if (!printWindow) {
-            alert('Please allow pop-ups to print the QR code.');
-            return;
+        try {
+            if (document.fonts && document.fonts.ready) {
+                await document.fonts.ready;
+            }
+
+            const scale = 2;
+            const cardWidth = 420;
+            const paddingX = 40;
+            const contentWidth = cardWidth - (paddingX * 2);
+            const logoSize = 72;
+            const qrSize = 220;
+            const green = '#0f7f13';
+            const hintText = 'Scan to open the patient referral registration page.';
+
+            const logo = await loadImage(affiliateLogoUrl);
+            const measureCanvas = document.createElement('canvas');
+            const measureCtx = measureCanvas.getContext('2d');
+
+            measureCtx.font = '400 14px Figtree, Arial, sans-serif';
+            const urlLines = wrapCanvasLines(measureCtx, currentReferralUrl, contentWidth);
+
+            measureCtx.font = '400 13px Figtree, Arial, sans-serif';
+            const hintLines = wrapCanvasLines(measureCtx, hintText, contentWidth);
+
+            let cardHeight = 40 + logoSize + 12 + 28 + 20 + 20 + 12;
+            cardHeight += urlLines.length * 20 + 24;
+            cardHeight += qrSize + 20;
+            cardHeight += hintLines.length * 18 + 40;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = cardWidth * scale;
+            canvas.height = cardHeight * scale;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(scale, scale);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, cardWidth, cardHeight);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+
+            let y = 40;
+            ctx.drawImage(logo, (cardWidth - logoSize) / 2, y, logoSize, logoSize);
+            y += logoSize + 12;
+
+            ctx.fillStyle = green;
+            ctx.font = '700 28px Figtree, Arial, sans-serif';
+            ctx.fillText('Noraya', cardWidth / 2, y);
+            y += 28 + 20;
+
+            ctx.fillStyle = '#111827';
+            ctx.font = '600 20px Figtree, Arial, sans-serif';
+            ctx.fillText(currentAffiliateName, cardWidth / 2, y);
+            y += 20 + 12;
+
+            ctx.fillStyle = '#374151';
+            ctx.font = '400 14px Figtree, Arial, sans-serif';
+            urlLines.forEach(function (line) {
+                ctx.fillText(line, cardWidth / 2, y);
+                y += 20;
+            });
+            y += 4;
+
+            ctx.drawImage(qrCanvas, (cardWidth - qrSize) / 2, y, qrSize, qrSize);
+            y += qrSize + 20;
+
+            ctx.fillStyle = '#6b7280';
+            ctx.font = '400 13px Figtree, Arial, sans-serif';
+            hintLines.forEach(function (line) {
+                ctx.fillText(line, cardWidth / 2, y);
+                y += 18;
+            });
+
+            const link = document.createElement('a');
+            link.download = 'noraya-qr-' + sanitizeFilename(currentAffiliateCode || currentAffiliateName) + '.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } catch (error) {
+            alert('Unable to download QR code. Please try again.');
+        } finally {
+            downloadBtn.disabled = false;
+            downloadBtn.innerHTML = originalHtml;
         }
-
-        printWindow.document.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Noraya</title>
-                <style>
-                    @page {
-                        margin: 0;
-                        size: auto;
-                    }
-
-                    * { box-sizing: border-box; }
-                    body {
-                        font-family: Arial, sans-serif;
-                        margin: 0;
-                        padding: 40px 24px;
-                        text-align: center;
-                        color: #111827;
-                    }
-                    .print-card {
-                        max-width: 420px;
-                        margin: 0 auto;
-                        border: 1px solid #dce8dd;
-                        border-radius: 16px;
-                        padding: 32px 24px;
-                    }
-                    .print-brand {
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        gap: 12px;
-                        margin-bottom: 20px;
-                    }
-                    .print-brand-logo {
-                        width: 72px;
-                        height: 72px;
-                        border-radius: 12px;
-                    }
-                    .print-brand-title {
-                        color: #0f7f13;
-                        font-size: 28px;
-                        font-weight: 700;
-                        margin: 0;
-                    }
-                    h1 {
-                        color: #111827;
-                        font-size: 20px;
-                        font-weight: 600;
-                        margin: 0 0 12px;
-                    }
-                    .referral-url {
-                        color: #374151;
-                        font-size: 14px;
-                        line-height: 1.5;
-                        word-break: break-all;
-                        margin-bottom: 24px;
-                    }
-                    .qr-image {
-                        width: 220px;
-                        height: 220px;
-                        margin: 0 auto 20px;
-                        display: block;
-                    }
-                    .hint {
-                        color: #6b7280;
-                        font-size: 13px;
-                        margin: 0;
-                    }
-                    @media print {
-                        html, body {
-                            margin: 0;
-                            padding: 32px 24px;
-                            -webkit-print-color-adjust: exact;
-                            print-color-adjust: exact;
-                        }
-                        .print-card {
-                            border: 0;
-                            padding: 0;
-                        }
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="print-card">
-                    <div class="print-brand">
-                        <img src="{{ asset('assets/img/patient-logo.png') }}" alt="Noraya" class="print-brand-logo">
-                        <h2 class="print-brand-title">Noraya</h2>
-                    </div>
-                    <h1>${currentAffiliateName}</h1>
-                    <div class="referral-url">${currentReferralUrl}</div>
-                    <img src="${qrDataUrl}" alt="Affiliate QR Code" class="qr-image">
-                    <p class="hint">Scan to open the patient referral registration page.</p>
-                </div>
-            </body>
-            </html>
-        `);
-        printWindow.document.close();
-
-        setTimeout(function () {
-            printWindow.focus();
-            printWindow.print();
-        }, 300);
     }
 
     $(function () {
@@ -960,7 +1036,8 @@
         $('.show-qr-btn').on('click', function () {
             const name = $(this).data('name');
             const url = $(this).data('url');
-            renderQr(url, name);
+            const code = $(this).data('code');
+            renderQr(url, name, code);
             new bootstrap.Modal(document.getElementById('qrModal')).show();
         });
 
@@ -973,8 +1050,8 @@
             });
         });
 
-        $('#printQrBtn').on('click', function () {
-            printAffiliateQr();
+        $('#downloadQrBtn').on('click', function () {
+            downloadAffiliateQrPng();
         });
 
         $('.edit-affiliate-btn').on('click', function () {
