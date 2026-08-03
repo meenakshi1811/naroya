@@ -7,6 +7,7 @@ use App\Models\Affiliate;
 use App\Models\Appointment;
 use App\Models\GeneralSetting;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -16,6 +17,7 @@ class AffiliateController extends Controller
     public function index(Request $request)
     {
         $search = trim((string) $request->input('search', ''));
+        $period = $this->resolvePeriodSelection($request);
         $defaultCommissionRate = $this->defaultCommissionRate();
 
         $affiliatesQuery = Affiliate::with('doctor:id,name,surname,email')
@@ -44,7 +46,12 @@ class AffiliateController extends Controller
         $totalUsers = 0;
 
         foreach ($affiliates as $affiliate) {
-            $stats = $this->statsForAffiliate($affiliate, $defaultCommissionRate);
+            $stats = $this->statsForAffiliate(
+                $affiliate,
+                $defaultCommissionRate,
+                $period['monthStart'],
+                $period['monthEnd']
+            );
             $affiliateStats[] = array_merge(['affiliate' => $affiliate], $stats);
             $totalBookings += $stats['bookings'];
             $totalValue += $stats['total_value'];
@@ -66,6 +73,11 @@ class AffiliateController extends Controller
             'totalCommission' => $totalCommission,
             'totalUsers' => $totalUsers,
             'search' => $search,
+            'selectedMonth' => $period['selectedMonth'],
+            'selectedYear' => $period['selectedYear'],
+            'isAllTime' => $period['isAllTime'],
+            'monthOptions' => $this->monthOptions(),
+            'yearOptions' => $this->yearOptions(),
             'approvedDoctors' => $approvedDoctors,
             'existingDoctorIds' => $existingDoctorIds,
             'defaultCommissionRate' => $defaultCommissionRate,
@@ -93,7 +105,7 @@ class AffiliateController extends Controller
         ]);
 
         return redirect()
-            ->route('admin.affiliate')
+            ->route('admin.affiliate', $this->filterQueryParams($request))
             ->with('success', 'Affiliate added successfully. QR code is ready to share.');
     }
 
@@ -121,7 +133,7 @@ class AffiliateController extends Controller
         ]);
 
         return redirect()
-            ->route('admin.affiliate')
+            ->route('admin.affiliate', $this->filterQueryParams($request))
             ->with('success', 'Affiliate updated successfully.');
     }
 
@@ -172,7 +184,7 @@ class AffiliateController extends Controller
         }
 
         return redirect()
-            ->route('admin.affiliate')
+            ->route('admin.affiliate', $this->filterQueryParams($request))
             ->with('success', 'Default commission rate updated.');
     }
 
@@ -212,8 +224,12 @@ class AffiliateController extends Controller
         return $validated;
     }
 
-    private function statsForAffiliate(Affiliate $affiliate, float $defaultRate): array
-    {
+    private function statsForAffiliate(
+        Affiliate $affiliate,
+        float $defaultRate,
+        ?Carbon $monthStart = null,
+        ?Carbon $monthEnd = null
+    ): array {
         $patientIds = $affiliate->patients()->pluck('id');
         $users = (int) ($affiliate->patients_count ?? $affiliate->patients()->count());
 
@@ -221,6 +237,10 @@ class AffiliateController extends Controller
             ->whereIn('patient_id', $patientIds)
             ->where('charIsPaid', 'Y')
             ->where('chrIsCanceled', 'N');
+
+        if ($monthStart && $monthEnd) {
+            $bookingQuery->whereBetween('created_at', [$monthStart, $monthEnd]);
+        }
 
         $bookings = (clone $bookingQuery)->count();
         $totalValue = (float) (clone $bookingQuery)->sum(DB::raw('COALESCE(amount, 0)'));
@@ -245,5 +265,81 @@ class AffiliateController extends Controller
         }
 
         return 3.0;
+    }
+
+    private function resolvePeriodSelection(Request $request): array
+    {
+        $monthInput = $request->input('month', (string) now()->month);
+
+        if ($monthInput === 'all') {
+            return [
+                'selectedMonth' => 'all',
+                'selectedYear' => (int) $request->input('year', now()->year),
+                'isAllTime' => true,
+                'monthStart' => null,
+                'monthEnd' => null,
+            ];
+        }
+
+        $selectedYear = (int) $request->input('year', now()->year);
+        $currentYear = (int) now()->year;
+        $currentMonth = (int) now()->month;
+
+        if ($selectedYear < ($currentYear - 2) || $selectedYear > ($currentYear + 1)) {
+            $selectedYear = $currentYear;
+        }
+
+        $selectedMonth = (int) $monthInput;
+        $maxMonth = $selectedYear === $currentYear ? $currentMonth : 12;
+
+        if ($selectedMonth < 1 || $selectedMonth > $maxMonth) {
+            $selectedMonth = $maxMonth;
+        }
+
+        $monthStart = Carbon::create($selectedYear, $selectedMonth, 1)->startOfMonth();
+        $monthEnd = $monthStart->copy()->endOfMonth();
+
+        return [
+            'selectedMonth' => $selectedMonth,
+            'selectedYear' => $selectedYear,
+            'isAllTime' => false,
+            'monthStart' => $monthStart,
+            'monthEnd' => $monthEnd,
+        ];
+    }
+
+    private function monthOptions(): array
+    {
+        return [
+            'all' => 'All',
+            1 => 'January',
+            2 => 'February',
+            3 => 'March',
+            4 => 'April',
+            5 => 'May',
+            6 => 'June',
+            7 => 'July',
+            8 => 'August',
+            9 => 'September',
+            10 => 'October',
+            11 => 'November',
+            12 => 'December',
+        ];
+    }
+
+    private function yearOptions(): array
+    {
+        $currentYear = (int) now()->year;
+
+        return range($currentYear - 2, $currentYear + 1);
+    }
+
+    private function filterQueryParams(Request $request): array
+    {
+        return array_filter([
+            'month' => $request->input('month'),
+            'year' => $request->input('year'),
+            'search' => trim((string) $request->input('search', '')),
+        ], fn ($value) => $value !== null && $value !== '');
     }
 }

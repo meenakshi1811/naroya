@@ -57,6 +57,26 @@
         color: #9ca3af;
     }
 
+    .affiliate-month-picker {
+        background: #fff;
+        border: 1px solid #d7e7d8;
+        border-radius: 999px;
+        padding: 0.45rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+
+    .affiliate-month-picker select {
+        border: 0;
+        background: transparent;
+        font-weight: 600;
+        color: #374151;
+        outline: none;
+        cursor: pointer;
+    }
+
     .affiliate-stat-grid {
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -626,14 +646,35 @@
     <div class="affiliate-dashboard-header">
         <div>
             <h1>Affiliate commission dashboard</h1>
-            <p>All affiliate bookings, referred users, and commission owed.</p>
+            <p>{{ $isAllTime ? 'All affiliate bookings, referred users, and commission owed.' : 'Bookings and commission owed, tracked month by month.' }}</p>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
+            <form method="GET" action="{{ route('admin.affiliate') }}" class="affiliate-month-picker">
+                @if($search !== '')
+                    <input type="hidden" name="search" value="{{ $search }}">
+                @endif
+                <select name="month" onchange="this.form.submit()">
+                    @foreach($monthOptions as $monthNumber => $monthLabel)
+                        <option value="{{ $monthNumber }}" {{ (string) $selectedMonth === (string) $monthNumber ? 'selected' : '' }}>{{ $monthLabel }}</option>
+                    @endforeach
+                </select>
+                <select name="year" onchange="this.form.submit()" @if($isAllTime) disabled @endif>
+                    @foreach($yearOptions as $yearOption)
+                        <option value="{{ $yearOption }}" {{ (int) $selectedYear === (int) $yearOption ? 'selected' : '' }}>{{ $yearOption }}</option>
+                    @endforeach
+                </select>
+            </form>
             <form method="GET" action="{{ route('admin.affiliate') }}" class="affiliate-search-bar">
+                @if((string) $selectedMonth !== 'all')
+                    <input type="hidden" name="month" value="{{ $selectedMonth }}">
+                    <input type="hidden" name="year" value="{{ $selectedYear }}">
+                @else
+                    <input type="hidden" name="month" value="all">
+                @endif
                 <i class="bi bi-search text-muted"></i>
                 <input type="text" name="search" value="{{ $search }}" placeholder="Search affiliate, code, or email">
                 @if($search !== '')
-                    <a href="{{ route('admin.affiliate') }}" class="btn btn-sm btn-light rounded-pill">Clear</a>
+                    <a href="{{ route('admin.affiliate', array_filter(['month' => $selectedMonth, 'year' => $selectedMonth === 'all' ? null : $selectedYear])) }}" class="btn btn-sm btn-light rounded-pill">Clear</a>
                 @endif
                 <button type="submit" class="btn btn-sm btn-primary rounded-pill">Search</button>
             </form>
@@ -647,6 +688,15 @@
         <label for="defaultCommissionRate">Default commission rate</label>
         <form method="POST" action="{{ route('admin.affiliate.default-commission') }}" id="defaultCommissionForm" class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
             @csrf
+            @if((string) $selectedMonth !== 'all')
+                <input type="hidden" name="month" value="{{ $selectedMonth }}">
+                <input type="hidden" name="year" value="{{ $selectedYear }}">
+            @else
+                <input type="hidden" name="month" value="all">
+            @endif
+            @if($search !== '')
+                <input type="hidden" name="search" value="{{ $search }}">
+            @endif
             <div class="commission-input-wrap">
                 <input type="number" step="0.01" min="0" max="100" name="affiliate_commission_percentage" id="defaultCommissionRate" value="{{ rtrim(rtrim(number_format($defaultCommissionRate, 2), '0'), '.') }}" required>
                 <span class="text-muted fw-semibold">%</span>
@@ -666,7 +716,7 @@
             <div class="value">{{ number_format($totalUsers) }}</div>
         </div>
         <div class="affiliate-stat-card">
-            <div class="label">Total Bookings</div>
+            <div class="label">{{ $isAllTime ? 'Total Bookings' : 'Bookings This Month' }}</div>
             <div class="value">{{ number_format($totalBookings) }}</div>
         </div>
         <div class="affiliate-stat-card">
@@ -767,7 +817,11 @@
     </div>
 
     <p class="affiliate-footer-note">
-        All-time snapshot of affiliate commission and referred users.
+        @if($isAllTime)
+            All-time snapshot of affiliate commission and referred users.
+        @else
+            Snapshot of affiliate commission for {{ $monthOptions[$selectedMonth] ?? '' }} {{ $selectedYear }}.
+        @endif
         Commission is calculated on paid booking value at each affiliate's rate (default {{ rtrim(rtrim(number_format($defaultCommissionRate, 2), '0'), '.') }}%).
         Patients who register via an affiliate QR code are linked to that affiliate for tracking.
     </p>
@@ -779,6 +833,15 @@
         <div class="modal-content">
             <form method="POST" action="{{ route('admin.affiliate.store') }}" id="addAffiliateForm">
                 @csrf
+                @if((string) $selectedMonth !== 'all')
+                    <input type="hidden" name="month" value="{{ $selectedMonth }}">
+                    <input type="hidden" name="year" value="{{ $selectedYear }}">
+                @else
+                    <input type="hidden" name="month" value="all">
+                @endif
+                @if($search !== '')
+                    <input type="hidden" name="search" value="{{ $search }}">
+                @endif
                 <input type="hidden" name="source_type" id="addSourceType" value="existing_doctor">
 
                 <div class="modal-header">
@@ -861,6 +924,15 @@
             <form method="POST" id="editAffiliateForm">
                 @csrf
                 @method('PUT')
+                @if((string) $selectedMonth !== 'all')
+                    <input type="hidden" name="month" value="{{ $selectedMonth }}">
+                    <input type="hidden" name="year" value="{{ $selectedYear }}">
+                @else
+                    <input type="hidden" name="month" value="all">
+                @endif
+                @if($search !== '')
+                    <input type="hidden" name="search" value="{{ $search }}">
+                @endif
                 <input type="hidden" name="source_type" id="editSourceType" value="existing_doctor">
 
                 <div class="modal-header">
