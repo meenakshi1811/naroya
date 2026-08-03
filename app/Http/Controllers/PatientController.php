@@ -78,18 +78,18 @@ class PatientController extends Controller
                 
                 // Check for a new device (new FCM token)
                 if ($request->fcm_token && $patient->fcm_token !== $request->fcm_token) {
-                // If the FCM token is different, send a push notification to the previous device
-                if ($patient->fcm_token) {
-                    $notificationController = new NotificationController();
-                    $notificationController->sendPushNotification(
-                        $patient->fcm_token,
-                        'New Device Login',
-                        'Your account was logged in from a new device. If this was not you, please contact support.',
-                        'patient',
-                        [],
-                        'patient_new_device_login'
-                    );
-                }
+                    // New Device Login notification temporarily disabled
+                    // if ($patient->fcm_token) {
+                    //     $notificationController = new NotificationController();
+                    //     $notificationController->sendPushNotification(
+                    //         $patient->fcm_token,
+                    //         'New Device Login',
+                    //         'Your account was logged in from a new device. If this was not you, please contact support.',
+                    //         'patient',
+                    //         [],
+                    //         'patient_new_device_login'
+                    //     );
+                    // }
 
                     // Update the patient's FCM token to the new token
                     $patient->fcm_token = $request->fcm_token;

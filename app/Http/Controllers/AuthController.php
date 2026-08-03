@@ -136,19 +136,28 @@ class AuthController extends Controller
                         'doctor_login'
                     );
                 } else {
-                    $message = $user->fcm_token
-                        ? 'Your account was logged in from a new device. If this was not you, please contact support.'
-                        : 'You have successfully logged in.';
-                    $action = $user->fcm_token ? 'doctor_new_device_login' : 'doctor_login';
+                    if (!$user->fcm_token) {
+                        $notificationController->sendPushNotification(
+                            $request->fcm_token,
+                            'Login Successful!',
+                            'You have successfully logged in.',
+                            'doctor',
+                            [],
+                            'doctor_login'
+                        );
+                    }
 
-                    $notificationController->sendPushNotification(
-                        $user->fcm_token ?: $request->fcm_token,
-                        $user->fcm_token ? 'New Device Login' : 'Login Successful!',
-                        $message,
-                        'doctor',
-                        [],
-                        $action
-                    );
+                    // New Device Login notification temporarily disabled
+                    // if ($user->fcm_token) {
+                    //     $notificationController->sendPushNotification(
+                    //         $user->fcm_token,
+                    //         'New Device Login',
+                    //         'Your account was logged in from a new device. If this was not you, please contact support.',
+                    //         'doctor',
+                    //         [],
+                    //         'doctor_new_device_login'
+                    //     );
+                    // }
 
                     $user->fcm_token = $request->fcm_token;
                     $user->save();
