@@ -190,6 +190,6 @@ return [
         // 'Example' => App\Facades\Example::class,
     ])->toArray(),
 
-    'patient_google_play_url' => env('PATIENT_GOOGLE_PLAY_URL', ''),
+    'patient_google_play_url' => env('PATIENT_GOOGLE_PLAY_URL', 'https://play.google.com/store/apps/details?id=com.app.norayapatient'),
 
 ];

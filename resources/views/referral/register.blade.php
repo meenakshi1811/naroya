@@ -442,6 +442,65 @@
             padding: 0 1.5rem 1.5rem;
         }
 
+        .success-modal .phone-modal-header {
+            padding-bottom: 0.25rem;
+        }
+
+        .success-modal-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 1rem;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #d7f0d8 0%, var(--green-light) 100%);
+            color: var(--green-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 20px rgba(16, 144, 20, 0.18);
+        }
+
+        .success-modal-icon svg {
+            width: 30px;
+            height: 30px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .success-modal-message {
+            margin: 0;
+            color: #4b5563;
+            font-size: 0.95rem;
+            line-height: 1.55;
+        }
+
+        .success-modal-play {
+            margin-top: 1.35rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid #eef2ef;
+            text-align: center;
+        }
+
+        .success-modal-play-label {
+            margin: 0 0 0.85rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .success-modal-actions {
+            display: block;
+            padding-top: 0.25rem;
+        }
+
+        .success-modal-actions .modal-btn-primary {
+            width: 100%;
+        }
+
         .modal-btn {
             padding: 0.8rem 1rem;
             border-radius: 10px;
@@ -507,10 +566,6 @@
         <div class="referral-card">
             <h2>Create your account</h2>
             <p class="subtitle">Fill in your details below to get started.</p>
-
-            @if(session('success'))
-                <div class="alert alert-success">{{ session('success') }}</div>
-            @endif
 
             @if($errors->any())
                 <div class="alert alert-danger">
@@ -650,6 +705,37 @@
         </div>
     </div>
 
+    @if(session('success'))
+        <div class="phone-modal-overlay is-open" id="registrationSuccessModal" aria-hidden="false">
+            <div class="phone-modal success-modal" role="dialog" aria-modal="true" aria-labelledby="registrationSuccessTitle">
+                <div class="phone-modal-header">
+                    <div class="success-modal-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M20 6L9 17l-5-5"></path>
+                        </svg>
+                    </div>
+                    <h3 id="registrationSuccessTitle">Registration Successful!</h3>
+                    <p class="success-modal-message">
+                        Your Noraya patient account has been created. Download the app and sign in with your phone number and password.
+                    </p>
+                </div>
+                @if(!empty($googlePlayUrl))
+                    <div class="phone-modal-body">
+                        <div class="success-modal-play">
+                            <p class="success-modal-play-label">Get the Noraya Patient App</p>
+                            <a href="{{ $googlePlayUrl }}" class="google-play-link" target="_blank" rel="noopener noreferrer">
+                                <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play">
+                            </a>
+                        </div>
+                    </div>
+                @endif
+                <div class="phone-modal-actions success-modal-actions">
+                    <button type="button" class="modal-btn modal-btn-primary" id="closeSuccessModalBtn">Got it</button>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <script>
         const form = document.getElementById('referralForm');
         const phoneInput = document.getElementById('phone');
@@ -787,6 +873,37 @@
             confirmModalBtn.textContent = 'Registering...';
             form.submit();
         });
+
+        const successModal = document.getElementById('registrationSuccessModal');
+        const closeSuccessModalBtn = document.getElementById('closeSuccessModalBtn');
+
+        function closeSuccessModal() {
+            if (!successModal) {
+                return;
+            }
+
+            successModal.classList.remove('is-open');
+            successModal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+
+        if (successModal) {
+            document.body.style.overflow = 'hidden';
+
+            closeSuccessModalBtn.addEventListener('click', closeSuccessModal);
+
+            successModal.addEventListener('click', function (event) {
+                if (event.target === successModal) {
+                    closeSuccessModal();
+                }
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && successModal.classList.contains('is-open')) {
+                    closeSuccessModal();
+                }
+            });
+        }
     </script>
 </body>
 </html>
