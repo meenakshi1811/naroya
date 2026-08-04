@@ -1,0 +1,15 @@
+<svg width="64" height="96" viewBox="0 0 64 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <pattern id="aqrCrosses" width="21" height="24" patternUnits="userSpaceOnUse">
+            <path d="M7 9L14 16M14 9L7 16" stroke="#8FA391" stroke-width="1.6" stroke-linecap="round"/>
+        </pattern>
+        <radialGradient id="aqrCrossesFade" cx="1" cy="1" r="1.05">
+            <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.8"/>
+            <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.15"/>
+        </radialGradient>
+        <mask id="aqrCrossesMask">
+            <rect width="64" height="96" fill="url(#aqrCrossesFade)"/>
+        </mask>
+    </defs>
+    <rect width="64" height="96" fill="url(#aqrCrosses)" mask="url(#aqrCrossesMask)"/>
+</svg>

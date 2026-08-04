@@ -370,14 +370,68 @@
         position: relative;
         width: 100%;
         margin: 0 auto;
-        background: #fff;
-        border-radius: 0;
-        padding: 8px 0 0;
-        overflow: visible;
+        background: #f7fcf8;
+        border-radius: 18px;
+        padding: 20px 18px 22px;
+        overflow: hidden;
         text-align: center;
         font-family: 'Inter', 'Figtree', Arial, sans-serif;
         color: #000;
         box-shadow: none;
+    }
+
+    .affiliate-qr-card-bg {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 0;
+        overflow: hidden;
+        border-radius: inherit;
+        pointer-events: none;
+    }
+
+    .affiliate-qr-card-bg-base {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+
+    .affiliate-qr-card-deco {
+        position: absolute;
+        display: block;
+    }
+
+    .affiliate-qr-deco-tl {
+        top: 14px;
+        left: 10px;
+        width: 24px;
+        height: auto;
+    }
+
+    .affiliate-qr-deco-tr {
+        top: 0;
+        right: 0;
+        width: 96px;
+        height: auto;
+    }
+
+    .affiliate-qr-deco-bl {
+        bottom: 16px;
+        left: 8px;
+        width: 30px;
+        height: auto;
+    }
+
+    .affiliate-qr-deco-br {
+        bottom: 14px;
+        right: 10px;
+        width: 52px;
+        height: auto;
     }
 
     .affiliate-qr-card-watermark {
@@ -396,7 +450,7 @@
         height: 100%;
         object-fit: contain;
         display: block;
-        opacity: 0.05;
+        opacity: 0.07;
     }
 
     .affiliate-qr-card-lower {
@@ -1024,6 +1078,13 @@
                         <i class="bi bi-x-lg"></i>
                     </button>
                     <div class="affiliate-qr-card" id="affiliateQrCard">
+                        <div class="affiliate-qr-card-bg" aria-hidden="true">
+                            <img src="{{ asset('assets/img/affiliate-qr/card-bg.svg') }}" alt="" class="affiliate-qr-card-bg-base" crossorigin="anonymous">
+                            <img src="{{ asset('assets/img/affiliate-qr/deco-chevrons.svg') }}" alt="" class="affiliate-qr-card-deco affiliate-qr-deco-tl" crossorigin="anonymous">
+                            <img src="{{ asset('assets/img/affiliate-qr/deco-dots.svg') }}" alt="" class="affiliate-qr-card-deco affiliate-qr-deco-tr" crossorigin="anonymous">
+                            <img src="{{ asset('assets/img/affiliate-qr/deco-play.svg') }}" alt="" class="affiliate-qr-card-deco affiliate-qr-deco-bl" crossorigin="anonymous">
+                            <img src="{{ asset('assets/img/affiliate-qr/deco-crosses.svg') }}" alt="" class="affiliate-qr-card-deco affiliate-qr-deco-br" crossorigin="anonymous">
+                        </div>
                         <div class="affiliate-qr-card-content">
                             <div class="affiliate-qr-card-logo-wrap">
                                 <img src="{{ asset('assets/img/affiliate-qr/logo-circle.svg') }}" alt="" class="affiliate-qr-card-logo-circle" crossorigin="anonymous">
