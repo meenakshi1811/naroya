@@ -471,20 +471,25 @@
         padding-bottom: 12px;
     }
 
-    /* Green tint + watermark only behind the QR block, not the full card. */
+    /* Green tint + watermark only behind the QR block (SVG renders reliably in PNG export). */
     .affiliate-qr-card-qr-section-bg {
         position: absolute;
         left: 50%;
-        top: 42%;
+        top: 50%;
         transform: translate(-50%, -50%);
         width: 88%;
-        height: 0;
-        padding-bottom: 88%;
+        aspect-ratio: 1;
         z-index: 0;
         pointer-events: none;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(230, 245, 233, 0.95) 0%, rgba(235, 247, 237, 0.55) 42%, rgba(255, 255, 255, 0) 72%);
-        overflow: hidden;
+    }
+
+    .affiliate-qr-card-qr-center-bg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: contain;
     }
 
     .affiliate-qr-card-qr-section-bg .affiliate-qr-card-watermark {
@@ -1154,6 +1159,7 @@
                             <div class="affiliate-qr-card-lower">
                                 <div class="affiliate-qr-card-qr-section">
                                     <div class="affiliate-qr-card-qr-section-bg" aria-hidden="true">
+                                        <img src="{{ asset('assets/img/affiliate-qr/qr-center-bg.svg') }}" alt="" class="affiliate-qr-card-qr-center-bg" crossorigin="anonymous">
                                         <img src="{{ asset('assets/img/affiliate-qr/watermark.svg') }}" alt="" class="affiliate-qr-card-watermark" crossorigin="anonymous">
                                     </div>
                                     <div class="affiliate-qr-card-qr-wrap">
@@ -1296,6 +1302,20 @@
         alert('QR library failed to load. Please refresh the page.');
     }
 
+    async function waitForCardImages(card) {
+        const images = Array.from(card.querySelectorAll('img'));
+        await Promise.all(images.map(function (img) {
+            if (img.complete && img.naturalWidth > 0) {
+                return Promise.resolve();
+            }
+
+            return new Promise(function (resolve) {
+                img.addEventListener('load', resolve, { once: true });
+                img.addEventListener('error', resolve, { once: true });
+            });
+        }));
+    }
+
     async function downloadAffiliateQrPng() {
         const card = document.getElementById('affiliateQrCard');
         const downloadBtn = document.getElementById('downloadQrBtn');
@@ -1318,13 +1338,17 @@
                 setTimeout(resolve, 250);
             });
 
+            await waitForCardImages(card);
+
             const canvas = await html2canvas(card, {
                 backgroundColor: '#ffffff',
                 scale: 3,
                 useCORS: true,
+                allowTaint: false,
                 logging: false,
                 width: card.offsetWidth,
                 height: card.offsetHeight,
+                imageTimeout: 0,
             });
 
             const link = document.createElement('a');
