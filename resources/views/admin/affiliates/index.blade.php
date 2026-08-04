@@ -402,10 +402,11 @@
         margin: 0 auto;
         background: #fbfefb;
         border-radius: 0;
-        /* Figma artboard is A5 @ 300dpi (1748 x 2480). Height grows past the
-           ratio if a long affiliate name wraps, rather than clipping. */
+        container-type: inline-size;
+        container-name: qr-card;
+        /* Figma artboard: 1748 x 2480 (A5 @ 300dpi). */
         aspect-ratio: 1748 / 2480;
-        padding: 18px 0 22px;
+        padding: 0;
         overflow: hidden;
         text-align: center;
         font-family: 'Inter', 'Figtree', Arial, sans-serif;
@@ -423,16 +424,15 @@
         overflow: hidden;
         border-radius: 0;
         pointer-events: none;
-        /* Corner glow only; keep the header/footer area plain. */
-        background:
-            radial-gradient(ellipse 65% 50% at 0% 0%, rgba(16, 144, 20, 0.11) 0%, rgba(16, 144, 20, 0) 68%),
-            radial-gradient(ellipse 55% 42% at 0% 100%, rgba(16, 144, 20, 0.10) 0%, rgba(16, 144, 20, 0) 62%),
-            radial-gradient(ellipse 50% 38% at 100% 100%, rgba(16, 144, 20, 0.07) 0%, rgba(16, 144, 20, 0) 58%),
-            #fbfefb;
     }
 
     .affiliate-qr-card-bg-base {
-        display: none;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
     }
 
     .affiliate-qr-card-deco {
@@ -470,12 +470,12 @@
         height: auto;
     }
 
-    /* Figma: 1436.52 x 1449.14 at (147.4, 518.78) on the 1748 x 2480 canvas, black @ 5%. */
+    /* Figma watermark frame: 1620 x 1620 centered on the 1748 x 2480 canvas. */
     .affiliate-qr-card-watermark {
         position: absolute;
-        left: 49.52%;
-        top: 50.13%;
-        width: 82.18%;
+        left: 50%;
+        top: 50%;
+        width: 92.68%;
         height: auto;
         transform: translate(-50%, -50%);
         display: block;
@@ -495,13 +495,15 @@
         flex-direction: column;
         align-items: center;
         width: 100%;
+        padding-top: 11.38cqi;
+        padding-bottom: 3.5cqi;
     }
 
     .affiliate-qr-card-logo-wrap {
         position: relative;
-        width: 52px;
-        height: 52px;
-        margin-bottom: 22px;
+        width: 15.27cqi;
+        height: 15.27cqi;
+        margin-bottom: 2.06cqi;
         flex-shrink: 0;
     }
 
@@ -514,8 +516,8 @@
 
     .affiliate-qr-card-logo-icon {
         position: absolute;
-        width: 57%;
-        height: 57%;
+        width: 56.6%;
+        height: 56.6%;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
@@ -525,10 +527,10 @@
 
     .affiliate-qr-card-name {
         color: #000;
-        font-size: 1.6875rem;
+        font-size: 5.15cqi;
         font-weight: 700;
-        margin: 0 0 4px;
-        line-height: 1.2;
+        margin: 0 0 3.72cqi;
+        line-height: 1.15;
         letter-spacing: -0.02em;
         width: 100%;
         padding: 0 6%;
@@ -537,34 +539,20 @@
     .affiliate-qr-card-qr-section {
         position: relative;
         width: 100%;
-        margin-bottom: 17px;
+        margin-bottom: 4.18cqi;
         z-index: 1;
     }
 
-    .affiliate-qr-card-qr-section::before {
-        content: '';
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        width: 72%;
-        aspect-ratio: 1;
-        background: radial-gradient(circle, rgba(16, 144, 20, 0.16) 0%, rgba(16, 144, 20, 0.07) 42%, rgba(16, 144, 20, 0) 72%);
-        z-index: 0;
-        pointer-events: none;
-    }
-
-    /* Figma: 1073 x 1072 box, rx 75, QR inset 63.5 — i.e. 61.4% of canvas width,
-       quiet zone 5.92% of the box. Percentage padding resolves against the section width. */
+    /* Figma Frame 3: 1073 x 1072, rx 75, shadow 0 4px 25px @ 50% green. */
     .affiliate-qr-card-qr-wrap {
         position: relative;
         z-index: 1;
-        width: 61.4%;
+        width: 61.36cqi;
         margin: 0 auto;
-        background: linear-gradient(145deg, #edf8ef 0%, #ffffff 52%, #f3fbf4 100%);
-        border-radius: 0;
-        padding: 3.64%;
-        box-shadow: 0 4px 28px rgba(16, 144, 20, 0.32);
+        background: #fff;
+        border-radius: 7%;
+        padding: 4.01%;
+        box-shadow: 0 4px 25px rgba(16, 144, 20, 0.5);
         overflow: hidden;
     }
 
@@ -593,12 +581,12 @@
 
     .affiliate-qr-card-hint {
         color: #000;
-        font-size: 0.875rem;
-        font-weight: 700;
-        margin: 0 0 27px;
-        line-height: 1.3;
+        font-size: 3.43cqi;
+        font-weight: 600;
+        margin: 0 0 7.55cqi;
+        line-height: 1.25;
         max-width: 100%;
-        padding: 0 12%;
+        padding: 0 19%;
         position: relative;
         z-index: 1;
     }
@@ -606,14 +594,14 @@
     .affiliate-qr-card-brand {
         position: relative;
         z-index: 1;
-        margin-bottom: 7px;
+        margin-bottom: 1.16cqi;
         line-height: 0;
     }
 
     .affiliate-qr-card-noraya {
-        height: 24px;
-        width: auto;
-        max-width: 100px;
+        width: 19.68cqi;
+        height: auto;
+        max-width: 100%;
         display: inline-block;
     }
 
@@ -629,10 +617,10 @@
 
     .affiliate-qr-card-url {
         color: #444;
-        font-size: 0.875rem;
+        font-size: 2.58cqi;
         font-weight: 500;
         margin: 0;
-        line-height: 1.35;
+        line-height: 1.25;
         word-break: break-all;
         padding: 0 8%;
         position: relative;
@@ -1204,7 +1192,7 @@
     function getQrPixelSize(container) {
         const wrap = container.closest('.affiliate-qr-card-qr-wrap');
         if (wrap && wrap.clientWidth > 0) {
-            const padding = wrap.clientWidth * 0.0364 * 2;
+            const padding = wrap.clientWidth * 0.0401 * 2;
             return Math.max(160, Math.floor(wrap.clientWidth - padding));
         }
 
