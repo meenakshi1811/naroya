@@ -343,8 +343,20 @@
     }
 
     #qrModal .modal-dialog {
-        max-width: 460px;
+        max-width: min(580px, 94vw);
         margin: 1rem auto;
+    }
+
+    @media (min-width: 992px) {
+        #qrModal .modal-dialog {
+            max-width: min(640px, 90vw);
+        }
+    }
+
+    @media (min-width: 1400px) {
+        #qrModal .modal-dialog {
+            max-width: min(720px, 85vw);
+        }
     }
 
     #qrModal .modal-content {
@@ -367,9 +379,21 @@
     .affiliate-qr-modal-shell {
         position: relative;
         width: 100%;
-        max-width: 414px;
+        max-width: 540px;
         margin: 0 auto;
         padding-top: 28px;
+    }
+
+    @media (min-width: 992px) {
+        .affiliate-qr-modal-shell {
+            max-width: 600px;
+        }
+    }
+
+    @media (min-width: 1400px) {
+        .affiliate-qr-modal-shell {
+            max-width: 680px;
+        }
     }
 
     .affiliate-qr-card {
@@ -620,9 +644,21 @@
         grid-template-columns: 1fr 1fr;
         gap: 0.75rem;
         width: 100%;
-        max-width: 414px;
+        max-width: 540px;
         margin: 1.25rem auto 0;
         padding: 0;
+    }
+
+    @media (min-width: 992px) {
+        .affiliate-qr-modal-actions {
+            max-width: 600px;
+        }
+    }
+
+    @media (min-width: 1400px) {
+        .affiliate-qr-modal-actions {
+            max-width: 680px;
+        }
     }
 
     .affiliate-qr-modal-actions .btn {
