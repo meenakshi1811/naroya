@@ -471,14 +471,14 @@
         padding-bottom: 12px;
     }
 
-    /* Green tint + watermark only behind the QR block (SVG renders reliably in PNG export). */
+    /* Green tint + watermark only behind the QR block. Inline SVG exports reliably. */
     .affiliate-qr-card-qr-section-bg {
         position: absolute;
         left: 50%;
         top: 50%;
         transform: translate(-50%, -50%);
         width: 88%;
-        aspect-ratio: 1;
+        height: 88%;
         z-index: 0;
         pointer-events: none;
     }
@@ -489,7 +489,6 @@
         width: 100%;
         height: 100%;
         display: block;
-        object-fit: contain;
     }
 
     .affiliate-qr-card-qr-section-bg .affiliate-qr-card-watermark {
@@ -1159,7 +1158,17 @@
                             <div class="affiliate-qr-card-lower">
                                 <div class="affiliate-qr-card-qr-section">
                                     <div class="affiliate-qr-card-qr-section-bg" aria-hidden="true">
-                                        <img src="{{ asset('assets/img/affiliate-qr/qr-center-bg.svg') }}" alt="" class="affiliate-qr-card-qr-center-bg" crossorigin="anonymous">
+                                        <svg class="affiliate-qr-card-qr-center-bg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                            <defs>
+                                                <radialGradient id="affiliateQrCenterGlow" cx="50%" cy="50%" r="50%">
+                                                    <stop offset="0%" stop-color="#E6F5E9"/>
+                                                    <stop offset="45%" stop-color="#EBF7ED"/>
+                                                    <stop offset="72%" stop-color="#F7FCF8"/>
+                                                    <stop offset="100%" stop-color="#FFFFFF"/>
+                                                </radialGradient>
+                                            </defs>
+                                            <rect width="400" height="400" fill="url(#affiliateQrCenterGlow)"/>
+                                        </svg>
                                         <img src="{{ asset('assets/img/affiliate-qr/watermark.svg') }}" alt="" class="affiliate-qr-card-watermark" crossorigin="anonymous">
                                     </div>
                                     <div class="affiliate-qr-card-qr-wrap">
@@ -1302,6 +1311,91 @@
         alert('QR library failed to load. Please refresh the page.');
     }
 
+    function rasterizeAffiliateQrCenterBg(bg) {
+        const glow = bg.querySelector('.affiliate-qr-card-qr-center-bg');
+        if (!glow || glow.tagName.toLowerCase() === 'img') {
+            return function () {};
+        }
+
+        const width = Math.max(1, Math.round(bg.offsetWidth));
+        const height = Math.max(1, Math.round(bg.offsetHeight));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        const cx = width / 2;
+        const cy = height / 2;
+        const radius = Math.max(width, height) / 2;
+        const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+        gradient.addColorStop(0, '#E6F5E9');
+        gradient.addColorStop(0.45, '#EBF7ED');
+        gradient.addColorStop(0.72, '#F7FCF8');
+        gradient.addColorStop(1, '#FFFFFF');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+
+        const img = document.createElement('img');
+        img.className = 'affiliate-qr-card-qr-center-bg';
+        img.alt = '';
+        img.setAttribute('aria-hidden', 'true');
+        img.src = canvas.toDataURL('image/png');
+        img.style.position = 'absolute';
+        img.style.inset = '0';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.display = 'block';
+
+        glow.replaceWith(img);
+
+        return function restoreAffiliateQrCenterBg() {
+            img.replaceWith(glow);
+        };
+    }
+
+    function prepareAffiliateQrCardExport(card) {
+        const section = card.querySelector('.affiliate-qr-card-qr-section');
+        const bg = card.querySelector('.affiliate-qr-card-qr-section-bg');
+        if (!section || !bg) {
+            return function () {};
+        }
+
+        const size = Math.max(1, Math.round(section.offsetWidth * 0.88));
+        const saved = {
+            width: bg.style.width,
+            height: bg.style.height,
+        };
+
+        bg.style.width = size + 'px';
+        bg.style.height = size + 'px';
+
+        const restoreGlow = rasterizeAffiliateQrCenterBg(bg);
+
+        return function restoreAffiliateQrCardExport() {
+            restoreGlow();
+            bg.style.width = saved.width;
+            bg.style.height = saved.height;
+        };
+    }
+
+    function syncAffiliateQrExportClone(clonedDoc) {
+        const clonedCard = clonedDoc.getElementById('affiliateQrCard');
+        if (!clonedCard) {
+            return;
+        }
+
+        const section = clonedCard.querySelector('.affiliate-qr-card-qr-section');
+        const bg = clonedCard.querySelector('.affiliate-qr-card-qr-section-bg');
+        if (!section || !bg) {
+            return;
+        }
+
+        const size = Math.max(1, Math.round(section.offsetWidth * 0.88));
+        bg.style.width = size + 'px';
+        bg.style.height = size + 'px';
+        rasterizeAffiliateQrCenterBg(bg);
+    }
+
     async function waitForCardImages(card) {
         const images = Array.from(card.querySelectorAll('img'));
         await Promise.all(images.map(function (img) {
@@ -1329,6 +1423,8 @@
         downloadBtn.disabled = true;
         downloadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Preparing...';
 
+        let restoreCardExport = function () {};
+
         try {
             if (document.fonts && document.fonts.ready) {
                 await document.fonts.ready;
@@ -1340,6 +1436,8 @@
 
             await waitForCardImages(card);
 
+            restoreCardExport = prepareAffiliateQrCardExport(card);
+
             const canvas = await html2canvas(card, {
                 backgroundColor: '#ffffff',
                 scale: 3,
@@ -1348,7 +1446,8 @@
                 logging: false,
                 width: card.offsetWidth,
                 height: card.offsetHeight,
-                imageTimeout: 0,
+                imageTimeout: 15000,
+                onclone: syncAffiliateQrExportClone,
             });
 
             const link = document.createElement('a');
@@ -1358,6 +1457,7 @@
         } catch (error) {
             alert('Unable to download QR card. Please try again.');
         } finally {
+            restoreCardExport();
             downloadBtn.disabled = false;
             downloadBtn.innerHTML = originalHtml;
         }
