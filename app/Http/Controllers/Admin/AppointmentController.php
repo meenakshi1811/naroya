@@ -30,18 +30,14 @@ class AppointmentController extends Controller
 
     private function getAppointments(Request $request = null)
     {
-        $query = Appointment::with([
-            'patient:id,name,lastname',
-            'doctor:id,name,surname,category,country,state',
-            'doctor.speciality:id,title',
-            'doctor.countryRel:id,countryname',
-            'doctor.stateRel:id,name'
-        ]);
+        $query = Appointment::query()
+            ->where('appointment.charIsPaid', 'Y')
+            ->where('appointment.chrIsCanceled', 'N');
 
         // Filters
         if ($request) {
             if ($request->date) {
-                $query->whereDate('varAppointment', $request->date);
+                $query->whereDate('appointment.varAppointment', $request->date);
             }
 
             if ($request->doctor) {
@@ -72,11 +68,11 @@ class AppointmentController extends Controller
                 $search = $request->search;
 
                 $query->where(function ($q) use ($search) {
-                    $q->where('varAppointment', 'like', '%' . $search . '%')
-                        ->orWhere('startTime', 'like', '%' . $search . '%')
-                        ->orWhere('endTime', 'like', '%' . $search . '%')
-                        ->orWhere('varSympton', 'like', '%' . $search . '%')
-                        ->orWhere('varSymptondesc', 'like', '%' . $search . '%')
+                    $q->where('appointment.varAppointment', 'like', '%' . $search . '%')
+                        ->orWhere('appointment.startTime', 'like', '%' . $search . '%')
+                        ->orWhere('appointment.endTime', 'like', '%' . $search . '%')
+                        ->orWhere('appointment.varSympton', 'like', '%' . $search . '%')
+                        ->orWhere('appointment.varSymptondesc', 'like', '%' . $search . '%')
                         ->orWhereHas('patient', function ($patientQuery) use ($search) {
                             $patientQuery->where('name', 'like', '%' . $search . '%')
                                 ->orWhere('lastname', 'like', '%' . $search . '%');
@@ -98,23 +94,46 @@ class AppointmentController extends Controller
             }
         }
 
-        $appointments = $query->orderBy('varAppointment', 'desc')
-            ->orderBy('startTime', 'asc')
+        $appointments = $query
+            ->leftJoin('patients', 'appointment.patient_id', '=', 'patients.id')
+            ->leftJoin('users', 'appointment.dr_id', '=', 'users.id')
+            ->leftJoin('dr_category', 'users.category', '=', 'dr_category.id')
+            ->leftJoin('country_master', 'users.country', '=', 'country_master.id')
+            ->leftJoin('states', 'users.state', '=', 'states.id')
+            ->select([
+                'appointment.*',
+                'patients.name as patient_first_name',
+                'patients.lastname as patient_last_name',
+                'users.name as doctor_first_name',
+                'users.surname as doctor_surname',
+                'dr_category.title as speciality',
+                'country_master.countryname as country',
+                'states.name as state',
+            ])
+            ->orderBy('appointment.varAppointment', 'desc')
+            ->orderBy('appointment.startTime', 'asc')
             ->paginate(10)
             ->withPath(route('appointments.filter'))
             ->appends($request?->query() ?? []);
 
         $appointments->getCollection()->transform(function ($item) {
-            return (object) array_merge($item->getAttributes(), [
-                'patient' => $item->patient?->name,
-                'lastname' => $item->patient?->lastname,
-                'doctor' => $item->doctor?->name,
-                'surname' => $item->doctor?->surname,
-                'speciality' => $item->doctor?->speciality?->title,
-                'speciality_id' => $item->doctor?->speciality?->id,
-                'country' => $item->doctor?->countryRel?->countryname,
-                'state' => $item->doctor?->stateRel?->name,
-            ]);
+            $patientName = trim(collect([$item->patient_first_name, $item->patient_last_name])->filter()->implode(' '));
+            $doctorName = trim(collect([$item->doctor_first_name, $item->doctor_surname])->filter()->implode(' '));
+
+            return (object) [
+                'id' => $item->id,
+                'patient' => $patientName !== '' ? $patientName : '-',
+                'doctor' => $doctorName !== '' ? $doctorName : '-',
+                'speciality' => $item->speciality ?: '-',
+                'varAppointment' => $item->varAppointment,
+                'startTime' => $item->startTime,
+                'endTime' => $item->endTime,
+                'varSympton' => $item->varSympton,
+                'varSymptondesc' => $item->varSymptondesc,
+                'chrIsAccepted' => $item->chrIsAccepted,
+                'country' => $item->country,
+                'state' => $item->state,
+            ];
         });
 
         return $appointments;

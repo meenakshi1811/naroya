@@ -142,6 +142,12 @@
         margin-bottom: 0;
     }
 
+    .affiliate-table-card thead th,
+    .affiliate-table-card tbody td,
+    .affiliate-table-card tfoot td {
+        text-align: center;
+    }
+
     .affiliate-table-card thead th {
         background: var(--affiliate-green-light) !important;
         color: var(--affiliate-green) !important;
@@ -189,6 +195,7 @@
     .affiliate-actions {
         display: flex;
         flex-wrap: wrap;
+        justify-content: center;
         gap: 0.35rem;
     }
 
@@ -543,9 +550,9 @@
         background: transparent;
         display: block;
         width: 100% !important;
-        height: 100% !important;
+        height: auto !important;
         max-width: 100%;
-        max-height: 100%;
+        aspect-ratio: 1;
     }
 
     .affiliate-qr-card-hint {
@@ -777,7 +784,7 @@
         </div>
         <div class="affiliate-stat-card">
             <div class="label">Commission Owed</div>
-            <div class="value commission">₹{{ number_format($totalCommission, 0) }}</div>
+            <div class="value commission">₹{{ number_format($totalCommission, 2) }}</div>
         </div>
     </div>
 
@@ -812,7 +819,7 @@
                             <td>{{ number_format($row['users']) }}</td>
                             <td>{{ number_format($row['bookings']) }}</td>
                             <td>₹{{ number_format($row['total_value'], 0) }}</td>
-                            <td><span class="affiliate-commission-value">₹{{ number_format($row['commission_owed'], 0) }}</span></td>
+                            <td><span class="affiliate-commission-value">₹{{ number_format($row['commission_owed'], 2) }}</span></td>
                             <td>
                                 <button type="button"
                                     class="btn btn-outline-primary btn-sm show-qr-btn"
@@ -859,7 +866,7 @@
                             <td>{{ number_format($totalUsers) }}</td>
                             <td>{{ number_format($totalBookings) }}</td>
                             <td>₹{{ number_format($totalValue, 0) }}</td>
-                            <td>₹{{ number_format($totalCommission, 0) }}</td>
+                            <td>₹{{ number_format($totalCommission, 2) }}</td>
                             <td colspan="2"></td>
                         </tr>
                     </tfoot>
@@ -1128,9 +1135,20 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
     let qrInstance = null;
+    let pendingQrData = null;
     let currentReferralUrl = '';
     let currentAffiliateName = '';
     let currentAffiliateCode = '';
+
+    function getQrPixelSize(container) {
+        const wrap = container.closest('.affiliate-qr-card-qr-wrap');
+        if (wrap && wrap.clientWidth > 0) {
+            const padding = wrap.clientWidth * 0.0364 * 2;
+            return Math.max(160, Math.floor(wrap.clientWidth - padding));
+        }
+
+        return 256;
+    }
 
     function sanitizeFilename(value) {
         return (value || 'affiliate')
@@ -1169,28 +1187,31 @@
 
         const container = document.getElementById('qrModalCanvas');
         container.innerHTML = '';
+        qrInstance = null;
+
+        const size = getQrPixelSize(container);
 
         if (typeof QRCodeStyling !== 'undefined') {
             qrInstance = new QRCodeStyling({
-                width: 800,
-                height: 800,
+                width: size,
+                height: size,
                 type: 'canvas',
                 data: url,
-                margin: 0,
+                margin: 2,
                 qrOptions: {
                     errorCorrectionLevel: 'H',
                 },
                 dotsOptions: {
                     color: '#000000',
-                    type: 'rounded',
+                    type: 'square',
                 },
                 cornersSquareOptions: {
                     color: '#000000',
-                    type: 'extra-rounded',
+                    type: 'square',
                 },
                 cornersDotOptions: {
                     color: '#000000',
-                    type: 'dot',
+                    type: 'square',
                 },
                 backgroundOptions: {
                     color: '#ffffff',
@@ -1204,8 +1225,8 @@
         if (typeof QRCode !== 'undefined') {
             qrInstance = new QRCode(container, {
                 text: url,
-                width: 800,
-                height: 800,
+                width: size,
+                height: size,
                 colorDark: '#000000',
                 colorLight: '#ffffff',
                 correctLevel: QRCode.CorrectLevel.H
@@ -1274,11 +1295,28 @@
         });
 
         $('.show-qr-btn').on('click', function () {
-            const name = $(this).data('name');
-            const url = $(this).data('url');
-            const code = $(this).data('code');
-            renderQr(url, name, code);
-            new bootstrap.Modal(document.getElementById('qrModal')).show();
+            pendingQrData = {
+                url: $(this).data('url'),
+                name: $(this).data('name'),
+                code: $(this).data('code'),
+            };
+
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('qrModal')).show();
+        });
+
+        $('#qrModal').on('shown.bs.modal', function () {
+            if (!pendingQrData) {
+                return;
+            }
+
+            renderQr(pendingQrData.url, pendingQrData.name, pendingQrData.code);
+            pendingQrData = null;
+        });
+
+        $('#qrModal').on('hidden.bs.modal', function () {
+            document.getElementById('qrModalCanvas').innerHTML = '';
+            qrInstance = null;
+            pendingQrData = null;
         });
 
         $('#copyReferralUrlBtn').on('click', function () {
