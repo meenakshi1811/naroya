@@ -141,13 +141,15 @@
             background: transparent;
             color: #6b7280;
             cursor: pointer;
-            width: 2rem;
-            height: 2rem;
+            width: 2.25rem;
+            height: 2.25rem;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             border-radius: 8px;
             padding: 0;
+            z-index: 2;
+            flex-shrink: 0;
         }
 
         .password-toggle:hover {
@@ -175,6 +177,13 @@
 
         .password-toggle.is-visible .icon-eye-off {
             display: block;
+        }
+
+        @media (max-width: 480px) {
+            .password-toggle {
+                width: 2.5rem;
+                height: 2.5rem;
+            }
         }
 
         .form-row {
@@ -620,8 +629,8 @@
                     <div class="form-group">
                         <label for="password">Password *</label>
                         <div class="password-input-wrap">
-                            <input type="password" id="password" name="password" required minlength="6" autocomplete="new-password">
-                            <button type="button" class="password-toggle" data-target="password" aria-label="Show password">
+                            <input type="text" id="password" name="password" required minlength="6" autocomplete="new-password">
+                            <button type="button" class="password-toggle is-visible" data-target="password" aria-label="Hide password" aria-pressed="true" title="Hide password">
                                 <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
                                     <circle cx="12" cy="12" r="3"></circle>
@@ -639,8 +648,8 @@
                     <div class="form-group">
                         <label for="password_confirmation">Confirm Password *</label>
                         <div class="password-input-wrap">
-                            <input type="password" id="password_confirmation" name="password_confirmation" required minlength="6" autocomplete="new-password">
-                            <button type="button" class="password-toggle" data-target="password_confirmation" aria-label="Show password">
+                            <input type="text" id="password_confirmation" name="password_confirmation" required minlength="6" autocomplete="new-password">
+                            <button type="button" class="password-toggle is-visible" data-target="password_confirmation" aria-label="Hide password" aria-pressed="true" title="Hide password">
                                 <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
                                     <circle cx="12" cy="12" r="3"></circle>
@@ -766,16 +775,21 @@
         bindPhoneInput(confirmPhoneInput);
 
         document.querySelectorAll('.password-toggle').forEach(function (button) {
-            button.addEventListener('click', function () {
+            button.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
                 const input = document.getElementById(button.dataset.target);
                 if (!input) {
                     return;
                 }
 
-                const isPassword = input.type === 'password';
-                input.type = isPassword ? 'text' : 'password';
-                button.classList.toggle('is-visible', isPassword);
-                button.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+                const willShowPassword = input.type === 'password';
+                input.type = willShowPassword ? 'text' : 'password';
+                button.classList.toggle('is-visible', willShowPassword);
+                button.setAttribute('aria-label', willShowPassword ? 'Hide password' : 'Show password');
+                button.setAttribute('aria-pressed', willShowPassword ? 'true' : 'false');
+                button.setAttribute('title', willShowPassword ? 'Hide password' : 'Show password');
             });
         });
 
