@@ -377,7 +377,7 @@
         width: 100%;
         margin: 0 auto;
         background: #fbfefb;
-        border-radius: 18px;
+        border-radius: 0;
         /* Figma artboard is A5 @ 300dpi (1748 x 2480). Height grows past the
            ratio if a long affiliate name wraps, rather than clipping. */
         aspect-ratio: 1748 / 2480;
@@ -397,15 +397,14 @@
         left: 0;
         z-index: 0;
         overflow: hidden;
-        border-radius: inherit;
+        border-radius: 0;
         pointer-events: none;
-        /* Green tint stays in the corners and top/bottom bands; center stays light. */
+        /* Corner glow only; keep the header/footer area plain. */
         background:
-            radial-gradient(ellipse 88% 48% at 50% 40%, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0) 72%),
             radial-gradient(ellipse 65% 50% at 0% 0%, rgba(16, 144, 20, 0.11) 0%, rgba(16, 144, 20, 0) 68%),
             radial-gradient(ellipse 55% 42% at 0% 100%, rgba(16, 144, 20, 0.10) 0%, rgba(16, 144, 20, 0) 62%),
             radial-gradient(ellipse 50% 38% at 100% 100%, rgba(16, 144, 20, 0.07) 0%, rgba(16, 144, 20, 0) 58%),
-            linear-gradient(180deg, #e6f5e9 0%, #fbfefb 22%, #ffffff 48%, #fbfefb 78%, #ebf7ed 100%);
+            #fbfefb;
     }
 
     .affiliate-qr-card-bg-base {
@@ -518,18 +517,30 @@
         z-index: 1;
     }
 
+    .affiliate-qr-card-qr-section::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 72%;
+        aspect-ratio: 1;
+        background: radial-gradient(circle, rgba(16, 144, 20, 0.16) 0%, rgba(16, 144, 20, 0.07) 42%, rgba(16, 144, 20, 0) 72%);
+        z-index: 0;
+        pointer-events: none;
+    }
+
     /* Figma: 1073 x 1072 box, rx 75, QR inset 63.5 — i.e. 61.4% of canvas width,
-       radius 7% of the box, quiet zone 5.92% of the box. Percentage padding
-       resolves against the section width, so 5.92% x 0.614 = 3.64%. */
+       quiet zone 5.92% of the box. Percentage padding resolves against the section width. */
     .affiliate-qr-card-qr-wrap {
         position: relative;
         z-index: 1;
         width: 61.4%;
         margin: 0 auto;
-        background: #fff;
-        border-radius: 7%;
+        background: linear-gradient(145deg, #edf8ef 0%, #ffffff 52%, #f3fbf4 100%);
+        border-radius: 0;
         padding: 3.64%;
-        box-shadow: 0 4px 22px rgba(16, 144, 20, 0.28);
+        box-shadow: 0 4px 28px rgba(16, 144, 20, 0.32);
         overflow: hidden;
     }
 
@@ -580,6 +591,16 @@
         width: auto;
         max-width: 100px;
         display: inline-block;
+    }
+
+    .affiliate-qr-card-url a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .affiliate-qr-card-url a:hover {
+        color: var(--affiliate-green);
+        text-decoration: underline;
     }
 
     .affiliate-qr-card-url {
@@ -1108,14 +1129,16 @@
                                 <div class="affiliate-qr-card-brand">
                                     <img src="{{ asset('assets/img/affiliate-qr/noraya-wordmark.svg') }}" alt="Noraya" class="affiliate-qr-card-noraya" crossorigin="anonymous">
                                 </div>
-                                <p class="affiliate-qr-card-url" id="qrModalReferralUrl"></p>
+                                <p class="affiliate-qr-card-url">
+                                    <a href="#" id="qrModalReferralUrl" target="_blank" rel="noopener noreferrer"></a>
+                                </p>
                             </div>
                         </div>
                     </div>
 
                     <div class="affiliate-qr-modal-actions">
                         <button type="button" class="btn btn-outline-primary" id="downloadQrBtn">
-                            <i class="bi bi-download me-1"></i> Download PNG
+                            <i class="bi bi-download me-1"></i> Download PDF
                         </button>
                         <button type="button" class="btn btn-primary" id="copyReferralUrlBtn">
                             <i class="bi bi-clipboard me-1"></i> Copy Link
@@ -1134,6 +1157,7 @@
 <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
 <script>
     let qrInstance = null;
     let pendingQrData = null;
@@ -1183,7 +1207,7 @@
         currentAffiliateName = name;
         currentAffiliateCode = code || '';
         $('#qrModalAffiliateName').text(name);
-        $('#qrModalReferralUrl').text(url);
+        $('#qrModalReferralUrl').attr('href', url).text(url);
         $('#openReferralUrlBtn').attr('href', url);
 
         const container = document.getElementById('qrModalCanvas');
@@ -1238,12 +1262,13 @@
         alert('QR library failed to load. Please refresh the page.');
     }
 
-    async function downloadAffiliateQrPng() {
+    async function downloadAffiliateQrPdf() {
         const card = document.getElementById('affiliateQrCard');
+        const urlLink = document.getElementById('qrModalReferralUrl');
         const downloadBtn = document.getElementById('downloadQrBtn');
 
-        if (!card || !currentReferralUrl || typeof html2canvas !== 'function') {
-            alert('Unable to download QR code. Please try again.');
+        if (!card || !urlLink || !currentReferralUrl || typeof html2canvas !== 'function' || typeof window.jspdf === 'undefined') {
+            alert('Unable to download QR card. Please try again.');
             return;
         }
 
@@ -1260,21 +1285,38 @@
                 setTimeout(resolve, 250);
             });
 
+            const cardRect = card.getBoundingClientRect();
+            const urlRect = urlLink.getBoundingClientRect();
+            const pdfWidth = card.offsetWidth;
+            const pdfHeight = card.offsetHeight;
+
             const canvas = await html2canvas(card, {
                 backgroundColor: '#ffffff',
                 scale: 3,
                 useCORS: true,
                 logging: false,
-                width: card.offsetWidth,
-                height: card.offsetHeight,
+                width: pdfWidth,
+                height: pdfHeight,
             });
 
-            const link = document.createElement('a');
-            link.download = 'noraya-qr-' + sanitizeFilename(currentAffiliateCode || currentAffiliateName) + '.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+            const imgData = canvas.toDataURL('image/png');
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({
+                orientation: pdfHeight >= pdfWidth ? 'portrait' : 'landscape',
+                unit: 'px',
+                format: [pdfWidth, pdfHeight],
+                hotfixes: ['px_scaling'],
+            });
+
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+
+            const linkX = urlRect.left - cardRect.left;
+            const linkY = urlRect.top - cardRect.top;
+            pdf.link(linkX, linkY, urlRect.width, urlRect.height, { url: currentReferralUrl });
+
+            pdf.save('noraya-qr-' + sanitizeFilename(currentAffiliateCode || currentAffiliateName) + '.pdf');
         } catch (error) {
-            alert('Unable to download QR code. Please try again.');
+            alert('Unable to download QR card. Please try again.');
         } finally {
             downloadBtn.disabled = false;
             downloadBtn.innerHTML = originalHtml;
@@ -1330,7 +1372,7 @@
         });
 
         $('#downloadQrBtn').on('click', function () {
-            downloadAffiliateQrPng();
+            downloadAffiliateQrPdf();
         });
 
         $('.edit-affiliate-btn').on('click', function () {
