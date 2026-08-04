@@ -376,7 +376,7 @@
         position: relative;
         width: 100%;
         margin: 0 auto;
-        background: #f7fcf8;
+        background: #fbfefb;
         border-radius: 18px;
         /* Figma artboard is A5 @ 300dpi (1748 x 2480). Height grows past the
            ratio if a long affiliate name wraps, rather than clipping. */
@@ -399,15 +399,17 @@
         overflow: hidden;
         border-radius: inherit;
         pointer-events: none;
+        /* Green tint stays in the corners and top/bottom bands; center stays light. */
+        background:
+            radial-gradient(ellipse 88% 48% at 50% 40%, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0) 72%),
+            radial-gradient(ellipse 65% 50% at 0% 0%, rgba(16, 144, 20, 0.11) 0%, rgba(16, 144, 20, 0) 68%),
+            radial-gradient(ellipse 55% 42% at 0% 100%, rgba(16, 144, 20, 0.10) 0%, rgba(16, 144, 20, 0) 62%),
+            radial-gradient(ellipse 50% 38% at 100% 100%, rgba(16, 144, 20, 0.07) 0%, rgba(16, 144, 20, 0) 58%),
+            linear-gradient(180deg, #e6f5e9 0%, #fbfefb 22%, #ffffff 48%, #fbfefb 78%, #ebf7ed 100%);
     }
 
     .affiliate-qr-card-bg-base {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: block;
+        display: none;
     }
 
     .affiliate-qr-card-deco {
@@ -524,11 +526,11 @@
         z-index: 1;
         width: 61.4%;
         margin: 0 auto;
-        background: transparent;
-        border-radius: 0;
+        background: #fff;
+        border-radius: 7%;
         padding: 3.64%;
-        box-shadow: none;
-        overflow: visible;
+        box-shadow: 0 4px 22px rgba(16, 144, 20, 0.28);
+        overflow: hidden;
     }
 
     #qrModalCanvas {
@@ -1213,7 +1215,7 @@
                     type: 'square',
                 },
                 backgroundOptions: {
-                    color: 'transparent',
+                    color: '#ffffff',
                 },
             });
 
@@ -1227,7 +1229,7 @@
                 width: size,
                 height: size,
                 colorDark: '#000000',
-                colorLight: 'rgba(0,0,0,0)',
+                colorLight: '#ffffff',
                 correctLevel: QRCode.CorrectLevel.H
             });
             return;
