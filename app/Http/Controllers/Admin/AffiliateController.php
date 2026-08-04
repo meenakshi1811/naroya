@@ -21,7 +21,6 @@ class AffiliateController extends Controller
         $defaultCommissionRate = $this->defaultCommissionRate();
 
         $affiliatesQuery = Affiliate::with('doctor:id,name,surname,email')
-            ->withCount('patients')
             ->where('is_active', true)
             ->orderBy('name');
 
@@ -76,7 +75,7 @@ class AffiliateController extends Controller
             'selectedMonth' => $period['selectedMonth'],
             'selectedYear' => $period['selectedYear'],
             'isAllTime' => $period['isAllTime'],
-            'monthOptions' => $this->monthOptions(),
+            'monthOptions' => $this->buildMonthOptionsForYear($period['selectedYear']),
             'yearOptions' => $this->yearOptions(),
             'approvedDoctors' => $approvedDoctors,
             'existingDoctorIds' => $existingDoctorIds,
@@ -230,8 +229,14 @@ class AffiliateController extends Controller
         ?Carbon $monthStart = null,
         ?Carbon $monthEnd = null
     ): array {
+        $usersQuery = $affiliate->patients();
+
+        if ($monthStart && $monthEnd) {
+            $usersQuery->whereBetween('created_at', [$monthStart, $monthEnd]);
+        }
+
+        $users = (int) $usersQuery->count();
         $patientIds = $affiliate->patients()->pluck('id');
-        $users = (int) ($affiliate->patients_count ?? $affiliate->patients()->count());
 
         $bookingQuery = Appointment::query()
             ->whereIn('patient_id', $patientIds)
@@ -239,7 +244,10 @@ class AffiliateController extends Controller
             ->where('chrIsCanceled', 'N');
 
         if ($monthStart && $monthEnd) {
-            $bookingQuery->whereBetween('created_at', [$monthStart, $monthEnd]);
+            $bookingQuery->whereBetween('varAppointment', [
+                $monthStart->toDateString(),
+                $monthEnd->toDateString(),
+            ]);
         }
 
         $bookings = (clone $bookingQuery)->count();
@@ -270,22 +278,24 @@ class AffiliateController extends Controller
     private function resolvePeriodSelection(Request $request): array
     {
         $monthInput = $request->input('month', (string) now()->month);
+        $now = Carbon::now();
+        $currentYear = (int) $now->year;
+        $currentMonth = (int) $now->month;
 
         if ($monthInput === 'all') {
             return [
                 'selectedMonth' => 'all',
-                'selectedYear' => (int) $request->input('year', now()->year),
+                'selectedYear' => $currentYear,
                 'isAllTime' => true,
                 'monthStart' => null,
                 'monthEnd' => null,
             ];
         }
 
-        $selectedYear = (int) $request->input('year', now()->year);
-        $currentYear = (int) now()->year;
-        $currentMonth = (int) now()->month;
+        $selectedYear = (int) $request->input('year', $currentYear);
+        $yearStart = max(2026, $currentYear - 2);
 
-        if ($selectedYear < ($currentYear - 2) || $selectedYear > ($currentYear + 1)) {
+        if ($selectedYear < $yearStart || $selectedYear > $currentYear) {
             $selectedYear = $currentYear;
         }
 
@@ -308,30 +318,28 @@ class AffiliateController extends Controller
         ];
     }
 
-    private function monthOptions(): array
+    private function buildMonthOptionsForYear(int $selectedYear): array
     {
-        return [
-            'all' => 'All',
-            1 => 'January',
-            2 => 'February',
-            3 => 'March',
-            4 => 'April',
-            5 => 'May',
-            6 => 'June',
-            7 => 'July',
-            8 => 'August',
-            9 => 'September',
-            10 => 'October',
-            11 => 'November',
-            12 => 'December',
-        ];
+        $now = Carbon::now();
+        $currentYear = (int) $now->year;
+        $currentMonth = (int) $now->month;
+        $maxMonth = $selectedYear === $currentYear ? $currentMonth : 12;
+
+        $options = ['all' => 'All'];
+
+        for ($month = 1; $month <= $maxMonth; $month++) {
+            $options[$month] = Carbon::create(2000, $month, 1)->format('F');
+        }
+
+        return $options;
     }
 
     private function yearOptions(): array
     {
         $currentYear = (int) now()->year;
+        $yearStart = max(2026, $currentYear - 2);
 
-        return range($currentYear - 2, $currentYear + 1);
+        return range($yearStart, $currentYear);
     }
 
     private function filterQueryParams(Request $request): array

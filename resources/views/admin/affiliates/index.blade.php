@@ -712,7 +712,7 @@
             <div class="value">{{ $activeAffiliates }}</div>
         </div>
         <div class="affiliate-stat-card">
-            <div class="label">Referred Users</div>
+            <div class="label">{{ $isAllTime ? 'Referred Users' : 'Referred Users This Month' }}</div>
             <div class="value">{{ number_format($totalUsers) }}</div>
         </div>
         <div class="affiliate-stat-card">
