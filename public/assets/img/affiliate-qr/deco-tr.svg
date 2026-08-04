@@ -1,0 +1,13 @@
+<svg width="314.6" height="314.6" viewBox="1474.2 -43.8 314.6 314.6" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <pattern id="aqrTrCross" width="28.66" height="28.66" patternUnits="userSpaceOnUse" x="1465.38" y="205.01">
+            <path d="M8.88 8.88L19.78 19.78M19.78 8.88L8.88 19.78" stroke="#B6B6B6" stroke-width="4.03"/>
+        </pattern>
+        <clipPath id="aqrTrClip">
+            <circle cx="1631.5" cy="113.5" r="157.3"/>
+        </clipPath>
+    </defs>
+    <g opacity="0.35" clip-path="url(#aqrTrClip)">
+        <rect x="1474.2" y="-43.8" width="314.6" height="314.6" fill="url(#aqrTrCross)"/>
+    </g>
+</svg>

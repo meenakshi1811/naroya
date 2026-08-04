@@ -337,7 +337,7 @@
     }
 
     #qrModal .modal-dialog {
-        max-width: 440px;
+        max-width: 460px;
         margin: 1rem auto;
     }
 
@@ -361,7 +361,7 @@
     .affiliate-qr-modal-shell {
         position: relative;
         width: 100%;
-        max-width: 380px;
+        max-width: 414px;
         margin: 0 auto;
         padding-top: 28px;
     }
@@ -372,7 +372,10 @@
         margin: 0 auto;
         background: #f7fcf8;
         border-radius: 18px;
-        padding: 20px 18px 22px;
+        /* Figma artboard is A5 @ 300dpi (1748 x 2480). Height grows past the
+           ratio if a long affiliate name wraps, rather than clipping. */
+        aspect-ratio: 1748 / 2480;
+        padding: 18px 0 22px;
         overflow: hidden;
         text-align: center;
         font-family: 'Inter', 'Figtree', Arial, sans-serif;
@@ -406,64 +409,52 @@
         display: block;
     }
 
+    /* Corner marks: positions are Figma coordinates over the 1748 x 2480 canvas,
+       expressed as percentages so they hold at any rendered card width. */
     .affiliate-qr-deco-tl {
-        top: 14px;
-        left: 10px;
-        width: 24px;
+        top: 2.54%;
+        left: 6.52%;
+        width: 3.51%;
         height: auto;
     }
 
     .affiliate-qr-deco-tr {
-        top: 0;
-        right: 0;
-        width: 96px;
+        top: -1.77%;
+        right: -2.33%;
+        width: 18%;
         height: auto;
     }
 
     .affiliate-qr-deco-bl {
-        bottom: 16px;
-        left: 8px;
-        width: 30px;
+        bottom: 11.17%;
+        left: -1.36%;
+        width: 13.61%;
         height: auto;
     }
 
     .affiliate-qr-deco-br {
-        bottom: 14px;
-        right: 10px;
-        width: 52px;
+        bottom: 8.46%;
+        right: 1.38%;
+        width: 5.75%;
         height: auto;
     }
 
+    /* Figma: 1436.52 x 1449.14 at (147.4, 518.78) on the 1748 x 2480 canvas, black @ 5%. */
     .affiliate-qr-card-watermark {
         position: absolute;
-        left: 50%;
-        top: 50%;
-        width: 340px;
-        height: 340px;
+        left: 49.52%;
+        top: 50.13%;
+        width: 82.18%;
+        height: auto;
         transform: translate(-50%, -50%);
-        pointer-events: none;
-        z-index: 0;
-    }
-
-    .affiliate-qr-card-watermark img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
         display: block;
-        opacity: 0.07;
+        opacity: 0.05;
     }
 
     .affiliate-qr-card-lower {
         position: relative;
         width: 100%;
         padding-bottom: 12px;
-    }
-
-    .affiliate-qr-card-lower .affiliate-qr-card-watermark {
-        top: 36%;
-        width: 420px;
-        height: 420px;
-        max-width: 115%;
     }
 
     .affiliate-qr-card-content {
@@ -477,9 +468,9 @@
 
     .affiliate-qr-card-logo-wrap {
         position: relative;
-        width: 84px;
-        height: 84px;
-        margin-bottom: 11px;
+        width: 52px;
+        height: 52px;
+        margin-bottom: 22px;
         flex-shrink: 0;
     }
 
@@ -503,29 +494,34 @@
 
     .affiliate-qr-card-name {
         color: #000;
-        font-size: 1.78rem;
+        font-size: 1.6875rem;
         font-weight: 700;
-        margin: 0 0 21px;
+        margin: 0 0 4px;
         line-height: 1.2;
         letter-spacing: -0.02em;
         width: 100%;
+        padding: 0 6%;
     }
 
     .affiliate-qr-card-qr-section {
         position: relative;
         width: 100%;
-        margin-bottom: 24px;
+        margin-bottom: 17px;
         z-index: 1;
     }
 
+    /* Figma: 1073 x 1072 box, rx 75, QR inset 63.5 — i.e. 61.4% of canvas width,
+       radius 7% of the box, quiet zone 5.92% of the box. Percentage padding
+       resolves against the section width, so 5.92% x 0.614 = 3.64%. */
     .affiliate-qr-card-qr-wrap {
         position: relative;
         z-index: 1;
-        width: 100%;
+        width: 61.4%;
+        margin: 0 auto;
         background: #fff;
-        border-radius: 24px;
-        padding: 8px;
-        box-shadow: 0 4px 25px rgba(16, 144, 20, 0.5);
+        border-radius: 7%;
+        padding: 3.64%;
+        box-shadow: 0 4px 22px rgba(16, 144, 20, 0.28);
         overflow: hidden;
     }
 
@@ -548,18 +544,18 @@
         display: block;
         width: 100% !important;
         height: 100% !important;
-        max-width: 292px;
-        max-height: 292px;
+        max-width: 100%;
+        max-height: 100%;
     }
 
     .affiliate-qr-card-hint {
         color: #000;
-        font-size: 1.19rem;
-        font-weight: 600;
-        margin: 0 0 44px;
-        line-height: 1.35;
+        font-size: 0.875rem;
+        font-weight: 700;
+        margin: 0 0 27px;
+        line-height: 1.3;
         max-width: 100%;
-        padding: 0 4px;
+        padding: 0 12%;
         position: relative;
         z-index: 1;
     }
@@ -568,22 +564,24 @@
         position: relative;
         z-index: 1;
         margin-bottom: 7px;
+        line-height: 0;
     }
 
     .affiliate-qr-card-noraya {
-        height: 29px;
+        height: 24px;
         width: auto;
-        max-width: 120px;
+        max-width: 100px;
         display: inline-block;
     }
 
     .affiliate-qr-card-url {
         color: #444;
-        font-size: 1.25rem;
+        font-size: 0.875rem;
         font-weight: 500;
         margin: 0;
         line-height: 1.35;
         word-break: break-all;
+        padding: 0 8%;
         position: relative;
         z-index: 1;
     }
@@ -593,7 +591,7 @@
         grid-template-columns: 1fr 1fr;
         gap: 0.75rem;
         width: 100%;
-        max-width: 380px;
+        max-width: 414px;
         margin: 1.25rem auto 0;
         padding: 0;
     }
@@ -1080,10 +1078,11 @@
                     <div class="affiliate-qr-card" id="affiliateQrCard">
                         <div class="affiliate-qr-card-bg" aria-hidden="true">
                             <img src="{{ asset('assets/img/affiliate-qr/card-bg.svg') }}" alt="" class="affiliate-qr-card-bg-base" crossorigin="anonymous">
-                            <img src="{{ asset('assets/img/affiliate-qr/deco-chevrons.svg') }}" alt="" class="affiliate-qr-card-deco affiliate-qr-deco-tl" crossorigin="anonymous">
-                            <img src="{{ asset('assets/img/affiliate-qr/deco-dots.svg') }}" alt="" class="affiliate-qr-card-deco affiliate-qr-deco-tr" crossorigin="anonymous">
-                            <img src="{{ asset('assets/img/affiliate-qr/deco-play.svg') }}" alt="" class="affiliate-qr-card-deco affiliate-qr-deco-bl" crossorigin="anonymous">
-                            <img src="{{ asset('assets/img/affiliate-qr/deco-crosses.svg') }}" alt="" class="affiliate-qr-card-deco affiliate-qr-deco-br" crossorigin="anonymous">
+                            <img src="{{ asset('assets/img/affiliate-qr/watermark.svg') }}" alt="" class="affiliate-qr-card-watermark" crossorigin="anonymous">
+                            <img src="{{ asset('assets/img/affiliate-qr/deco-tl.svg') }}" alt="" class="affiliate-qr-card-deco affiliate-qr-deco-tl" crossorigin="anonymous">
+                            <img src="{{ asset('assets/img/affiliate-qr/deco-tr.svg') }}" alt="" class="affiliate-qr-card-deco affiliate-qr-deco-tr" crossorigin="anonymous">
+                            <img src="{{ asset('assets/img/affiliate-qr/deco-bl.svg') }}" alt="" class="affiliate-qr-card-deco affiliate-qr-deco-bl" crossorigin="anonymous">
+                            <img src="{{ asset('assets/img/affiliate-qr/deco-br.svg') }}" alt="" class="affiliate-qr-card-deco affiliate-qr-deco-br" crossorigin="anonymous">
                         </div>
                         <div class="affiliate-qr-card-content">
                             <div class="affiliate-qr-card-logo-wrap">
@@ -1092,9 +1091,6 @@
                             </div>
                             <p class="affiliate-qr-card-name" id="qrModalAffiliateName"></p>
                             <div class="affiliate-qr-card-lower">
-                                <div class="affiliate-qr-card-watermark" aria-hidden="true">
-                                    <img src="{{ asset('assets/img/affiliate-qr/watermark.svg') }}" alt="" crossorigin="anonymous">
-                                </div>
                                 <div class="affiliate-qr-card-qr-section">
                                     <div class="affiliate-qr-card-qr-wrap">
                                         <div id="qrModalCanvas"></div>
@@ -1176,8 +1172,8 @@
 
         if (typeof QRCodeStyling !== 'undefined') {
             qrInstance = new QRCodeStyling({
-                width: 292,
-                height: 292,
+                width: 800,
+                height: 800,
                 type: 'canvas',
                 data: url,
                 margin: 0,
@@ -1208,8 +1204,8 @@
         if (typeof QRCode !== 'undefined') {
             qrInstance = new QRCode(container, {
                 text: url,
-                width: 292,
-                height: 292,
+                width: 800,
+                height: 800,
                 colorDark: '#000000',
                 colorLight: '#ffffff',
                 correctLevel: QRCode.CorrectLevel.H
