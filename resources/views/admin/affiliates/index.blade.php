@@ -524,11 +524,11 @@
         z-index: 1;
         width: 61.4%;
         margin: 0 auto;
-        background: #fff;
-        border-radius: 7%;
+        background: transparent;
+        border-radius: 0;
         padding: 3.64%;
-        box-shadow: 0 4px 22px rgba(16, 144, 20, 0.28);
-        overflow: hidden;
+        box-shadow: none;
+        overflow: visible;
     }
 
     #qrModalCanvas {
@@ -1213,7 +1213,7 @@
                     type: 'square',
                 },
                 backgroundOptions: {
-                    color: '#ffffff',
+                    color: 'transparent',
                 },
             });
 
@@ -1227,7 +1227,7 @@
                 width: size,
                 height: size,
                 colorDark: '#000000',
-                colorLight: '#ffffff',
+                colorLight: 'rgba(0,0,0,0)',
                 correctLevel: QRCode.CorrectLevel.H
             });
             return;
