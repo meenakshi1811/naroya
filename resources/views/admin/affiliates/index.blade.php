@@ -187,7 +187,6 @@
 
     .affiliate-total-row td {
         background: var(--affiliate-green-light) !important;
-        font-weight: 700;
         color: var(--affiliate-green);
         border-color: #cfe8d1 !important;
     }
