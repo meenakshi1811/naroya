@@ -1173,7 +1173,7 @@
 
                     <div class="affiliate-qr-modal-actions">
                         <button type="button" class="btn btn-outline-primary" id="downloadQrBtn">
-                            <i class="bi bi-download me-1"></i> Download PDF
+                            <i class="bi bi-download me-1"></i> Download PNG
                         </button>
                         <button type="button" class="btn btn-primary" id="copyReferralUrlBtn">
                             <i class="bi bi-clipboard me-1"></i> Copy Link
@@ -1192,7 +1192,6 @@
 <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
 <script>
     let qrInstance = null;
     let pendingQrData = null;
@@ -1297,12 +1296,11 @@
         alert('QR library failed to load. Please refresh the page.');
     }
 
-    async function downloadAffiliateQrPdf() {
+    async function downloadAffiliateQrPng() {
         const card = document.getElementById('affiliateQrCard');
-        const urlLink = document.getElementById('qrModalReferralUrl');
         const downloadBtn = document.getElementById('downloadQrBtn');
 
-        if (!card || !urlLink || !currentReferralUrl || typeof html2canvas !== 'function' || typeof window.jspdf === 'undefined') {
+        if (!card || !currentReferralUrl || typeof html2canvas !== 'function') {
             alert('Unable to download QR card. Please try again.');
             return;
         }
@@ -1320,36 +1318,19 @@
                 setTimeout(resolve, 250);
             });
 
-            const cardRect = card.getBoundingClientRect();
-            const urlRect = urlLink.getBoundingClientRect();
-            const pdfWidth = card.offsetWidth;
-            const pdfHeight = card.offsetHeight;
-
             const canvas = await html2canvas(card, {
                 backgroundColor: '#ffffff',
                 scale: 3,
                 useCORS: true,
                 logging: false,
-                width: pdfWidth,
-                height: pdfHeight,
+                width: card.offsetWidth,
+                height: card.offsetHeight,
             });
 
-            const imgData = canvas.toDataURL('image/png');
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({
-                orientation: pdfHeight >= pdfWidth ? 'portrait' : 'landscape',
-                unit: 'px',
-                format: [pdfWidth, pdfHeight],
-                hotfixes: ['px_scaling'],
-            });
-
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
-
-            const linkX = urlRect.left - cardRect.left;
-            const linkY = urlRect.top - cardRect.top;
-            pdf.link(linkX, linkY, urlRect.width, urlRect.height, { url: currentReferralUrl });
-
-            pdf.save('noraya-qr-' + sanitizeFilename(currentAffiliateCode || currentAffiliateName) + '.pdf');
+            const link = document.createElement('a');
+            link.download = 'noraya-qr-' + sanitizeFilename(currentAffiliateCode || currentAffiliateName) + '.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
         } catch (error) {
             alert('Unable to download QR card. Please try again.');
         } finally {
@@ -1407,7 +1388,7 @@
         });
 
         $('#downloadQrBtn').on('click', function () {
-            downloadAffiliateQrPdf();
+            downloadAffiliateQrPng();
         });
 
         $('.edit-affiliate-btn').on('click', function () {
