@@ -38,6 +38,23 @@ class AppServiceProvider extends ServiceProvider
             // Check if the domain is in the allowed list
             return in_array(strtolower($domain), $allowedDomains);
         });
+
+        Validator::extend('valid_indian_mobile', function ($attribute, $value, $parameters, $validator) {
+            if (! is_string($value) || ! preg_match('/^[6-9][0-9]{9}$/', $value)) {
+                return false;
+            }
+
+            // Reject obvious fake numbers such as 6666666666 or 4444444444.
+            if (preg_match('/^(\d)\1{9}$/', $value)) {
+                return false;
+            }
+
+            return true;
+        });
+
+        Validator::replacer('valid_indian_mobile', function ($message, $attribute, $rule, $parameters) {
+            return 'Please enter a valid Indian mobile number (10 digits, starting with 6, 7, 8, or 9).';
+        });
         Passport::enablePasswordGrant();
     }
 

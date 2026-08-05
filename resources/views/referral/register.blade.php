@@ -614,14 +614,14 @@
                             name="phone"
                             value="{{ old('phone') }}"
                             inputmode="numeric"
-                            pattern="[0-9]{10}"
+                            pattern="[6-9][0-9]{9}"
                             maxlength="10"
-                            placeholder="10-digit mobile number"
+                            placeholder="10-digit mobile number (starts with 6-9)"
                             required
                             autocomplete="tel-national"
                         >
                     </div>
-                    <div class="field-hint">This number will be used to sign in to the Noraya app.</div>
+                    <div class="field-hint">Enter a valid Indian mobile number (10 digits, starting with 6, 7, 8, or 9). This number will be used to sign in to the Noraya app.</div>
                     @error('phone')<div class="form-error">{{ $message }}</div>@enderror
                 </div>
 
@@ -699,9 +699,9 @@
                         type="tel"
                         id="confirmPhone"
                         inputmode="numeric"
-                        pattern="[0-9]{10}"
+                        pattern="[6-9][0-9]{9}"
                         maxlength="10"
-                        placeholder="10-digit mobile number"
+                        placeholder="10-digit mobile number (starts with 6-9)"
                         autocomplete="tel-national"
                     >
                 </div>
@@ -762,6 +762,10 @@
                 digits = digits.slice(2);
             }
 
+            if (digits.length === 11 && digits.startsWith('0')) {
+                digits = digits.slice(1);
+            }
+
             return digits.slice(0, 10);
         }
 
@@ -794,7 +798,20 @@
         });
 
         function isValidPhone(value) {
-            return /^[0-9]{10}$/.test(value);
+            if (!/^[6-9][0-9]{9}$/.test(value)) {
+                return false;
+            }
+
+            // Reject obvious fake numbers such as 6666666666 or 4444444444.
+            if (/^(\d)\1{9}$/.test(value)) {
+                return false;
+            }
+
+            return true;
+        }
+
+        function phoneValidationMessage() {
+            return 'Please enter a valid Indian mobile number (10 digits, starting with 6, 7, 8, or 9).';
         }
 
         function validateFormFields() {
@@ -811,7 +828,7 @@
             }
 
             if (!isValidPhone(phoneInput.value)) {
-                alert('Please enter a valid 10-digit phone number.');
+                alert(phoneValidationMessage());
                 phoneInput.focus();
                 return false;
             }
@@ -876,7 +893,7 @@
             confirmPhoneInput.value = confirmedPhone;
 
             if (!isValidPhone(confirmedPhone)) {
-                showModalError('Please enter a valid 10-digit phone number.');
+                showModalError(phoneValidationMessage());
                 confirmPhoneInput.focus();
                 return;
             }

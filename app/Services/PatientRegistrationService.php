@@ -36,7 +36,7 @@ class PatientRegistrationService
             'last_name' => 'nullable|string|max:255',
             'email' => 'nullable|string|email|unique:patients,email|valid_email_domain',
             'password' => $passwordRule,
-            'phone' => 'required|string|max:20|unique:patients,phone',
+            'phone' => ['required', 'digits:10', 'valid_indian_mobile', 'unique:patients,phone'],
             'state' => 'required|integer|exists:states,id',
             'language_id' => 'required|integer|exists:language_master,id',
             'country' => 'nullable|integer|exists:country_master,id',
@@ -56,7 +56,7 @@ class PatientRegistrationService
             'first_name' => 'required|string|max:255',
             'last_name' => 'nullable|string|max:255',
             'password' => $passwordRule,
-            'phone' => ['required', 'digits:10', 'unique:patients,phone'],
+            'phone' => ['required', 'digits:10', 'valid_indian_mobile', 'unique:patients,phone'],
             'country' => 'nullable|integer|exists:country_master,id',
         ];
     }
@@ -78,6 +78,10 @@ class PatientRegistrationService
         if (! $request->filled('email')) {
             $request->merge(['email' => null]);
         }
+
+        $request->merge([
+            'phone' => $this->normalizePhone((string) $request->input('phone', '')),
+        ]);
 
         $validated = $request->validate($this->validationRules($requirePasswordConfirmation));
 
@@ -160,6 +164,10 @@ class PatientRegistrationService
 
         if (strlen($digits) === 12 && str_starts_with($digits, '91')) {
             $digits = substr($digits, 2);
+        }
+
+        if (strlen($digits) === 11 && str_starts_with($digits, '0')) {
+            $digits = substr($digits, 1);
         }
 
         return $digits;

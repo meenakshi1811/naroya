@@ -1317,8 +1317,8 @@
             return function () {};
         }
 
-        const width = Math.max(1, Math.round(bg.offsetWidth));
-        const height = Math.max(1, Math.round(bg.offsetHeight));
+        const width = Math.max(1, Math.round(bg.offsetWidth || bg.clientWidth || 400));
+        const height = Math.max(1, Math.round(bg.offsetHeight || bg.clientHeight || width));
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
@@ -1329,9 +1329,9 @@
         const radius = Math.max(width, height) / 2;
         const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
         gradient.addColorStop(0, '#E6F5E9');
-        gradient.addColorStop(0.45, '#EBF7ED');
-        gradient.addColorStop(0.72, '#F7FCF8');
-        gradient.addColorStop(1, '#FFFFFF');
+        gradient.addColorStop(0.42, 'rgba(235, 247, 237, 0.85)');
+        gradient.addColorStop(0.72, 'rgba(255, 255, 255, 0)');
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, width, height);
 
@@ -1353,47 +1353,236 @@
         };
     }
 
-    function prepareAffiliateQrCardExport(card) {
-        const section = card.querySelector('.affiliate-qr-card-qr-section');
-        const bg = card.querySelector('.affiliate-qr-card-qr-section-bg');
-        if (!section || !bg) {
-            return function () {};
-        }
+    /**
+     * html2canvas does not apply CSS container-query units (cqi). Freeze used
+     * pixel values as inline styles so name, spacing, and QR glow export correctly.
+     */
+    function freezeAffiliateQrCardStyles(card) {
+        const selectors = [
+            '.affiliate-qr-card-content',
+            '.affiliate-qr-card-logo-wrap',
+            '.affiliate-qr-card-logo-circle',
+            '.affiliate-qr-card-logo-icon',
+            '.affiliate-qr-card-name',
+            '.affiliate-qr-card-lower',
+            '.affiliate-qr-card-qr-section',
+            '.affiliate-qr-card-qr-section-bg',
+            '.affiliate-qr-card-qr-center-bg',
+            '.affiliate-qr-card-watermark',
+            '.affiliate-qr-card-qr-wrap',
+            '#qrModalCanvas',
+            '#qrModalCanvas canvas',
+            '#qrModalCanvas img',
+            '.affiliate-qr-card-hint',
+            '.affiliate-qr-card-brand',
+            '.affiliate-qr-card-noraya',
+            '.affiliate-qr-card-url',
+            '.affiliate-qr-card-url a',
+            '.affiliate-qr-card-deco',
+        ];
 
-        const size = Math.max(1, Math.round(section.offsetWidth * 0.88));
-        const saved = {
-            width: bg.style.width,
-            height: bg.style.height,
-        };
+        const elements = [card].concat(Array.from(card.querySelectorAll(selectors.join(','))));
+        const restorers = [];
 
-        bg.style.width = size + 'px';
-        bg.style.height = size + 'px';
+        elements.forEach(function (el) {
+            if (!el) {
+                return;
+            }
 
-        const restoreGlow = rasterizeAffiliateQrCenterBg(bg);
+            const prevStyle = el.getAttribute('style');
+            const cs = window.getComputedStyle(el);
+            const isCard = el === card;
 
-        return function restoreAffiliateQrCardExport() {
-            restoreGlow();
-            bg.style.width = saved.width;
-            bg.style.height = saved.height;
+            el.style.setProperty('font-family', cs.fontFamily, 'important');
+            el.style.setProperty('font-size', cs.fontSize, 'important');
+            el.style.setProperty('font-weight', cs.fontWeight, 'important');
+            el.style.setProperty('line-height', cs.lineHeight, 'important');
+            el.style.setProperty('letter-spacing', cs.letterSpacing, 'important');
+            el.style.setProperty('color', cs.color, 'important');
+            el.style.setProperty('width', cs.width, 'important');
+            el.style.setProperty('height', isCard ? (card.offsetHeight + 'px') : cs.height, 'important');
+            el.style.setProperty('max-width', cs.maxWidth, 'important');
+            el.style.setProperty('padding-top', cs.paddingTop, 'important');
+            el.style.setProperty('padding-right', cs.paddingRight, 'important');
+            el.style.setProperty('padding-bottom', cs.paddingBottom, 'important');
+            el.style.setProperty('padding-left', cs.paddingLeft, 'important');
+            el.style.setProperty('margin-top', cs.marginTop, 'important');
+            el.style.setProperty('margin-right', cs.marginRight, 'important');
+            el.style.setProperty('margin-bottom', cs.marginBottom, 'important');
+            el.style.setProperty('margin-left', cs.marginLeft, 'important');
+            el.style.setProperty('border-radius', cs.borderRadius, 'important');
+            el.style.setProperty('box-shadow', cs.boxShadow, 'important');
+            el.style.setProperty('opacity', cs.opacity, 'important');
+            el.style.setProperty('background-color', cs.backgroundColor, 'important');
+            el.style.setProperty('display', cs.display, 'important');
+            el.style.setProperty('position', cs.position, 'important');
+            el.style.setProperty('z-index', cs.zIndex, 'important');
+            el.style.setProperty('text-align', cs.textAlign, 'important');
+            el.style.setProperty('overflow', cs.overflow, 'important');
+            el.style.setProperty('object-fit', cs.objectFit, 'important');
+
+            if (cs.top !== 'auto') {
+                el.style.setProperty('top', cs.top, 'important');
+            }
+            if (cs.right !== 'auto') {
+                el.style.setProperty('right', cs.right, 'important');
+            }
+            if (cs.bottom !== 'auto') {
+                el.style.setProperty('bottom', cs.bottom, 'important');
+            }
+            if (cs.left !== 'auto') {
+                el.style.setProperty('left', cs.left, 'important');
+            }
+            if (cs.transform && cs.transform !== 'none') {
+                el.style.setProperty('transform', cs.transform, 'important');
+            }
+
+            restorers.push(function () {
+                if (prevStyle === null) {
+                    el.removeAttribute('style');
+                } else {
+                    el.setAttribute('style', prevStyle);
+                }
+            });
+        });
+
+        return function restoreFrozenAffiliateQrStyles() {
+            restorers.reverse().forEach(function (restore) {
+                restore();
+            });
         };
     }
 
-    function syncAffiliateQrExportClone(clonedDoc) {
+    function ensureAffiliateQrWrapGlow(card) {
+        const wrap = card.querySelector('.affiliate-qr-card-qr-wrap');
+        const section = card.querySelector('.affiliate-qr-card-qr-section');
+        if (!wrap || !section) {
+            return function () {};
+        }
+
+        // html2canvas can drop soft colored shadows; paint an explicit green glow behind the QR box.
+        const glow = document.createElement('div');
+        glow.setAttribute('data-affiliate-qr-export-glow', '1');
+        glow.setAttribute('aria-hidden', 'true');
+
+        const wrapRect = wrap.getBoundingClientRect();
+        const sectionRect = section.getBoundingClientRect();
+        const left = wrapRect.left - sectionRect.left;
+        const top = wrapRect.top - sectionRect.top;
+
+        glow.style.cssText = [
+            'position:absolute',
+            'left:' + left + 'px',
+            'top:' + top + 'px',
+            'width:' + wrapRect.width + 'px',
+            'height:' + wrapRect.height + 'px',
+            'border-radius:' + window.getComputedStyle(wrap).borderRadius,
+            'box-shadow:0 4px 25px rgba(16, 144, 20, 0.5)',
+            'background:transparent',
+            'pointer-events:none',
+            'z-index:0',
+        ].join(';');
+
+        section.insertBefore(glow, section.firstChild);
+
+        return function restoreAffiliateQrWrapGlow() {
+            glow.remove();
+        };
+    }
+
+    function prepareAffiliateQrCardExport(card) {
+        const nameEl = card.querySelector('.affiliate-qr-card-name');
+        if (nameEl && currentAffiliateName && !nameEl.textContent.trim()) {
+            nameEl.textContent = currentAffiliateName;
+        }
+
+        const restoreStyles = freezeAffiliateQrCardStyles(card);
+
+        const section = card.querySelector('.affiliate-qr-card-qr-section');
+        const bg = card.querySelector('.affiliate-qr-card-qr-section-bg');
+        let restoreBgSize = function () {};
+        let restoreGlow = function () {};
+        let restoreWrapGlow = function () {};
+
+        if (section && bg) {
+            const size = Math.max(1, Math.round(section.offsetWidth * 0.88));
+            const saved = {
+                width: bg.style.width,
+                height: bg.style.height,
+            };
+
+            bg.style.setProperty('width', size + 'px', 'important');
+            bg.style.setProperty('height', size + 'px', 'important');
+
+            restoreBgSize = function () {
+                bg.style.width = saved.width;
+                bg.style.height = saved.height;
+            };
+
+            restoreGlow = rasterizeAffiliateQrCenterBg(bg);
+            restoreWrapGlow = ensureAffiliateQrWrapGlow(card);
+        }
+
+        return function restoreAffiliateQrCardExport() {
+            restoreWrapGlow();
+            restoreGlow();
+            restoreBgSize();
+            restoreStyles();
+        };
+    }
+
+    function syncAffiliateQrExportClone(clonedDoc, sourceCard) {
         const clonedCard = clonedDoc.getElementById('affiliateQrCard');
-        if (!clonedCard) {
+        if (!clonedCard || !sourceCard) {
             return;
+        }
+
+        const sourceName = sourceCard.querySelector('.affiliate-qr-card-name');
+        const clonedName = clonedCard.querySelector('.affiliate-qr-card-name');
+        if (sourceName && clonedName) {
+            const nameText = (sourceName.textContent || currentAffiliateName || '').trim();
+            if (nameText) {
+                clonedName.textContent = nameText;
+            }
+
+            const nameStyle = window.getComputedStyle(sourceName);
+            clonedName.style.setProperty('font-family', nameStyle.fontFamily, 'important');
+            clonedName.style.setProperty('font-size', nameStyle.fontSize, 'important');
+            clonedName.style.setProperty('font-weight', nameStyle.fontWeight, 'important');
+            clonedName.style.setProperty('line-height', nameStyle.lineHeight, 'important');
+            clonedName.style.setProperty('letter-spacing', nameStyle.letterSpacing, 'important');
+            clonedName.style.setProperty('color', '#000000', 'important');
+            clonedName.style.setProperty('display', 'block', 'important');
+            clonedName.style.setProperty('visibility', 'visible', 'important');
+            clonedName.style.setProperty('opacity', '1', 'important');
+            clonedName.style.setProperty('width', nameStyle.width, 'important');
+            clonedName.style.setProperty('margin', nameStyle.margin, 'important');
+            clonedName.style.setProperty('padding', nameStyle.padding, 'important');
+            clonedName.style.setProperty('text-align', 'center', 'important');
+        }
+
+        const sourceWrap = sourceCard.querySelector('.affiliate-qr-card-qr-wrap');
+        const clonedWrap = clonedCard.querySelector('.affiliate-qr-card-qr-wrap');
+        if (sourceWrap && clonedWrap) {
+            const wrapStyle = window.getComputedStyle(sourceWrap);
+            clonedWrap.style.setProperty('width', wrapStyle.width, 'important');
+            clonedWrap.style.setProperty('height', wrapStyle.height, 'important');
+            clonedWrap.style.setProperty('padding', wrapStyle.padding, 'important');
+            clonedWrap.style.setProperty('border-radius', wrapStyle.borderRadius, 'important');
+            clonedWrap.style.setProperty('background-color', '#ffffff', 'important');
+            clonedWrap.style.setProperty('box-shadow', '0 4px 25px rgba(16, 144, 20, 0.5)', 'important');
         }
 
         const section = clonedCard.querySelector('.affiliate-qr-card-qr-section');
         const bg = clonedCard.querySelector('.affiliate-qr-card-qr-section-bg');
-        if (!section || !bg) {
-            return;
+        const sourceSection = sourceCard.querySelector('.affiliate-qr-card-qr-section');
+        if (section && bg) {
+            const baseWidth = section.offsetWidth || (sourceSection ? sourceSection.offsetWidth : 0) || clonedCard.offsetWidth;
+            const size = Math.max(1, Math.round(baseWidth * 0.88));
+            bg.style.setProperty('width', size + 'px', 'important');
+            bg.style.setProperty('height', size + 'px', 'important');
+            rasterizeAffiliateQrCenterBg(bg);
         }
-
-        const size = Math.max(1, Math.round(section.offsetWidth * 0.88));
-        bg.style.width = size + 'px';
-        bg.style.height = size + 'px';
-        rasterizeAffiliateQrCenterBg(bg);
     }
 
     async function waitForCardImages(card) {
@@ -1437,6 +1626,7 @@
             await waitForCardImages(card);
 
             restoreCardExport = prepareAffiliateQrCardExport(card);
+            await waitForCardImages(card);
 
             const canvas = await html2canvas(card, {
                 backgroundColor: '#ffffff',
@@ -1447,7 +1637,9 @@
                 width: card.offsetWidth,
                 height: card.offsetHeight,
                 imageTimeout: 15000,
-                onclone: syncAffiliateQrExportClone,
+                onclone: function (clonedDoc) {
+                    syncAffiliateQrExportClone(clonedDoc, card);
+                },
             });
 
             const link = document.createElement('a');
