@@ -570,6 +570,13 @@
         overflow: hidden;
     }
 
+    .affiliate-qr-card-qr-wrap-export-glow {
+        position: absolute;
+        pointer-events: none;
+        z-index: 0;
+        display: block;
+    }
+
     #qrModalCanvas {
         display: flex;
         justify-content: center;
@@ -1418,7 +1425,11 @@
             el.style.setProperty('position', cs.position, 'important');
             el.style.setProperty('z-index', cs.zIndex, 'important');
             el.style.setProperty('text-align', cs.textAlign, 'important');
-            el.style.setProperty('overflow', cs.overflow, 'important');
+            if (el.classList.contains('affiliate-qr-card-qr-wrap')) {
+                el.style.setProperty('overflow', 'visible', 'important');
+            } else {
+                el.style.setProperty('overflow', cs.overflow, 'important');
+            }
             el.style.setProperty('object-fit', cs.objectFit, 'important');
 
             if (cs.top !== 'auto') {
@@ -1453,40 +1464,98 @@
         };
     }
 
-    function ensureAffiliateQrWrapGlow(card) {
-        const wrap = card.querySelector('.affiliate-qr-card-qr-wrap');
-        const section = card.querySelector('.affiliate-qr-card-qr-section');
-        if (!wrap || !section) {
+    function drawRoundRect(ctx, x, y, width, height, radius) {
+        const r = Math.min(radius, width / 2, height / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + width - r, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+        ctx.lineTo(x + width, y + height - r);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+        ctx.lineTo(x + r, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+    }
+
+    function rasterizeAffiliateQrWrapGlow(section, wrap, metrics) {
+        if (!section || !wrap) {
             return function () {};
         }
 
-        // html2canvas can drop soft colored shadows; paint an explicit green glow behind the QR box.
-        const glow = document.createElement('div');
-        glow.setAttribute('data-affiliate-qr-export-glow', '1');
-        glow.setAttribute('aria-hidden', 'true');
+        const wrapStyle = window.getComputedStyle(wrap);
+        const width = Math.max(1, Math.round(
+            metrics?.width || wrap.offsetWidth || parseFloat(wrapStyle.width) || 0
+        ));
+        const height = Math.max(1, Math.round(
+            metrics?.height || wrap.offsetHeight || parseFloat(wrapStyle.height) || width
+        ));
+        const borderRadius = parseFloat(wrapStyle.borderRadius) || Math.round(width * 0.07);
+        const shadowPad = 50;
+        const canvasWidth = width + shadowPad * 2;
+        const canvasHeight = height + shadowPad * 2;
 
-        const wrapRect = wrap.getBoundingClientRect();
+        const canvas = document.createElement('canvas');
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+        ctx.shadowColor = 'rgba(16, 144, 20, 0.5)';
+        ctx.shadowBlur = 25;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 4;
+        ctx.fillStyle = '#ffffff';
+        drawRoundRect(ctx, shadowPad, shadowPad, width, height, borderRadius);
+        ctx.fill();
+
         const sectionRect = section.getBoundingClientRect();
-        const left = wrapRect.left - sectionRect.left;
-        const top = wrapRect.top - sectionRect.top;
+        const wrapRect = wrap.getBoundingClientRect();
+        let left = metrics?.left;
 
-        glow.style.cssText = [
-            'position:absolute',
-            'left:' + left + 'px',
-            'top:' + top + 'px',
-            'width:' + wrapRect.width + 'px',
-            'height:' + wrapRect.height + 'px',
-            'border-radius:' + window.getComputedStyle(wrap).borderRadius,
-            'box-shadow:0 4px 25px rgba(16, 144, 20, 0.5)',
-            'background:transparent',
-            'pointer-events:none',
-            'z-index:0',
-        ].join(';');
+        if (typeof left !== 'number') {
+            left = wrapRect.left - sectionRect.left - shadowPad;
+        }
 
-        section.insertBefore(glow, section.firstChild);
+        if (!Number.isFinite(left) || left < 0) {
+            left = Math.max(0, (section.offsetWidth - width) / 2 - shadowPad);
+        }
+
+        let top = metrics?.top;
+        if (typeof top !== 'number') {
+            top = wrapRect.top - sectionRect.top - shadowPad;
+        }
+
+        if (!Number.isFinite(top) || top < 0) {
+            top = Math.max(0, shadowPad * -0.5);
+        }
+
+        const img = document.createElement('img');
+        img.className = 'affiliate-qr-card-qr-wrap-export-glow';
+        img.setAttribute('data-affiliate-qr-export-wrap-glow', '1');
+        img.setAttribute('aria-hidden', 'true');
+        img.alt = '';
+        img.src = canvas.toDataURL('image/png');
+        img.style.left = left + 'px';
+        img.style.top = top + 'px';
+        img.style.width = canvasWidth + 'px';
+        img.style.height = canvasHeight + 'px';
+
+        section.insertBefore(img, wrap);
+
+        const savedWrapShadow = wrap.style.boxShadow;
+        const savedWrapOverflow = wrap.style.overflow;
+        const savedSectionOverflow = section.style.overflow;
+        wrap.style.setProperty('box-shadow', 'none', 'important');
+        wrap.style.setProperty('overflow', 'visible', 'important');
+        section.style.setProperty('overflow', 'visible', 'important');
 
         return function restoreAffiliateQrWrapGlow() {
-            glow.remove();
+            img.remove();
+            wrap.style.boxShadow = savedWrapShadow;
+            wrap.style.overflow = savedWrapOverflow;
+            section.style.overflow = savedSectionOverflow;
         };
     }
 
@@ -1503,6 +1572,7 @@
         let restoreBgSize = function () {};
         let restoreGlow = function () {};
         let restoreWrapGlow = function () {};
+        const wrap = card.querySelector('.affiliate-qr-card-qr-wrap');
 
         if (section && bg) {
             const size = Math.max(1, Math.round(section.offsetWidth * 0.88));
@@ -1520,7 +1590,10 @@
             };
 
             restoreGlow = rasterizeAffiliateQrCenterBg(bg);
-            restoreWrapGlow = ensureAffiliateQrWrapGlow(card);
+        }
+
+        if (section && wrap) {
+            restoreWrapGlow = rasterizeAffiliateQrWrapGlow(section, wrap);
         }
 
         return function restoreAffiliateQrCardExport() {
@@ -1563,14 +1636,30 @@
 
         const sourceWrap = sourceCard.querySelector('.affiliate-qr-card-qr-wrap');
         const clonedWrap = clonedCard.querySelector('.affiliate-qr-card-qr-wrap');
-        if (sourceWrap && clonedWrap) {
+        const clonedSection = clonedCard.querySelector('.affiliate-qr-card-qr-section');
+        if (sourceWrap && clonedWrap && clonedSection) {
             const wrapStyle = window.getComputedStyle(sourceWrap);
-            clonedWrap.style.setProperty('width', wrapStyle.width, 'important');
-            clonedWrap.style.setProperty('height', wrapStyle.height, 'important');
+            const sourceSection = sourceCard.querySelector('.affiliate-qr-card-qr-section');
+            const wrapWidth = Math.max(1, Math.round(parseFloat(wrapStyle.width) || sourceWrap.offsetWidth));
+            const wrapHeight = Math.max(1, Math.round(parseFloat(wrapStyle.height) || sourceWrap.offsetHeight));
+            const sectionWidth = sourceSection ? sourceSection.offsetWidth : clonedSection.offsetWidth;
+            const shadowPad = 50;
+            const glowLeft = Math.max(0, (sectionWidth - wrapWidth) / 2 - shadowPad);
+
+            clonedWrap.style.setProperty('width', wrapWidth + 'px', 'important');
+            clonedWrap.style.setProperty('height', wrapHeight + 'px', 'important');
             clonedWrap.style.setProperty('padding', wrapStyle.padding, 'important');
             clonedWrap.style.setProperty('border-radius', wrapStyle.borderRadius, 'important');
             clonedWrap.style.setProperty('background-color', '#ffffff', 'important');
-            clonedWrap.style.setProperty('box-shadow', '0 4px 25px rgba(16, 144, 20, 0.5)', 'important');
+            clonedWrap.style.setProperty('box-shadow', 'none', 'important');
+            clonedWrap.style.setProperty('overflow', 'visible', 'important');
+            clonedSection.style.setProperty('overflow', 'visible', 'important');
+            rasterizeAffiliateQrWrapGlow(clonedSection, clonedWrap, {
+                width: wrapWidth,
+                height: wrapHeight,
+                left: glowLeft,
+                top: -shadowPad * 0.5,
+            });
         }
 
         const section = clonedCard.querySelector('.affiliate-qr-card-qr-section');
