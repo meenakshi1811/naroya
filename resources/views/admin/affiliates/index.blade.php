@@ -555,6 +555,7 @@
         width: 100%;
         margin-bottom: 4.18cqi;
         z-index: 1;
+        overflow: visible;
     }
 
     /* Figma Frame 3: 1073 x 1072, rx 75, shadow 0 4px 25px @ 50% green. */
@@ -1407,7 +1408,12 @@
             el.style.setProperty('letter-spacing', cs.letterSpacing, 'important');
             el.style.setProperty('color', cs.color, 'important');
             el.style.setProperty('width', cs.width, 'important');
-            el.style.setProperty('height', isCard ? (card.offsetHeight + 'px') : cs.height, 'important');
+            if (isCard) {
+                el.style.setProperty('min-height', card.offsetHeight + 'px', 'important');
+                el.style.setProperty('height', 'auto', 'important');
+            } else {
+                el.style.setProperty('height', cs.height, 'important');
+            }
             el.style.setProperty('max-width', cs.maxWidth, 'important');
             el.style.setProperty('padding-top', cs.paddingTop, 'important');
             el.style.setProperty('padding-right', cs.paddingRight, 'important');
@@ -1484,7 +1490,9 @@
             return function () {};
         }
 
+        const GLOW_BLEED = 35;
         const wrapStyle = window.getComputedStyle(wrap);
+        const sectionStyle = window.getComputedStyle(section);
         const width = Math.max(1, Math.round(
             metrics?.width || wrap.offsetWidth || parseFloat(wrapStyle.width) || 0
         ));
@@ -1492,9 +1500,8 @@
             metrics?.height || wrap.offsetHeight || parseFloat(wrapStyle.height) || width
         ));
         const borderRadius = parseFloat(wrapStyle.borderRadius) || Math.round(width * 0.07);
-        const shadowPad = 50;
-        const canvasWidth = width + shadowPad * 2;
-        const canvasHeight = height + shadowPad * 2;
+        const canvasWidth = width + GLOW_BLEED * 2;
+        const canvasHeight = height + GLOW_BLEED * 2;
 
         const canvas = document.createElement('canvas');
         canvas.width = canvasWidth;
@@ -1505,30 +1512,39 @@
         ctx.shadowColor = 'rgba(16, 144, 20, 0.5)';
         ctx.shadowBlur = 25;
         ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 4;
+        ctx.shadowOffsetY = 0;
         ctx.fillStyle = '#ffffff';
-        drawRoundRect(ctx, shadowPad, shadowPad, width, height, borderRadius);
+        drawRoundRect(ctx, GLOW_BLEED, GLOW_BLEED, width, height, borderRadius);
         ctx.fill();
+
+        const savedSectionPaddingTop = section.style.paddingTop;
+        const savedSectionPaddingBottom = section.style.paddingBottom;
+        const savedSectionMarginBottom = section.style.marginBottom;
+        const currentMarginBottom = parseFloat(sectionStyle.marginBottom) || 0;
+
+        section.style.setProperty('padding-top', GLOW_BLEED + 'px', 'important');
+        section.style.setProperty('padding-bottom', GLOW_BLEED + 'px', 'important');
+        section.style.setProperty('margin-bottom', (currentMarginBottom + GLOW_BLEED) + 'px', 'important');
 
         const sectionRect = section.getBoundingClientRect();
         const wrapRect = wrap.getBoundingClientRect();
         let left = metrics?.left;
 
         if (typeof left !== 'number') {
-            left = wrapRect.left - sectionRect.left - shadowPad;
+            left = wrapRect.left - sectionRect.left - GLOW_BLEED;
         }
 
-        if (!Number.isFinite(left) || left < 0) {
-            left = Math.max(0, (section.offsetWidth - width) / 2 - shadowPad);
+        if (!Number.isFinite(left)) {
+            left = Math.max(0, (section.offsetWidth - width) / 2 - GLOW_BLEED);
         }
 
         let top = metrics?.top;
         if (typeof top !== 'number') {
-            top = wrapRect.top - sectionRect.top - shadowPad;
+            top = wrapRect.top - sectionRect.top - GLOW_BLEED;
         }
 
-        if (!Number.isFinite(top) || top < 0) {
-            top = Math.max(0, shadowPad * -0.5);
+        if (!Number.isFinite(top)) {
+            top = GLOW_BLEED;
         }
 
         const img = document.createElement('img');
@@ -1556,6 +1572,9 @@
             wrap.style.boxShadow = savedWrapShadow;
             wrap.style.overflow = savedWrapOverflow;
             section.style.overflow = savedSectionOverflow;
+            section.style.paddingTop = savedSectionPaddingTop;
+            section.style.paddingBottom = savedSectionPaddingBottom;
+            section.style.marginBottom = savedSectionMarginBottom;
         };
     }
 
@@ -1566,6 +1585,8 @@
         }
 
         const restoreStyles = freezeAffiliateQrCardStyles(card);
+        const savedCardOverflow = card.style.overflow;
+        card.style.setProperty('overflow', 'visible', 'important');
 
         const section = card.querySelector('.affiliate-qr-card-qr-section');
         const bg = card.querySelector('.affiliate-qr-card-qr-section-bg');
@@ -1596,7 +1617,10 @@
             restoreWrapGlow = rasterizeAffiliateQrWrapGlow(section, wrap);
         }
 
+        card.style.setProperty('min-height', card.scrollHeight + 'px', 'important');
+
         return function restoreAffiliateQrCardExport() {
+            card.style.overflow = savedCardOverflow;
             restoreWrapGlow();
             restoreGlow();
             restoreBgSize();
@@ -1640,11 +1664,11 @@
         if (sourceWrap && clonedWrap && clonedSection) {
             const wrapStyle = window.getComputedStyle(sourceWrap);
             const sourceSection = sourceCard.querySelector('.affiliate-qr-card-qr-section');
+            const GLOW_BLEED = 35;
             const wrapWidth = Math.max(1, Math.round(parseFloat(wrapStyle.width) || sourceWrap.offsetWidth));
             const wrapHeight = Math.max(1, Math.round(parseFloat(wrapStyle.height) || sourceWrap.offsetHeight));
             const sectionWidth = sourceSection ? sourceSection.offsetWidth : clonedSection.offsetWidth;
-            const shadowPad = 50;
-            const glowLeft = Math.max(0, (sectionWidth - wrapWidth) / 2 - shadowPad);
+            const glowLeft = Math.max(0, (sectionWidth - wrapWidth) / 2 - GLOW_BLEED);
 
             clonedWrap.style.setProperty('width', wrapWidth + 'px', 'important');
             clonedWrap.style.setProperty('height', wrapHeight + 'px', 'important');
@@ -1658,8 +1682,17 @@
                 width: wrapWidth,
                 height: wrapHeight,
                 left: glowLeft,
-                top: -shadowPad * 0.5,
             });
+        }
+
+        const clonedHint = clonedCard.querySelector('.affiliate-qr-card-hint');
+        if (clonedHint && sourceCard.querySelector('.affiliate-qr-card-hint')) {
+            const hintStyle = window.getComputedStyle(sourceCard.querySelector('.affiliate-qr-card-hint'));
+            clonedHint.style.setProperty('margin-top', hintStyle.marginTop, 'important');
+            clonedHint.style.setProperty('margin-bottom', hintStyle.marginBottom, 'important');
+            clonedHint.style.setProperty('padding-top', hintStyle.paddingTop, 'important');
+            clonedHint.style.setProperty('position', 'relative', 'important');
+            clonedHint.style.setProperty('z-index', '2', 'important');
         }
 
         const section = clonedCard.querySelector('.affiliate-qr-card-qr-section');
@@ -1717,6 +1750,9 @@
             restoreCardExport = prepareAffiliateQrCardExport(card);
             await waitForCardImages(card);
 
+            const exportHeight = card.scrollHeight;
+            card.style.setProperty('min-height', exportHeight + 'px', 'important');
+
             const canvas = await html2canvas(card, {
                 backgroundColor: '#ffffff',
                 scale: 3,
@@ -1724,7 +1760,7 @@
                 allowTaint: false,
                 logging: false,
                 width: card.offsetWidth,
-                height: card.offsetHeight,
+                height: exportHeight,
                 imageTimeout: 15000,
                 onclone: function (clonedDoc) {
                     syncAffiliateQrExportClone(clonedDoc, card);
