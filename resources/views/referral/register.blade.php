@@ -635,7 +635,7 @@
                         autocomplete="email"
                         placeholder="you@example.com"
                     >
-                    <div class="field-hint">Optional. Use Gmail, Yahoo, Outlook, or Hotmail if provided.</div>
+                    <div class="field-hint">Adding an email helps you securely reset your password if you ever forget it.</div>
                     <div class="form-error" id="emailClientError" style="display: none;"></div>
                     @error('email')<div class="form-error">{{ $message }}</div>@enderror
                 </div>
