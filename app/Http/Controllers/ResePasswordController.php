@@ -4,39 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Patients;
 use App\Models\User;
-use App\Services\PatientRegistrationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class ResePasswordController extends Controller
 {
-    public function __construct(
-        private PatientRegistrationService $registrationService
-    ) {}
-
     public function create(Request $request, $token)
     {
         $tokenData = decrypt($token);
 
         return view('reset-password', compact('tokenData'));
-    }
-
-    public function checkPassword(Request $request)
-    {
-        $validator = Validator::make(
-            $request->all(),
-            ['password' => $this->registrationService->passwordValidationRules(false)],
-            $this->registrationService->passwordValidationMessages()
-        );
-
-        if ($validator->fails()) {
-            return response()->json([
-                'valid' => false,
-                'message' => $validator->errors()->first('password'),
-            ], 422);
-        }
-
-        return response()->json(['valid' => true]);
     }
 
     public function update(Request $request)
@@ -45,14 +22,10 @@ class ResePasswordController extends Controller
             ? 'required|email|exists:users,email'
             : 'required|email|exists:patients,email';
 
-        $validator = Validator::make(
-            $request->all(),
-            [
-                'email' => $emailRule,
-                'password' => $this->registrationService->passwordValidationRules(true),
-            ],
-            $this->registrationService->passwordValidationMessages()
-        );
+        $validator = Validator::make($request->all(), [
+            'email' => $emailRule,
+            'password' => 'required|string|confirmed',
+        ]);
 
         if ($validator->fails()) {
             if ($request->expectsJson()) {

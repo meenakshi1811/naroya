@@ -644,7 +644,7 @@
                     <div class="form-group">
                         <label for="password">Password *</label>
                         <div class="password-input-wrap">
-                            <input type="text" id="password" name="password" required minlength="8" autocomplete="new-password">
+                            <input type="text" id="password" name="password" required autocomplete="new-password">
                             <button type="button" class="password-toggle is-visible" data-target="password" aria-label="Hide password" aria-pressed="true" title="Hide password">
                                 <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
@@ -658,13 +658,12 @@
                                 </svg>
                             </button>
                         </div>
-                        <div class="form-error" id="passwordClientError" style="display: none;"></div>
                         @error('password')<div class="form-error">{{ $message }}</div>@enderror
                     </div>
                     <div class="form-group">
                         <label for="password_confirmation">Confirm Password *</label>
                         <div class="password-input-wrap">
-                            <input type="text" id="password_confirmation" name="password_confirmation" required minlength="8" autocomplete="new-password">
+                            <input type="text" id="password_confirmation" name="password_confirmation" required autocomplete="new-password">
                             <button type="button" class="password-toggle is-visible" data-target="password_confirmation" aria-label="Hide password" aria-pressed="true" title="Hide password">
                                 <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
@@ -768,7 +767,6 @@
         const passwordInput = document.getElementById('password');
         const passwordConfirmationInput = document.getElementById('password_confirmation');
         const emailClientError = document.getElementById('emailClientError');
-        const passwordClientError = document.getElementById('passwordClientError');
         const confirmPhoneInput = document.getElementById('confirmPhone');
         const modal = document.getElementById('phoneConfirmModal');
         const modalError = document.getElementById('phoneModalError');
@@ -776,13 +774,10 @@
         const cancelModalBtn = document.getElementById('cancelPhoneConfirmBtn');
         const confirmModalBtn = document.getElementById('confirmPhoneBtn');
         const csrfToken = document.querySelector('input[name="_token"]').value;
-        const checkPasswordUrl = @json(route('referral.check-password', $affiliate->code));
         const checkEmailUrl = @json(route('referral.check-email', $affiliate->code));
 
         let emailValidationState = { valid: true, message: '' };
-        let passwordValidationState = { valid: true, message: '' };
         let emailValidationRequestId = 0;
-        let passwordValidationRequestId = 0;
 
         function showClientError(element, message) {
             element.textContent = message;
@@ -843,26 +838,6 @@
             }
 
             return emailValidationState;
-        }
-
-        async function validatePasswordAjax(password, showError = true) {
-            const requestId = ++passwordValidationRequestId;
-            const result = await postValidation(checkPasswordUrl, { password: password || '' });
-
-            if (requestId !== passwordValidationRequestId) {
-                return passwordValidationState;
-            }
-
-            passwordValidationState = {
-                valid: !!result.valid,
-                message: result.valid ? '' : (result.message || 'Password does not meet the required format.'),
-            };
-
-            if (showError) {
-                showClientError(passwordClientError, passwordValidationState.message);
-            }
-
-            return passwordValidationState;
         }
 
         function normalizePhone(value) {
@@ -948,7 +923,6 @@
 
         async function validateFormFieldsAsync() {
             showClientError(emailClientError, '');
-            showClientError(passwordClientError, '');
 
             if (!validateFormFields()) {
                 return false;
@@ -961,12 +935,6 @@
                 const emailResult = await validateEmailAjax(emailInput.value, true);
                 if (!emailResult.valid) {
                     emailInput.focus();
-                    return false;
-                }
-
-                const passwordResult = await validatePasswordAjax(passwordInput.value, true);
-                if (!passwordResult.valid) {
-                    passwordInput.focus();
                     return false;
                 }
 

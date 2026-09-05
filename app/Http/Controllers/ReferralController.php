@@ -43,28 +43,6 @@ class ReferralController extends Controller
             ->with('success', 'Registration successful! Download the Noraya patient app and sign in with your phone number and password.');
     }
 
-    public function checkPassword(Request $request, string $code)
-    {
-        Affiliate::where('code', strtoupper($code))
-            ->where('is_active', true)
-            ->firstOrFail();
-
-        $validator = Validator::make(
-            $request->all(),
-            ['password' => $this->registrationService->passwordValidationRules(false)],
-            $this->registrationService->passwordValidationMessages()
-        );
-
-        if ($validator->fails()) {
-            return response()->json([
-                'valid' => false,
-                'message' => $validator->errors()->first('password'),
-            ], 422);
-        }
-
-        return response()->json(['valid' => true]);
-    }
-
     public function checkEmail(Request $request, string $code)
     {
         Affiliate::where('code', strtoupper($code))

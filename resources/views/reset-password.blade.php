@@ -264,7 +264,7 @@
 
         <div class="auth-card">
             <h2>Reset your password</h2>
-            <p class="subtitle">Enter a strong new password below to secure your account.</p>
+            <p class="subtitle">Enter your new password below.</p>
 
             <div class="form-alert" id="formAlert"></div>
 
@@ -289,7 +289,7 @@
                     <div class="form-group">
                         <label for="password">New Password *</label>
                         <div class="password-input-wrap">
-                            <input type="text" id="password" name="password" required minlength="8" autocomplete="new-password">
+                            <input type="text" id="password" name="password" required autocomplete="new-password">
                             <button type="button" class="password-toggle is-visible" data-target="password" aria-label="Hide password" aria-pressed="true" title="Hide password">
                                 <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
@@ -303,12 +303,11 @@
                                 </svg>
                             </button>
                         </div>
-                        <div class="form-error" id="passwordClientError" style="display: none;"></div>
                     </div>
                     <div class="form-group">
                         <label for="password_confirmation">Confirm Password *</label>
                         <div class="password-input-wrap">
-                            <input type="text" id="password_confirmation" name="password_confirmation" required minlength="8" autocomplete="new-password">
+                            <input type="text" id="password_confirmation" name="password_confirmation" required autocomplete="new-password">
                             <button type="button" class="password-toggle is-visible" data-target="password_confirmation" aria-label="Hide password" aria-pressed="true" title="Hide password">
                                 <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
@@ -335,12 +334,10 @@
         const form = document.getElementById('resetPasswordForm');
         const passwordInput = document.getElementById('password');
         const passwordConfirmationInput = document.getElementById('password_confirmation');
-        const passwordClientError = document.getElementById('passwordClientError');
         const passwordConfirmClientError = document.getElementById('passwordConfirmClientError');
         const formAlert = document.getElementById('formAlert');
         const submitBtn = document.getElementById('submitBtn');
         const csrfToken = document.querySelector('input[name="_token"]').value;
-        const checkPasswordUrl = @json(route('password.check-password'));
         const updatePasswordUrl = @json(route('password.update'));
 
         function showClientError(element, message) {
@@ -372,19 +369,6 @@
             return { ok: response.ok, data: data };
         }
 
-        async function validatePasswordAjax(password) {
-            const result = await postJson(checkPasswordUrl, { password: password || '' });
-
-            if (!result.ok) {
-                return {
-                    valid: false,
-                    message: result.data.message || 'Password does not meet the required format.',
-                };
-            }
-
-            return { valid: true, message: '' };
-        }
-
         document.querySelectorAll('.password-toggle').forEach(function (button) {
             button.addEventListener('click', function (event) {
                 event.preventDefault();
@@ -407,7 +391,6 @@
             event.preventDefault();
 
             showFormAlert('');
-            showClientError(passwordClientError, '');
             showClientError(passwordConfirmClientError, '');
 
             const password = passwordInput.value;
@@ -425,18 +408,9 @@
             }
 
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Validating...';
+            submitBtn.textContent = 'Resetting...';
 
             try {
-                const passwordResult = await validatePasswordAjax(password);
-                if (!passwordResult.valid) {
-                    showClientError(passwordClientError, passwordResult.message);
-                    passwordInput.focus();
-                    return;
-                }
-
-                submitBtn.textContent = 'Resetting...';
-
                 const payload = {
                     email: document.getElementById('email').value,
                     isDoctor: document.querySelector('input[name="isDoctor"]').value,

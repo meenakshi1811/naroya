@@ -24,33 +24,6 @@ class PatientRegistrationService
             ->value('id');
     }
 
-    public function passwordValidationRules(bool $requireConfirmation = false): array
-    {
-        $rules = [
-            'required',
-            'string',
-            'min:8',
-            'regex:/[a-z]/',
-            'regex:/[A-Z]/',
-            'regex:/[0-9]/',
-            'regex:/[@$!%*#?&]/',
-        ];
-
-        if ($requireConfirmation) {
-            $rules[] = 'confirmed';
-        }
-
-        return $rules;
-    }
-
-    public function passwordValidationMessages(): array
-    {
-        return [
-            'password.min' => 'Password should be 8 characters long and should contain one upper, one lower character, one digit and one special character.',
-            'password.regex' => 'Password should be 8 characters long and should contain one upper, one lower character, one digit and one special character.',
-        ];
-    }
-
     public function emailValidationRules(): array
     {
         return [
@@ -98,7 +71,7 @@ class PatientRegistrationService
             'first_name' => 'required|string|max:255',
             'last_name' => 'nullable|string|max:255',
             'email' => $this->emailValidationRules(),
-            'password' => $this->passwordValidationRules($requirePasswordConfirmation),
+            'password' => $requirePasswordConfirmation ? 'required|string|confirmed' : 'required|string',
             'phone' => ['required', 'digits:10', 'valid_indian_mobile', 'unique:patients,phone'],
             'country' => 'nullable|integer|exists:country_master,id',
         ];
@@ -143,10 +116,7 @@ class PatientRegistrationService
 
         $validated = $request->validate(
             $this->referralValidationRules(true),
-            array_merge(
-                $this->passwordValidationMessages(),
-                $this->emailValidationMessages()
-            )
+            $this->emailValidationMessages()
         );
         $validated['state'] = null;
         $validated['language_id'] = null;
