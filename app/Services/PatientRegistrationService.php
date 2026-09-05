@@ -46,7 +46,7 @@ class PatientRegistrationService
 
     public function validationRules(bool $requirePasswordConfirmation = false): array
     {
-        $passwordRule = 'required|string|min:6';
+        $passwordRule = 'required|string';
         if ($requirePasswordConfirmation) {
             $passwordRule .= '|confirmed';
         }
