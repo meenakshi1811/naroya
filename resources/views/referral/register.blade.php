@@ -625,11 +625,26 @@
                     @error('phone')<div class="form-error">{{ $message }}</div>@enderror
                 </div>
 
+                <div class="form-group">
+                    <label for="email">Email (optional)</label>
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value="{{ old('email') }}"
+                        autocomplete="email"
+                        placeholder="you@example.com"
+                    >
+                    <div class="field-hint">Optional. Use Gmail, Yahoo, Outlook, or Hotmail if provided.</div>
+                    <div class="form-error" id="emailClientError" style="display: none;"></div>
+                    @error('email')<div class="form-error">{{ $message }}</div>@enderror
+                </div>
+
                 <div class="form-row">
                     <div class="form-group">
                         <label for="password">Password *</label>
                         <div class="password-input-wrap">
-                            <input type="text" id="password" name="password" required minlength="6" autocomplete="new-password">
+                            <input type="text" id="password" name="password" required minlength="8" autocomplete="new-password">
                             <button type="button" class="password-toggle is-visible" data-target="password" aria-label="Hide password" aria-pressed="true" title="Hide password">
                                 <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
@@ -643,12 +658,14 @@
                                 </svg>
                             </button>
                         </div>
+                        <div class="field-hint">Password should be 8 characters long and should contain one upper, one lower character, one digit and one special character.</div>
+                        <div class="form-error" id="passwordClientError" style="display: none;"></div>
                         @error('password')<div class="form-error">{{ $message }}</div>@enderror
                     </div>
                     <div class="form-group">
                         <label for="password_confirmation">Confirm Password *</label>
                         <div class="password-input-wrap">
-                            <input type="text" id="password_confirmation" name="password_confirmation" required minlength="6" autocomplete="new-password">
+                            <input type="text" id="password_confirmation" name="password_confirmation" required minlength="8" autocomplete="new-password">
                             <button type="button" class="password-toggle is-visible" data-target="password_confirmation" aria-label="Hide password" aria-pressed="true" title="Hide password">
                                 <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
@@ -748,12 +765,144 @@
     <script>
         const form = document.getElementById('referralForm');
         const phoneInput = document.getElementById('phone');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const passwordConfirmationInput = document.getElementById('password_confirmation');
+        const emailClientError = document.getElementById('emailClientError');
+        const passwordClientError = document.getElementById('passwordClientError');
         const confirmPhoneInput = document.getElementById('confirmPhone');
         const modal = document.getElementById('phoneConfirmModal');
         const modalError = document.getElementById('phoneModalError');
         const openModalBtn = document.getElementById('openPhoneConfirmBtn');
         const cancelModalBtn = document.getElementById('cancelPhoneConfirmBtn');
         const confirmModalBtn = document.getElementById('confirmPhoneBtn');
+        const csrfToken = document.querySelector('input[name="_token"]').value;
+        const checkPasswordUrl = @json(route('referral.check-password', $affiliate->code));
+        const checkEmailUrl = @json(route('referral.check-email', $affiliate->code));
+
+        let emailValidationState = { valid: true, message: '' };
+        let passwordValidationState = { valid: true, message: '' };
+        let emailValidationRequestId = 0;
+        let passwordValidationRequestId = 0;
+
+        function showClientError(element, message) {
+            element.textContent = message;
+            element.style.display = message ? 'block' : 'none';
+        }
+
+        async function postValidation(url, payload) {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            const data = await response.json().catch(function () {
+                return { valid: false, message: 'Unable to validate right now. Please try again.' };
+            });
+
+            if (!response.ok) {
+                return {
+                    valid: false,
+                    message: data.message || 'Validation failed.',
+                };
+            }
+
+            return data;
+        }
+
+        async function validateEmailAjax(email, showError = true) {
+            const trimmedEmail = (email || '').trim();
+
+            if (!trimmedEmail) {
+                emailValidationState = { valid: true, message: '' };
+                if (showError) {
+                    showClientError(emailClientError, '');
+                }
+                return emailValidationState;
+            }
+
+            const requestId = ++emailValidationRequestId;
+            const result = await postValidation(checkEmailUrl, { email: trimmedEmail });
+
+            if (requestId !== emailValidationRequestId) {
+                return emailValidationState;
+            }
+
+            emailValidationState = {
+                valid: !!result.valid,
+                message: result.valid ? '' : (result.message || 'Please enter a valid email address.'),
+            };
+
+            if (showError) {
+                showClientError(emailClientError, emailValidationState.message);
+            }
+
+            return emailValidationState;
+        }
+
+        async function validatePasswordAjax(password, showError = true) {
+            const requestId = ++passwordValidationRequestId;
+            const result = await postValidation(checkPasswordUrl, { password: password || '' });
+
+            if (requestId !== passwordValidationRequestId) {
+                return passwordValidationState;
+            }
+
+            passwordValidationState = {
+                valid: !!result.valid,
+                message: result.valid ? '' : (result.message || 'Password does not meet the required format.'),
+            };
+
+            if (showError) {
+                showClientError(passwordClientError, passwordValidationState.message);
+            }
+
+            return passwordValidationState;
+        }
+
+        function debounce(fn, delay) {
+            let timer = null;
+            return function (...args) {
+                clearTimeout(timer);
+                timer = setTimeout(function () {
+                    fn.apply(null, args);
+                }, delay);
+            };
+        }
+
+        emailInput.addEventListener('blur', function () {
+            validateEmailAjax(emailInput.value, true);
+        });
+
+        emailInput.addEventListener('input', debounce(function () {
+            if (!emailInput.value.trim()) {
+                emailValidationState = { valid: true, message: '' };
+                showClientError(emailClientError, '');
+                return;
+            }
+            validateEmailAjax(emailInput.value, true);
+        }, 400));
+
+        passwordInput.addEventListener('blur', function () {
+            if (passwordInput.value) {
+                validatePasswordAjax(passwordInput.value, true);
+            }
+        });
+
+        passwordInput.addEventListener('input', debounce(function () {
+            if (!passwordInput.value) {
+                passwordValidationState = { valid: true, message: '' };
+                showClientError(passwordClientError, '');
+                return;
+            }
+            validatePasswordAjax(passwordInput.value, true);
+        }, 400));
 
         function normalizePhone(value) {
             let digits = (value || '').replace(/\D/g, '');
@@ -819,8 +968,8 @@
                 return false;
             }
 
-            const password = document.getElementById('password').value;
-            const passwordConfirmation = document.getElementById('password_confirmation').value;
+            const password = passwordInput.value;
+            const passwordConfirmation = passwordConfirmationInput.value;
 
             if (password !== passwordConfirmation) {
                 alert('Password and confirm password must match.');
@@ -834,6 +983,34 @@
             }
 
             return true;
+        }
+
+        async function validateFormFieldsAsync() {
+            if (!validateFormFields()) {
+                return false;
+            }
+
+            openModalBtn.disabled = true;
+            openModalBtn.textContent = 'Validating...';
+
+            try {
+                const emailResult = await validateEmailAjax(emailInput.value, true);
+                if (!emailResult.valid) {
+                    emailInput.focus();
+                    return false;
+                }
+
+                const passwordResult = await validatePasswordAjax(passwordInput.value, true);
+                if (!passwordResult.valid) {
+                    passwordInput.focus();
+                    return false;
+                }
+
+                return true;
+            } finally {
+                openModalBtn.disabled = false;
+                openModalBtn.textContent = 'Register as Patient';
+            }
         }
 
         function showModalError(message) {
@@ -864,10 +1041,10 @@
             document.body.style.overflow = '';
         }
 
-        openModalBtn.addEventListener('click', function () {
+        openModalBtn.addEventListener('click', async function () {
             phoneInput.value = normalizePhone(phoneInput.value);
 
-            if (!validateFormFields()) {
+            if (!await validateFormFieldsAsync()) {
                 return;
             }
 

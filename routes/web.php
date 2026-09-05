@@ -55,6 +55,8 @@ Route::get('/disclaimer', function () {
 // Affiliate referral (public)
 Route::get('/refer/{code}', [App\Http\Controllers\ReferralController::class, 'show'])->name('referral.show');
 Route::post('/refer/{code}', [App\Http\Controllers\ReferralController::class, 'register'])->name('referral.register');
+Route::post('/refer/{code}/check-password', [App\Http\Controllers\ReferralController::class, 'checkPassword'])->name('referral.check-password');
+Route::post('/refer/{code}/check-email', [App\Http\Controllers\ReferralController::class, 'checkEmail'])->name('referral.check-email');
 Route::get('admin/login', [App\Http\Controllers\AdminAuthController::class, 'showLoginForm'])->name('admin.login');
 Route::post('admin/login', [App\Http\Controllers\AdminAuthController::class, 'login']);
 Route::get('admin/logout', [App\Http\Controllers\AdminAuthController::class, 'logout'])->name('admin.logout');

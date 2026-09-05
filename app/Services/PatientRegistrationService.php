@@ -24,6 +24,53 @@ class PatientRegistrationService
             ->value('id');
     }
 
+    public function passwordValidationRules(bool $requireConfirmation = false): array
+    {
+        $rules = [
+            'required',
+            'string',
+            'min:8',
+            'regex:/[a-z]/',
+            'regex:/[A-Z]/',
+            'regex:/[0-9]/',
+            'regex:/[@$!%*#?&]/',
+        ];
+
+        if ($requireConfirmation) {
+            $rules[] = 'confirmed';
+        }
+
+        return $rules;
+    }
+
+    public function passwordValidationMessages(): array
+    {
+        return [
+            'password.min' => 'Password should be 8 characters long and should contain one upper, one lower character, one digit and one special character.',
+            'password.regex' => 'Password should be 8 characters long and should contain one upper, one lower character, one digit and one special character.',
+        ];
+    }
+
+    public function emailValidationRules(): array
+    {
+        return [
+            'nullable',
+            'string',
+            'email',
+            'unique:patients,email',
+            'valid_email_domain',
+        ];
+    }
+
+    public function emailValidationMessages(): array
+    {
+        return [
+            'email.unique' => 'This email is already registered.',
+            'email.email' => 'Please enter a valid email address.',
+            'email.valid_email_domain' => 'Please use a Gmail, Yahoo, Outlook, or Hotmail email address.',
+        ];
+    }
+
     public function validationRules(bool $requirePasswordConfirmation = false): array
     {
         $passwordRule = 'required|string|min:6';
@@ -34,7 +81,7 @@ class PatientRegistrationService
         return [
             'first_name' => 'required|string|max:255',
             'last_name' => 'nullable|string|max:255',
-            'email' => 'nullable|string|email|unique:patients,email|valid_email_domain',
+            'email' => $this->emailValidationRules(),
             'password' => $passwordRule,
             'phone' => ['required', 'digits:10', 'valid_indian_mobile', 'unique:patients,phone'],
             'state' => 'required|integer|exists:states,id',
@@ -47,15 +94,11 @@ class PatientRegistrationService
 
     public function referralValidationRules(bool $requirePasswordConfirmation = false): array
     {
-        $passwordRule = 'required|string|min:6';
-        if ($requirePasswordConfirmation) {
-            $passwordRule .= '|confirmed';
-        }
-
         return [
             'first_name' => 'required|string|max:255',
             'last_name' => 'nullable|string|max:255',
-            'password' => $passwordRule,
+            'email' => $this->emailValidationRules(),
+            'password' => $this->passwordValidationRules($requirePasswordConfirmation),
             'phone' => ['required', 'digits:10', 'valid_indian_mobile', 'unique:patients,phone'],
             'country' => 'nullable|integer|exists:country_master,id',
         ];
@@ -90,12 +133,21 @@ class PatientRegistrationService
 
     public function createFromReferralRequest(Request $request, ?int $affiliateId = null): Patients
     {
+        if (! $request->filled('email')) {
+            $request->merge(['email' => null]);
+        }
+
         $request->merge([
             'phone' => $this->normalizePhone((string) $request->input('phone', '')),
         ]);
 
-        $validated = $request->validate($this->referralValidationRules(true));
-        $validated['email'] = null;
+        $validated = $request->validate(
+            $this->referralValidationRules(true),
+            array_merge(
+                $this->passwordValidationMessages(),
+                $this->emailValidationMessages()
+            )
+        );
         $validated['state'] = null;
         $validated['language_id'] = null;
 

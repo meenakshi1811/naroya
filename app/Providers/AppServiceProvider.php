@@ -39,6 +39,10 @@ class AppServiceProvider extends ServiceProvider
             return in_array(strtolower($domain), $allowedDomains);
         });
 
+        Validator::replacer('valid_email_domain', function ($message, $attribute, $rule, $parameters) {
+            return 'Please use a Gmail, Yahoo, Outlook, or Hotmail email address.';
+        });
+
         Validator::extend('valid_indian_mobile', function ($attribute, $value, $parameters, $validator) {
             if (! is_string($value) || ! preg_match('/^[6-9][0-9]{9}$/', $value)) {
                 return false;

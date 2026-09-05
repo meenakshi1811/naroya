@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Affiliate;
 use App\Services\PatientRegistrationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class ReferralController extends Controller
 {
@@ -40,5 +41,53 @@ class ReferralController extends Controller
         return redirect()
             ->route('referral.show', $affiliate->code)
             ->with('success', 'Registration successful! Download the Noraya patient app and sign in with your phone number and password.');
+    }
+
+    public function checkPassword(Request $request, string $code)
+    {
+        Affiliate::where('code', strtoupper($code))
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        $validator = Validator::make(
+            $request->all(),
+            ['password' => $this->registrationService->passwordValidationRules(false)],
+            $this->registrationService->passwordValidationMessages()
+        );
+
+        if ($validator->fails()) {
+            return response()->json([
+                'valid' => false,
+                'message' => $validator->errors()->first('password'),
+            ], 422);
+        }
+
+        return response()->json(['valid' => true]);
+    }
+
+    public function checkEmail(Request $request, string $code)
+    {
+        Affiliate::where('code', strtoupper($code))
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        if (! $request->filled('email')) {
+            return response()->json(['valid' => true]);
+        }
+
+        $validator = Validator::make(
+            $request->all(),
+            ['email' => $this->registrationService->emailValidationRules()],
+            $this->registrationService->emailValidationMessages()
+        );
+
+        if ($validator->fails()) {
+            return response()->json([
+                'valid' => false,
+                'message' => $validator->errors()->first('email'),
+            ], 422);
+        }
+
+        return response()->json(['valid' => true]);
     }
 }
