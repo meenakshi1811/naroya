@@ -658,7 +658,6 @@
                                 </svg>
                             </button>
                         </div>
-                        <div class="field-hint">Password should be 8 characters long and should contain one upper, one lower character, one digit and one special character.</div>
                         <div class="form-error" id="passwordClientError" style="display: none;"></div>
                         @error('password')<div class="form-error">{{ $message }}</div>@enderror
                     </div>
@@ -866,44 +865,6 @@
             return passwordValidationState;
         }
 
-        function debounce(fn, delay) {
-            let timer = null;
-            return function (...args) {
-                clearTimeout(timer);
-                timer = setTimeout(function () {
-                    fn.apply(null, args);
-                }, delay);
-            };
-        }
-
-        emailInput.addEventListener('blur', function () {
-            validateEmailAjax(emailInput.value, true);
-        });
-
-        emailInput.addEventListener('input', debounce(function () {
-            if (!emailInput.value.trim()) {
-                emailValidationState = { valid: true, message: '' };
-                showClientError(emailClientError, '');
-                return;
-            }
-            validateEmailAjax(emailInput.value, true);
-        }, 400));
-
-        passwordInput.addEventListener('blur', function () {
-            if (passwordInput.value) {
-                validatePasswordAjax(passwordInput.value, true);
-            }
-        });
-
-        passwordInput.addEventListener('input', debounce(function () {
-            if (!passwordInput.value) {
-                passwordValidationState = { valid: true, message: '' };
-                showClientError(passwordClientError, '');
-                return;
-            }
-            validatePasswordAjax(passwordInput.value, true);
-        }, 400));
-
         function normalizePhone(value) {
             let digits = (value || '').replace(/\D/g, '');
 
@@ -986,6 +947,9 @@
         }
 
         async function validateFormFieldsAsync() {
+            showClientError(emailClientError, '');
+            showClientError(passwordClientError, '');
+
             if (!validateFormFields()) {
                 return false;
             }
