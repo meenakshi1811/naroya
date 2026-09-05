@@ -429,47 +429,7 @@ class PatientController extends Controller
 
                     $patient = Patients::find($tokenData['id']);
                     if (!empty($patient)) {
-                        $topDoctor = User::select(
-                            'users.id',
-                            'users.name',
-                            'users.email',
-                            'users.surname',
-                            'users.country',
-                            'users.state',
-                            'users.gmc_registration_no',
-                            'users.indemnity_insurance_provider',
-                            'users.policy_no',
-                            'users.india_registration_no',
-                            'users.dha_reg',
-                            'users.reg_no',
-                            'users.chrSmartcard',
-                            'users.varProfile',
-                            'users.varSpeciality',
-                            'users.language_ids',
-                            'users.varExperience',
-                            'users.varPostGraduation',
-                            'users.varPostGraduationYear',
-                            'users.varGraduation',
-                            'users.varGraduationYear',
-                            'users.chrApproval',
-                            'users.category as category',
-                            'dr_category.title as categoryName',
-                            'users.varFees as Fees',
-                            'users.varTimeDuration as Consaltation Time'
-                        )
-                            ->where('category', $request->speciality)
-                            ->where('chrApproval', 'Y')
-                            ->join('dr_category', 'users.category', '=', 'dr_category.id')
-                            // ->where('country', $patient->country)
-                            ->leftJoin('block', function($join) use ($patient) {
-                                $join->on('block.dr_id', '=', 'users.id')
-                                     ->where('block.patient_id', '=', $patient->id)
-                                     ->where('block.chrIsBlock', '=', 'Y'); // Only blocked doctors
-                            })
-                            ->whereNull('block.id');
-                        $topDoctor = Rating::orderByAverageRatingDesc($topDoctor)
-                            ->limit('5')
-                            ->get();
+                        $topDoctor = $this->getHomeTopDoctors($patient, $request->speciality, 3);
                         $favDoctor = DB::table('favourite')
                             ->select(
                                 'users.id',
@@ -1555,6 +1515,71 @@ class PatientController extends Controller
         return array_values(array_unique(array_map('intval', array_filter($value, function ($id) {
             return is_numeric($id) && (int) $id > 0;
         }))));
+    }
+
+    private function buildHomeDoctorQuery(Patients $patient, $speciality)
+    {
+        return User::select(
+            'users.id',
+            'users.name',
+            'users.email',
+            'users.surname',
+            'users.country',
+            'users.state',
+            'users.gmc_registration_no',
+            'users.indemnity_insurance_provider',
+            'users.policy_no',
+            'users.india_registration_no',
+            'users.dha_reg',
+            'users.reg_no',
+            'users.chrSmartcard',
+            'users.varProfile',
+            'users.varSpeciality',
+            'users.language_ids',
+            'users.varExperience',
+            'users.varPostGraduation',
+            'users.varPostGraduationYear',
+            'users.varGraduation',
+            'users.varGraduationYear',
+            'users.chrApproval',
+            'users.category as category',
+            'dr_category.title as categoryName',
+            'users.varFees as Fees',
+            'users.varTimeDuration as Consaltation Time'
+        )
+            ->where('category', $speciality)
+            ->where('chrApproval', 'Y')
+            ->join('dr_category', 'users.category', '=', 'dr_category.id')
+            ->leftJoin('block', function ($join) use ($patient) {
+                $join->on('block.dr_id', '=', 'users.id')
+                    ->where('block.patient_id', '=', $patient->id)
+                    ->where('block.chrIsBlock', '=', 'Y');
+            })
+            ->whereNull('block.id');
+    }
+
+    private function getHomeTopDoctors(Patients $patient, $speciality, int $limit = 3)
+    {
+        $topDoctors = Rating::orderByAverageRatingDesc($this->buildHomeDoctorQuery($patient, $speciality))
+            ->limit($limit)
+            ->get();
+
+        if ($topDoctors->count() >= $limit) {
+            return $topDoctors;
+        }
+
+        $latestDoctorsQuery = $this->buildHomeDoctorQuery($patient, $speciality)
+            ->orderByDesc('users.id');
+
+        if ($topDoctors->isNotEmpty()) {
+            $latestDoctorsQuery->whereNotIn('users.id', $topDoctors->pluck('id')->all());
+        }
+
+        $latestDoctors = $latestDoctorsQuery
+            ->limit($limit - $topDoctors->count())
+            ->get();
+
+        return $topDoctors->concat($latestDoctors)->values();
     }
 
 }
