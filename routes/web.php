@@ -137,6 +137,12 @@ Route::get('password/reset/{token}', [\App\Http\Controllers\ResePasswordControll
 
 Route::post('password/reset', [\App\Http\Controllers\ResePasswordController::class, 'update'])
     ->name('password.update');
+
+Route::post('password/check-password', [\App\Http\Controllers\ResePasswordController::class, 'checkPassword'])
+    ->name('password.check-password');
+
+Route::get('password/reset-success', [\App\Http\Controllers\ResePasswordController::class, 'success'])
+    ->name('password.reset.success');
 // Route::get('/admin', function () {
 //     return view('admin.dashboard'); // Create a dashboard view
 // });

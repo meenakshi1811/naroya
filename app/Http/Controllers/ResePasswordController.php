@@ -2,19 +2,41 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator; // Import Validator
-use Illuminate\Support\Facades\Hash; // Import Hash for hashing passwords
-use App\Models\User;
 use App\Models\Patients;
-
+use App\Models\User;
+use App\Services\PatientRegistrationService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class ResePasswordController extends Controller
 {
-    public function create(Request $request,$token){
+    public function __construct(
+        private PatientRegistrationService $registrationService
+    ) {}
+
+    public function create(Request $request, $token)
+    {
         $tokenData = decrypt($token);
-        return view('reset-password',compact('tokenData'));
+
+        return view('reset-password', compact('tokenData'));
+    }
+
+    public function checkPassword(Request $request)
+    {
+        $validator = Validator::make(
+            $request->all(),
+            ['password' => $this->registrationService->passwordValidationRules(false)],
+            $this->registrationService->passwordValidationMessages()
+        );
+
+        if ($validator->fails()) {
+            return response()->json([
+                'valid' => false,
+                'message' => $validator->errors()->first('password'),
+            ], 422);
+        }
+
+        return response()->json(['valid' => true]);
     }
 
     public function update(Request $request)
@@ -23,22 +45,23 @@ class ResePasswordController extends Controller
             ? 'required|email|exists:users,email'
             : 'required|email|exists:patients,email';
 
-        $validator = Validator::make($request->all(), [
-            'email' => $emailRule,
-            'password' => [
-                'required',
-                'min:8',
-                'regex:/[a-z]/',      // lowercase
-                'regex:/[A-Z]/',      // uppercase
-                'regex:/[0-9]/',      // number
-                'regex:/[@$!%*#?&]/', // special character
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'email' => $emailRule,
+                'password' => $this->registrationService->passwordValidationRules(true),
             ],
-        ], [
-            'password.min' => 'Password must be at least 8 characters.',
-            'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
-        ]);
+            $this->registrationService->passwordValidationMessages()
+        );
 
         if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors()->first(),
+                ], 422);
+            }
+
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
@@ -53,6 +76,25 @@ class ResePasswordController extends Controller
             $user->save();
         }
 
-        return redirect()->back()->with('status', 'Password updated successfully. Please go back to login page!');
+        $accountType = $request->isDoctor == 'Y' ? 'doctor' : 'patient';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'redirect' => route('password.reset.success', ['type' => $accountType]),
+            ]);
+        }
+
+        return redirect()->route('password.reset.success', ['type' => $accountType]);
+    }
+
+    public function success(Request $request)
+    {
+        $type = $request->query('type', 'patient') === 'doctor' ? 'doctor' : 'patient';
+
+        return view('password-reset-success', [
+            'accountType' => $type,
+            'googlePlayUrl' => config('app.patient_google_play_url'),
+        ]);
     }
 }
