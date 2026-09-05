@@ -289,8 +289,8 @@
                     <div class="form-group">
                         <label for="password">New Password *</label>
                         <div class="password-input-wrap">
-                            <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password">
-                            <button type="button" class="password-toggle" data-target="password" aria-label="Show password" aria-pressed="false" title="Show password">
+                            <input type="text" id="password" name="password" required minlength="8" autocomplete="new-password">
+                            <button type="button" class="password-toggle is-visible" data-target="password" aria-label="Hide password" aria-pressed="true" title="Hide password">
                                 <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
                                     <circle cx="12" cy="12" r="3"></circle>
@@ -308,8 +308,8 @@
                     <div class="form-group">
                         <label for="password_confirmation">Confirm Password *</label>
                         <div class="password-input-wrap">
-                            <input type="password" id="password_confirmation" name="password_confirmation" required minlength="8" autocomplete="new-password">
-                            <button type="button" class="password-toggle" data-target="password_confirmation" aria-label="Show password" aria-pressed="false" title="Show password">
+                            <input type="text" id="password_confirmation" name="password_confirmation" required minlength="8" autocomplete="new-password">
+                            <button type="button" class="password-toggle is-visible" data-target="password_confirmation" aria-label="Hide password" aria-pressed="true" title="Hide password">
                                 <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
                                     <circle cx="12" cy="12" r="3"></circle>
