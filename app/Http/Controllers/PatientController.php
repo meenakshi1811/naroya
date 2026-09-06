@@ -1517,9 +1517,9 @@ class PatientController extends Controller
         }))));
     }
 
-    private function buildHomeDoctorQuery(Patients $patient, $speciality)
+    private function buildHomeDoctorQuery(Patients $patient, $speciality = null)
     {
-        return User::select(
+        $query = User::select(
             'users.id',
             'users.name',
             'users.email',
@@ -1547,7 +1547,6 @@ class PatientController extends Controller
             'users.varFees as Fees',
             'users.varTimeDuration as Consaltation Time'
         )
-            ->where('category', $speciality)
             ->where('chrApproval', 'Y')
             ->join('dr_category', 'users.category', '=', 'dr_category.id')
             ->leftJoin('block', function ($join) use ($patient) {
@@ -1556,6 +1555,28 @@ class PatientController extends Controller
                     ->where('block.chrIsBlock', '=', 'Y');
             })
             ->whereNull('block.id');
+
+        if ($speciality !== null && $speciality !== '') {
+            $query->where('users.category', $speciality);
+        }
+
+        return $query;
+    }
+
+    private function getLatestHomeDoctors(Patients $patient, array $excludeIds, int $limit, $speciality = null)
+    {
+        if ($limit <= 0) {
+            return collect();
+        }
+
+        $query = $this->buildHomeDoctorQuery($patient, $speciality)
+            ->orderByDesc('users.id');
+
+        if ($excludeIds !== []) {
+            $query->whereNotIn('users.id', $excludeIds);
+        }
+
+        return $query->limit($limit)->get();
     }
 
     private function getHomeTopDoctors(Patients $patient, $speciality, int $limit = 3)
@@ -1564,22 +1585,31 @@ class PatientController extends Controller
             ->limit($limit)
             ->get();
 
-        if ($topDoctors->count() >= $limit) {
-            return $topDoctors;
+        $selectedIds = $topDoctors->pluck('id')->all();
+
+        if ($topDoctors->count() < $limit) {
+            $sameSpecialityDoctors = $this->getLatestHomeDoctors(
+                $patient,
+                $selectedIds,
+                $limit - $topDoctors->count(),
+                $speciality
+            );
+
+            $topDoctors = $topDoctors->concat($sameSpecialityDoctors)->values();
+            $selectedIds = $topDoctors->pluck('id')->all();
         }
 
-        $latestDoctorsQuery = $this->buildHomeDoctorQuery($patient, $speciality)
-            ->orderByDesc('users.id');
+        if ($topDoctors->count() < $limit) {
+            $otherDoctors = $this->getLatestHomeDoctors(
+                $patient,
+                $selectedIds,
+                $limit - $topDoctors->count()
+            );
 
-        if ($topDoctors->isNotEmpty()) {
-            $latestDoctorsQuery->whereNotIn('users.id', $topDoctors->pluck('id')->all());
+            $topDoctors = $topDoctors->concat($otherDoctors)->values();
         }
 
-        $latestDoctors = $latestDoctorsQuery
-            ->limit($limit - $topDoctors->count())
-            ->get();
-
-        return $topDoctors->concat($latestDoctors)->values();
+        return $topDoctors;
     }
 
 }
