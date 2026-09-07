@@ -58,7 +58,7 @@ class PatientRegistrationService
             'password' => $passwordRule,
             'phone' => ['required', 'digits:10', 'valid_indian_mobile', 'unique:patients,phone'],
             'state' => 'required|integer|exists:states,id',
-            'language_id' => 'required|integer|exists:language_master,id',
+            'language_id' => 'nullable|integer|exists:language_master,id',
             'country' => 'nullable|integer|exists:country_master,id',
             'fcm_token' => 'nullable|string',
             'affiliate_code' => 'nullable|string|exists:affiliates,code',
@@ -93,6 +93,10 @@ class PatientRegistrationService
     {
         if (! $request->filled('email')) {
             $request->merge(['email' => null]);
+        }
+
+        if (! $request->filled('language_id')) {
+            $request->merge(['language_id' => 1]);
         }
 
         $request->merge([
