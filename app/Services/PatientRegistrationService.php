@@ -54,6 +54,7 @@ class PatientRegistrationService
         return [
             'first_name' => 'required|string|max:255',
             'last_name' => 'nullable|string|max:255',
+            'dob' => 'nullable|date',
             'email' => $this->emailValidationRules(),
             'password' => $passwordRule,
             'phone' => ['required', 'digits:10', 'valid_indian_mobile', 'unique:patients,phone'],
@@ -70,6 +71,7 @@ class PatientRegistrationService
         return [
             'first_name' => 'required|string|max:255',
             'last_name' => 'nullable|string|max:255',
+            'dob' => 'nullable|date',
             'email' => $this->emailValidationRules(),
             'password' => $requirePasswordConfirmation ? 'required|string|confirmed' : 'required|string',
             'phone' => ['required', 'digits:10', 'valid_indian_mobile', 'unique:patients,phone'],
@@ -95,6 +97,10 @@ class PatientRegistrationService
             $request->merge(['email' => null]);
         }
 
+        if (! $request->filled('dob')) {
+            $request->merge(['dob' => null]);
+        }
+
         if (! $request->filled('language_id')) {
             $request->merge(['language_id' => 1]);
         }
@@ -112,6 +118,10 @@ class PatientRegistrationService
     {
         if (! $request->filled('email')) {
             $request->merge(['email' => null]);
+        }
+
+        if (! $request->filled('dob')) {
+            $request->merge(['dob' => null]);
         }
 
         $request->merge([
@@ -133,6 +143,7 @@ class PatientRegistrationService
         $patient = new Patients();
         $patient->name = $data['first_name'];
         $patient->lastname = $data['last_name'] ?? '';
+        $patient->dob = ! empty($data['dob']) ? $data['dob'] : null;
         $patient->email = ! empty($data['email']) ? $data['email'] : null;
         $patient->phone = $data['phone'];
         $patient->country = $data['country'] ?? $this->indiaCountryId();

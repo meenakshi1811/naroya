@@ -605,6 +605,18 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="dob">Date of Birth (optional)</label>
+                    <input
+                        type="date"
+                        id="dob"
+                        name="dob"
+                        value="{{ old('dob') }}"
+                        autocomplete="bday"
+                    >
+                    @error('dob')<div class="form-error">{{ $message }}</div>@enderror
+                </div>
+
+                <div class="form-group">
                     <label for="phone">Phone Number *</label>
                     <div class="phone-input-wrap">
                         <span class="phone-prefix">+91</span>

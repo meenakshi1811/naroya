@@ -22,6 +22,7 @@ class Patients extends Authenticatable
         'email',
         'password',
         'lastname',
+        'dob',
         'country',
         'state',
         'phone',
@@ -56,6 +57,7 @@ class Patients extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'dob' => 'date',
         'password' => 'hashed',
     ];
 

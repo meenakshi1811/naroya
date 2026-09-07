@@ -198,6 +198,7 @@ class PatientController extends Controller
                         'id' => $patient->id,
                         'name' => $patient->name,
                         'lastname' => $patient->lastname,
+                        'dob' => $patient->dob?->format('Y-m-d'),
                         'country' => $patient->country,
                         'state' => $patient->state,
                         'language_id' => $patient->language_id,
