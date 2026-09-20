@@ -12,6 +12,7 @@ use App\Models\Appointment;
 use App\Services\PatientRegistrationService;
 use App\Models\Favourite;
 use App\Models\GeneralSetting;
+use App\Models\BookCount;
 use App\Models\User;
 use App\Models\Rating;
 use Carbon\Carbon;
@@ -1613,6 +1614,61 @@ class PatientController extends Controller
         }
 
         return $topDoctors;
+    }
+
+    public function getFreeSlotsOffer(Request $request)
+    {
+        try {
+            $decodedData = decrypt($request->bearerToken());
+            $patientId = $decodedData['id'] ?? null;
+
+            if (! $patientId || ! Patients::whereKey($patientId)->exists()) {
+                return response()->json([
+                    'message' => 'Unauthorized request',
+                    'data' => [
+                        'error' => 'Unauthorized request',
+                    ],
+                ], 401);
+            }
+
+            $settings = GeneralSetting::whereIn('field_name', [
+                'app_user_offer_enabled',
+                'app_user_free_slots',
+            ])->pluck('field_value', 'field_name');
+
+            $offerEnabled = ($settings['app_user_offer_enabled'] ?? '0') === '1';
+            $totalFreeSlots = (int) ($settings['app_user_free_slots'] ?? 5);
+
+            if (! $offerEnabled) {
+                return response()->json([
+                    'message' => 'success',
+                    'data' => [
+                        'offer_enabled' => false,
+                        'free_slots_left' => 0,
+                    ],
+                ], 200);
+            }
+
+            $usedFreeSlots = BookCount::where('patient_id', $patientId)->count();
+            $freeSlotsLeft = max(0, $totalFreeSlots - $usedFreeSlots);
+
+            return response()->json([
+                'message' => 'success',
+                'data' => [
+                    'offer_enabled' => true,
+                    'free_slots_total' => $totalFreeSlots,
+                    'free_slots_used' => $usedFreeSlots,
+                    'free_slots_left' => $freeSlotsLeft,
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Unauthorized request',
+                'data' => [
+                    'error' => 'Unauthorized request',
+                ],
+            ], 401);
+        }
     }
 
 }
