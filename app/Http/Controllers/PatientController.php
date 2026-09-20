@@ -229,19 +229,21 @@ class PatientController extends Controller
                     ], 400);
                 }
 
-                // Handle all other validation errors
+                $firstError = collect($errors)->flatten()->first() ?? 'Please Provide Valid details!';
+
                 return response()->json([
-                    'message' => 'Please Provide Valid details!',
+                    'message' => $firstError,
                     'data' => [
-                        'error' => 'Please Provide Valid details!',
+                        'error' => $firstError,
+                        'errors' => $errors,
                     ]
                 ], 400);
             }
 
             return response()->json([
-                'message' => 'Please Provide Valid details!',
+                'message' => $e->getMessage() ?: 'Please Provide Valid details!',
                 'data' => [
-                    'error' => 'Please Provide Valid details!'
+                    'error' => $e->getMessage() ?: 'Please Provide Valid details!',
                 ],
             ], 400);
         }

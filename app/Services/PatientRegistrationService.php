@@ -24,15 +24,20 @@ class PatientRegistrationService
             ->value('id');
     }
 
-    public function emailValidationRules(): array
+    public function emailValidationRules(bool $restrictDomain = false): array
     {
-        return [
+        $rules = [
             'nullable',
             'string',
             'email',
             'unique:patients,email',
-            'valid_email_domain',
         ];
+
+        if ($restrictDomain) {
+            $rules[] = 'valid_email_domain';
+        }
+
+        return $rules;
     }
 
     public function emailValidationMessages(): array
@@ -55,7 +60,7 @@ class PatientRegistrationService
             'first_name' => 'required|string|max:255',
             'last_name' => 'nullable|string|max:255',
             'dob' => 'nullable|date',
-            'email' => $this->emailValidationRules(),
+            'email' => $this->emailValidationRules(false),
             'password' => $passwordRule,
             'phone' => ['required', 'digits:10', 'valid_indian_mobile', 'unique:patients,phone'],
             'state' => 'required|integer|exists:states,id',
@@ -72,7 +77,7 @@ class PatientRegistrationService
             'first_name' => 'required|string|max:255',
             'last_name' => 'nullable|string|max:255',
             'dob' => 'nullable|date',
-            'email' => $this->emailValidationRules(),
+            'email' => $this->emailValidationRules(true),
             'password' => $requirePasswordConfirmation ? 'required|string|confirmed' : 'required|string',
             'phone' => ['required', 'digits:10', 'valid_indian_mobile', 'unique:patients,phone'],
             'country' => 'nullable|integer|exists:country_master,id',
@@ -109,7 +114,10 @@ class PatientRegistrationService
             'phone' => $this->normalizePhone((string) $request->input('phone', '')),
         ]);
 
-        $validated = $request->validate($this->validationRules($requirePasswordConfirmation));
+        $validated = $request->validate(
+            $this->validationRules($requirePasswordConfirmation),
+            $this->emailValidationMessages()
+        );
 
         return $this->createPatient($validated, $affiliateId, $request);
     }

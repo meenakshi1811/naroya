@@ -55,7 +55,7 @@ class ReferralController extends Controller
 
         $validator = Validator::make(
             $request->all(),
-            ['email' => $this->registrationService->emailValidationRules()],
+            ['email' => $this->registrationService->emailValidationRules(true)],
             $this->registrationService->emailValidationMessages()
         );
 
