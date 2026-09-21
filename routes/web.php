@@ -71,7 +71,7 @@ Route::middleware(['auth:web'])->group(function () {
     Route::delete('/admin/doctor/delete/{id}', [App\Http\Controllers\Admin\DoctorController::class, 'destroy'])->name('admin.doctor.delete');
     Route::get('/admin/patient',[App\Http\Controllers\PatientController::class, 'listData'])->name('admin.patient');
     Route::post('/admin/update-payment', [App\Http\Controllers\Admin\DoctorController::class, 'updatePayment'])->name('admin.updatePayment');
-        Route::delete('/admin/delete-doctor/{id}', [App\Http\Controllers\Admin\DoctorController::class, 'deleteDoctor']);
+    Route::delete('/admin/delete-doctor/{id}', [App\Http\Controllers\Admin\DoctorController::class, 'destroy'])->name('admin.delete-doctor');
 Route::delete('/admin/delete-patient/{id}', [App\Http\Controllers\PatientController::class, 'deletePatient'])
     ->name('admin.patient.delete');
 

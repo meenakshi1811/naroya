@@ -265,17 +265,20 @@
     function confirmDelete(doctorId) {
         if (confirm('Are you sure you want to delete this doctor?')) {
             $.ajax({
-                url: "{{ url('admin/delete-doctor') }}/" + doctorId,
+                url: "{{ url('admin/doctor/delete') }}/" + doctorId,
                 type: 'DELETE',
                 data: {
                     _token: "{{ csrf_token() }}"
                 },
                 success: function(response) {
-                    alert('Doctor deleted successfully');
+                    alert(response.message || 'Doctor deleted successfully');
                     location.reload();
                 },
                 error: function(xhr) {
-                    alert('An error occurred while deleting the doctor.');
+                    var message = (xhr.responseJSON && xhr.responseJSON.message)
+                        ? xhr.responseJSON.message
+                        : 'An error occurred while deleting the doctor.';
+                    alert(message);
                 }
             });
         }
