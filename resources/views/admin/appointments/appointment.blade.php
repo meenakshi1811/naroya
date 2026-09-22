@@ -54,6 +54,7 @@
                                 <th class="text-center">Symptom</th>
                                 <th class="text-center">Symptom Detail</th>
                                 <th class="text-center">Accepted</th>
+                                <th class="text-center">Booking</th>
                                 <th class="text-center">Country</th>
                                 <th class="text-center">State</th>
                             </tr>

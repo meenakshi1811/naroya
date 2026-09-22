@@ -10,12 +10,19 @@
     <td class="text-center">{{ $data->varSympton }}</td>
     <td class="text-center">{!! $data->varSymptondesc !!}</td>
     <td class="text-center">{!! ($data->chrIsAccepted == 'Y')? 'Yes' : 'No' !!}</td>
+    <td class="text-center">
+        @if(!empty($data->is_freeslot))
+            <span class="badge text-bg-success">Free slot</span>
+        @else
+            <span class="badge text-bg-secondary">Paid</span>
+        @endif
+    </td>
     <td class="text-center">{!! !empty($data->country)? $data->country : '-' !!}</td>  
     <td class="text-center">{!! !empty($data->state)? $data->state : '-' !!}</td>  
 </tr>
 @endforeach
 @else
 <tr>
-    <td colspan="11" class="text-center">No records found</td>
+    <td colspan="12" class="text-center">No records found</td>
 </tr>
 @endif    

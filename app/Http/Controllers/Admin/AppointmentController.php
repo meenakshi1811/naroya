@@ -131,6 +131,7 @@ class AppointmentController extends Controller
                 'varSympton' => $item->varSympton,
                 'varSymptondesc' => $item->varSymptondesc,
                 'chrIsAccepted' => $item->chrIsAccepted,
+                'is_freeslot' => (int) ($item->is_freeslot ?? 0),
                 'country' => $item->country,
                 'state' => $item->state,
             ];

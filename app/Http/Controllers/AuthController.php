@@ -1045,6 +1045,10 @@ class AuthController extends Controller
                     $patient = Patients::find($request->patient);
                     if(isset($request->isAccept) && $request->isAccept == 'Y'){
                         $requestData->chrIsAccepted = $request->isAccept;
+
+                        if ((int) $requestData->is_freeslot === 1) {
+                            $requestData->charIsPaid = 'Y';
+                        }
                         
                         if (! empty($patient->fcm_token)) {
                             $notificationController = new NotificationController();
@@ -1063,6 +1067,14 @@ class AuthController extends Controller
                         $message = "Appointment Accepted Successfully";
                         
                     }else{
+                        $freeSlotRestored = false;
+                        $freeSlotsLeft = null;
+
+                        if ($requestData->chrIsRejected !== 'Y' && (int) $requestData->is_freeslot === 1) {
+                            $freeSlotsLeft = $this->restoreGlobalFreeSlot();
+                            $freeSlotRestored = true;
+                        }
+
                         $requestData->chrIsAccepted = 'N';
                         $requestData->chrIsRejected = 'Y';
                         
@@ -1083,7 +1095,12 @@ class AuthController extends Controller
                         $message = "Appointment Declined Successfully";
                     }
                     $requestData->varReason = $request->reason;
-                    $requestData->save();  
+                    $requestData->save();
+
+                    if (isset($freeSlotRestored) && $freeSlotRestored) {
+                        $requestData->free_slot_restored = true;
+                        $requestData->free_slots_left = $freeSlotsLeft;
+                    }
                 }
             }
             if(isset($requestData) && !empty($requestData->varReason)){
@@ -1430,6 +1447,29 @@ class AuthController extends Controller
                 'isCurrentworkOrg' => $entry['isCurrentworkOrg'] ?? 'N',
             ]);
         }
+    }
+
+    private function restoreGlobalFreeSlot(): int
+    {
+        return DB::transaction(function () {
+            $slotsSetting = GeneralSetting::where('field_name', 'app_user_free_slots')->lockForUpdate()->first();
+
+            if (! $slotsSetting) {
+                GeneralSetting::updateOrCreate(
+                    ['field_name' => 'app_user_free_slots'],
+                    ['field_value' => '1']
+                );
+
+                return 1;
+            }
+
+            $remaining = max(0, (int) $slotsSetting->field_value);
+            $updated = $remaining + 1;
+            $slotsSetting->field_value = (string) $updated;
+            $slotsSetting->save();
+
+            return $updated;
+        });
     }
 
 
