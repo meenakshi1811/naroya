@@ -104,6 +104,8 @@ Route::delete('/admin/delete-patient/{id}', [App\Http\Controllers\PatientControl
     //appointment Admin
     Route::get('/admin/appointment',[App\Http\Controllers\Admin\AppointmentController::class, 'index'])->name('admin.appointment');
     Route::get('/admin/appointments/filter', [App\Http\Controllers\Admin\AppointmentController::class, 'filter'])->name('appointments.filter');
+    Route::get('/admin/request-appointment',[App\Http\Controllers\Admin\AppointmentController::class, 'requestIndex'])->name('admin.appointment.requests');
+    Route::get('/admin/appointment-requests/filter', [App\Http\Controllers\Admin\AppointmentController::class, 'requestFilter'])->name('appointments.requests.filter');
     Route::get('/admin/specialities/list', [App\Http\Controllers\Admin\AppointmentController::class, 'getSpecialities'])->name('specialities.list');
     //Setting
     Route::get('/admin/settings',[App\Http\Controllers\Admin\SettingController::class, 'index'])->name('admin.settings');

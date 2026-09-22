@@ -30,8 +30,11 @@
                             <p>Speciality</p>
                         </a> </li>
                         <li class="nav-item"> <a href="{{ url('/admin/appointment') }}" class="nav-link {{ (Request::segment('2') == 'appointment') ? 'active': ''}}"> <i class="nav-icon bi bi-circle"></i>
-                            <p>Appointment</p>
-                        </a> </li> 
+                            <p>Confirm Appointment</p>
+                        </a> </li>
+                        <li class="nav-item"> <a href="{{ url('/admin/request-appointment') }}" class="nav-link {{ (Request::segment('2') == 'request-appointment') ? 'active': ''}}"> <i class="nav-icon bi bi-circle"></i>
+                            <p>Request Appointments</p>
+                        </a> </li>
                          <li class="nav-item"> <a href="{{ url('/admin/payment-log') }}" class="nav-link {{ (Request::segment('2') == 'payment-log') ? 'active': ''}}"> <i class="nav-icon bi bi-circle"></i>
                             <p>Payment-Logs</p>
                         </a> </li> 

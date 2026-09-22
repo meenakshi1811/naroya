@@ -9,18 +9,16 @@ use App\Models\Speciality;
 
 class AppointmentController extends Controller
 {
-
-
     public function index()
     {
-        // Load initial appointments for the view
-        $appointmentData = $this->getAppointments();
+        $appointmentData = $this->getAppointments(null, 'confirmed');
+
         return view('admin.appointments.appointment', compact('appointmentData'));
     }
 
     public function filter(Request $request)
     {
-        $appointmentData = $this->getAppointments($request);
+        $appointmentData = $this->getAppointments($request, 'confirmed');
 
         return response()->json([
             'rows' => view('admin.appointments.appointment_table', compact('appointmentData'))->render(),
@@ -28,71 +26,41 @@ class AppointmentController extends Controller
         ]);
     }
 
-    private function getAppointments(Request $request = null)
+    public function requestIndex()
     {
-        $query = Appointment::query()
-            ->where('appointment.charIsPaid', 'Y')
-            ->where('appointment.chrIsCanceled', 'N');
+        $appointmentData = $this->getAppointments(null, 'requests');
 
-        // Filters
-        if ($request) {
-            if ($request->date) {
-                $query->whereDate('appointment.varAppointment', $request->date);
-            }
+        return view('admin.appointments.request_appointment', compact('appointmentData'));
+    }
 
-            if ($request->doctor) {
-                $query->whereHas('doctor', function ($q) use ($request) {
-                    $q->whereRaw("CONCAT(name, ' ', surname) LIKE ?", ["%{$request->doctor}%"]);
-                });
-            }
+    public function requestFilter(Request $request)
+    {
+        $appointmentData = $this->getAppointments($request, 'requests');
 
-            if ($request->speciality) {
-                $query->whereHas('doctor.speciality', function ($q) use ($request) {
-                    $q->where('id', $request->speciality);
-                });
-            }
+        return response()->json([
+            'rows' => view('admin.appointments.appointment_request_table', compact('appointmentData'))->render(),
+            'pagination' => $appointmentData->links('pagination::bootstrap-5')->render(),
+        ]);
+    }
 
-            if ($request->country) {
-                $query->whereHas('doctor.countryRel', function ($q) use ($request) {
-                    $q->where('countryname', 'like', '%' . $request->country . '%');
-                });
-            }
+    private function getAppointments(?Request $request, string $listType)
+    {
+        $query = Appointment::query();
 
-            if ($request->state) {
-                $query->whereHas('doctor.stateRel', function ($q) use ($request) {
-                    $q->where('name', 'like', '%' . $request->state . '%');
-                });
-            }
-
-            if ($request->search) {
-                $search = $request->search;
-
-                $query->where(function ($q) use ($search) {
-                    $q->where('appointment.varAppointment', 'like', '%' . $search . '%')
-                        ->orWhere('appointment.startTime', 'like', '%' . $search . '%')
-                        ->orWhere('appointment.endTime', 'like', '%' . $search . '%')
-                        ->orWhere('appointment.varSympton', 'like', '%' . $search . '%')
-                        ->orWhere('appointment.varSymptondesc', 'like', '%' . $search . '%')
-                        ->orWhereHas('patient', function ($patientQuery) use ($search) {
-                            $patientQuery->where('name', 'like', '%' . $search . '%')
-                                ->orWhere('lastname', 'like', '%' . $search . '%');
-                        })
-                        ->orWhereHas('doctor', function ($doctorQuery) use ($search) {
-                            $doctorQuery->where('name', 'like', '%' . $search . '%')
-                                ->orWhere('surname', 'like', '%' . $search . '%');
-                        })
-                        ->orWhereHas('doctor.speciality', function ($specialityQuery) use ($search) {
-                            $specialityQuery->where('title', 'like', '%' . $search . '%');
-                        })
-                        ->orWhereHas('doctor.countryRel', function ($countryQuery) use ($search) {
-                            $countryQuery->where('countryname', 'like', '%' . $search . '%');
-                        })
-                        ->orWhereHas('doctor.stateRel', function ($stateQuery) use ($search) {
-                            $stateQuery->where('name', 'like', '%' . $search . '%');
-                        });
-                });
-            }
+        if ($listType === 'confirmed') {
+            $query->where('appointment.charIsPaid', 'Y')
+                ->where('appointment.chrIsCanceled', 'N');
+        } else {
+            $query->where('appointment.charIsPaid', 'N')
+                ->where('appointment.chrIsRejected', 'N')
+                ->where('appointment.chrIsCanceled', 'N');
         }
+
+        $this->applyAppointmentFilters($query, $request);
+
+        $filterRoute = $listType === 'confirmed'
+            ? route('appointments.filter')
+            : route('appointments.requests.filter');
 
         $appointments = $query
             ->leftJoin('patients', 'appointment.patient_id', '=', 'patients.id')
@@ -113,7 +81,7 @@ class AppointmentController extends Controller
             ->orderBy('appointment.varAppointment', 'desc')
             ->orderBy('appointment.startTime', 'asc')
             ->paginate(10)
-            ->withPath(route('appointments.filter'))
+            ->withPath($filterRoute)
             ->appends($request?->query() ?? []);
 
         $appointments->getCollection()->transform(function ($item) {
@@ -131,6 +99,7 @@ class AppointmentController extends Controller
                 'varSympton' => $item->varSympton,
                 'varSymptondesc' => $item->varSymptondesc,
                 'chrIsAccepted' => $item->chrIsAccepted,
+                'charIsPaid' => $item->charIsPaid,
                 'is_freeslot' => (int) ($item->is_freeslot ?? 0),
                 'country' => $item->country,
                 'state' => $item->state,
@@ -140,7 +109,70 @@ class AppointmentController extends Controller
         return $appointments;
     }
 
-  
+    private function applyAppointmentFilters($query, ?Request $request): void
+    {
+        if (! $request) {
+            return;
+        }
+
+        if ($request->date) {
+            $query->whereDate('appointment.varAppointment', $request->date);
+        }
+
+        if ($request->doctor) {
+            $query->whereHas('doctor', function ($q) use ($request) {
+                $q->whereRaw("CONCAT(name, ' ', surname) LIKE ?", ["%{$request->doctor}%"]);
+            });
+        }
+
+        if ($request->speciality) {
+            $query->whereHas('doctor.speciality', function ($q) use ($request) {
+                $q->where('id', $request->speciality);
+            });
+        }
+
+        if ($request->country) {
+            $query->whereHas('doctor.countryRel', function ($q) use ($request) {
+                $q->where('countryname', 'like', '%' . $request->country . '%');
+            });
+        }
+
+        if ($request->state) {
+            $query->whereHas('doctor.stateRel', function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->state . '%');
+            });
+        }
+
+        if ($request->search) {
+            $search = $request->search;
+
+            $query->where(function ($q) use ($search) {
+                $q->where('appointment.varAppointment', 'like', '%' . $search . '%')
+                    ->orWhere('appointment.startTime', 'like', '%' . $search . '%')
+                    ->orWhere('appointment.endTime', 'like', '%' . $search . '%')
+                    ->orWhere('appointment.varSympton', 'like', '%' . $search . '%')
+                    ->orWhere('appointment.varSymptondesc', 'like', '%' . $search . '%')
+                    ->orWhereHas('patient', function ($patientQuery) use ($search) {
+                        $patientQuery->where('name', 'like', '%' . $search . '%')
+                            ->orWhere('lastname', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('doctor', function ($doctorQuery) use ($search) {
+                        $doctorQuery->where('name', 'like', '%' . $search . '%')
+                            ->orWhere('surname', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('doctor.speciality', function ($specialityQuery) use ($search) {
+                        $specialityQuery->where('title', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('doctor.countryRel', function ($countryQuery) use ($search) {
+                        $countryQuery->where('countryname', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('doctor.stateRel', function ($stateQuery) use ($search) {
+                        $stateQuery->where('name', 'like', '%' . $search . '%');
+                    });
+            });
+        }
+    }
+
     public function getSpecialities()
     {
         $specialities = Speciality::all();
@@ -148,7 +180,7 @@ class AppointmentController extends Controller
         foreach ($specialities as $speciality) {
             $options .= '<option value="' . $speciality->id . '">' . $speciality->title . '</option>';
         }
+
         return response()->json($options);
     }
-
 }

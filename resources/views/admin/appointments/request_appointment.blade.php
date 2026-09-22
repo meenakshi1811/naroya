@@ -10,8 +10,9 @@
     <div class="col-md-12">
         <div class="card mb-4">
             <div class="card-header">
-                <h2 class="card-title">Confirm Appointment</h2>
-            </div> <!-- /.card-header -->
+                <h2 class="card-title">Request Appointments</h2>
+                <p class="text-muted small mb-0">Unpaid appointments that are not declined or cancelled.</p>
+            </div>
 
             <div class="card-body">
                 <div class="row mb-3">
@@ -24,7 +25,6 @@
                     <div class="col-md-3">
                         <select id="filter_speciality" class="form-select">
                             <option value="">Select Speciality</option>
-                            <!-- Populate with specialities -->
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -55,12 +55,13 @@
                                 <th class="text-center">Symptom Detail</th>
                                 <th class="text-center">Accepted</th>
                                 <th class="text-center">Booking</th>
+                                <th class="text-center">Payment</th>
                                 <th class="text-center">Country</th>
                                 <th class="text-center">State</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @include('admin.appointments.appointment_table')
+                            @include('admin.appointments.appointment_request_table')
                         </tbody>
                     </table>
                 </div>
@@ -68,15 +69,14 @@
                 <div id="appointment_pagination" class="mt-3">
                     {{ $appointmentData->links('pagination::bootstrap-5') }}
                 </div>
-            </div> <!-- /.card-body -->
-        </div> <!-- /.card -->
-    </div> <!-- /.col -->
+            </div>
+        </div>
+    </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function() {
-    // Load specialities for the dropdown
     function loadSpecialities() {
         $.ajax({
             url: "{{ route('specialities.list') }}",
@@ -100,7 +100,7 @@ $(document).ready(function() {
         };
     }
 
-    function loadAppointments(url = "{{ route('appointments.filter') }}") {
+    function loadAppointments(url = "{{ route('appointments.requests.filter') }}") {
         $.ajax({
             url: url,
             method: "GET",
