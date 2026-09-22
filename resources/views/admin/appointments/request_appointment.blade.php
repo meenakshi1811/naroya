@@ -9,8 +9,8 @@
 <div class="row">
     <div class="col-md-12">
         <div class="card mb-4">
-            <div class="card-header">
-                <h2 class="card-title">Request Appointments</h2>
+            <div class="card-header d-flex flex-column align-items-start">
+                <h2 class="card-title mb-1">Request Appointments</h2>
                 <p class="text-muted small mb-0">Unpaid appointments that are not declined or cancelled.</p>
             </div>
 
