@@ -12,7 +12,6 @@ use App\Models\Appointment;
 use App\Services\PatientRegistrationService;
 use App\Models\Favourite;
 use App\Models\GeneralSetting;
-use App\Models\BookCount;
 use App\Models\User;
 use App\Models\Rating;
 use Carbon\Carbon;
@@ -1204,7 +1203,8 @@ class PatientController extends Controller
                             'time_start' => 'required|date_format:H:i',
                             'time_end' => 'required|date_format:H:i',
                             'sympton' => 'required|string',
-                            'symton_desc' => 'required|string'
+                            'symton_desc' => 'required|string',
+                            'is_freeslot' => 'nullable|in:0,1',
                         ]);
 
 
@@ -1241,20 +1241,35 @@ class PatientController extends Controller
 
 
                         $doctor = User::find($request->doctor); // doctor id maps to users.id
+                        $requestedFreeSlot = in_array($request->input('is_freeslot'), [1, '1'], true);
+                        $freeSlotApplied = false;
+                        $freeSlotsLeftAfterBooking = null;
 
-                        // Create the appointment
-                        $appointment = new Appointment();
-                        $appointment->patient_id = $patient->id; // Make sure you pass patient_id in request
-                        $appointment->dr_id = $request->doctor;
-                        $appointment->amount = $doctor->varFees ?? null;
-                        $appointment->varAppointment = $request->date; // Modify based on your needs
-                        $appointment->startTime = $request->time_start;
-                        $appointment->endTime = $request->time_end;
-                        $appointment->varSympton = $request->sympton;
-                        $appointment->varSymptondesc = $request->symton_desc;
-                        // $appointment->charIsPaid = $request->paid;
-                        $appointment->save();
+                        if ($requestedFreeSlot) {
+                            $freeSlotResult = DB::transaction(function () use ($patient, $request, $doctor) {
+                                $consumeResult = $this->tryConsumeGlobalFreeSlot();
+                                $appointment = $this->makeAppointmentFromRequest(
+                                    $patient,
+                                    $request,
+                                    $doctor,
+                                    $consumeResult['consumed']
+                                );
+                                $appointment->save();
 
+                                return [
+                                    'appointment' => $appointment,
+                                    'free_slot_applied' => $consumeResult['consumed'],
+                                    'free_slots_left' => $consumeResult['free_slots_left'],
+                                ];
+                            });
+
+                            $appointment = $freeSlotResult['appointment'];
+                            $freeSlotApplied = $freeSlotResult['free_slot_applied'];
+                            $freeSlotsLeftAfterBooking = $freeSlotResult['free_slots_left'];
+                        } else {
+                            $appointment = $this->makeAppointmentFromRequest($patient, $request, $doctor, false);
+                            $appointment->save();
+                        }
 
                         if ($doctor && $doctor->fcm_token) {
                             $notificationController = new NotificationController();
@@ -1271,11 +1286,20 @@ class PatientController extends Controller
                             );
                         }
                         
+                        $responseData = [
+                            'appointment' => $appointment,
+                        ];
+
+                        if ($requestedFreeSlot) {
+                            $offerStatus = $this->globalFreeSlotOfferStatus();
+                            $responseData['offer_enabled'] = $offerStatus['offer_enabled'];
+                            $responseData['free_slot_applied'] = $freeSlotApplied;
+                            $responseData['free_slots_left'] = $freeSlotsLeftAfterBooking;
+                        }
+
                         return response()->json([
                             'message' => 'Appointment request sent!',
-                            'data' => [
-                                'appointment' => $appointment
-                            ]
+                            'data' => $responseData,
                         ], 200);
                     }
                 }
@@ -1631,15 +1655,9 @@ class PatientController extends Controller
                 ], 401);
             }
 
-            $settings = GeneralSetting::whereIn('field_name', [
-                'app_user_offer_enabled',
-                'app_user_free_slots',
-            ])->pluck('field_value', 'field_name');
+            $offer = $this->globalFreeSlotOfferStatus();
 
-            $offerEnabled = ($settings['app_user_offer_enabled'] ?? '0') === '1';
-            $totalFreeSlots = (int) ($settings['app_user_free_slots'] ?? 5);
-
-            if (! $offerEnabled) {
+            if (! $offer['offer_enabled']) {
                 return response()->json([
                     'message' => 'success',
                     'data' => [
@@ -1649,16 +1667,11 @@ class PatientController extends Controller
                 ], 200);
             }
 
-            $usedFreeSlots = BookCount::where('patient_id', $patientId)->count();
-            $freeSlotsLeft = max(0, $totalFreeSlots - $usedFreeSlots);
-
             return response()->json([
                 'message' => 'success',
                 'data' => [
                     'offer_enabled' => true,
-                    'free_slots_total' => $totalFreeSlots,
-                    'free_slots_used' => $usedFreeSlots,
-                    'free_slots_left' => $freeSlotsLeft,
+                    'free_slots_left' => $offer['free_slots_left'],
                 ],
             ], 200);
         } catch (\Exception $e) {
@@ -1669,6 +1682,67 @@ class PatientController extends Controller
                 ],
             ], 401);
         }
+    }
+
+    private function globalFreeSlotOfferStatus(): array
+    {
+        $settings = GeneralSetting::whereIn('field_name', [
+            'app_user_offer_enabled',
+            'app_user_free_slots',
+        ])->pluck('field_value', 'field_name');
+
+        $offerEnabled = ($settings['app_user_offer_enabled'] ?? '0') === '1';
+        $freeSlotsLeft = max(0, (int) ($settings['app_user_free_slots'] ?? 0));
+
+        if (! $offerEnabled) {
+            $freeSlotsLeft = 0;
+        }
+
+        return [
+            'offer_enabled' => $offerEnabled,
+            'free_slots_left' => $freeSlotsLeft,
+        ];
+    }
+
+    private function tryConsumeGlobalFreeSlot(): array
+    {
+        $enabledSetting = GeneralSetting::where('field_name', 'app_user_offer_enabled')->lockForUpdate()->first();
+        $slotsSetting = GeneralSetting::where('field_name', 'app_user_free_slots')->lockForUpdate()->first();
+
+        $offerEnabled = ($enabledSetting->field_value ?? '0') === '1';
+        $remaining = max(0, (int) ($slotsSetting->field_value ?? 0));
+
+        // Offer disabled or pool empty: same fallback — book as a normal (non-free) appointment.
+        if (! $offerEnabled || $remaining < 1) {
+            return [
+                'consumed' => false,
+                'free_slots_left' => 0,
+            ];
+        }
+
+        $slotsSetting->field_value = (string) ($remaining - 1);
+        $slotsSetting->save();
+
+        return [
+            'consumed' => true,
+            'free_slots_left' => $remaining - 1,
+        ];
+    }
+
+    private function makeAppointmentFromRequest(Patients $patient, Request $request, ?User $doctor, bool $isFreeSlot): Appointment
+    {
+        $appointment = new Appointment();
+        $appointment->patient_id = $patient->id;
+        $appointment->dr_id = $request->doctor;
+        $appointment->amount = $doctor->varFees ?? null;
+        $appointment->is_freeslot = $isFreeSlot ? 1 : 0;
+        $appointment->varAppointment = $request->date;
+        $appointment->startTime = $request->time_start;
+        $appointment->endTime = $request->time_end;
+        $appointment->varSympton = $request->sympton;
+        $appointment->varSymptondesc = $request->symton_desc;
+
+        return $appointment;
     }
 
 }
