@@ -45,6 +45,11 @@
                             <td>N/A</td>
                             @endif
                             <td>
+                                <button
+                                    type="button"
+                                    class="btn btn-warning mr-1"
+                                    onclick="openResetPasswordModal({{ $data->id }}, @json(trim($data->name . ' ' . ($data->lastname ?? ''))), @json(route('admin.patient.reset-password', $data->id)))"
+                                >Reset Password</button>
                                 <button type="button" class="btn btn-danger" onclick="confirmDeletePatient({{ $data->id }})">Delete</button>
                             </td>
                         </tr>
@@ -105,7 +110,7 @@ function confirmDeletePatient(patientId) {
             "lengthChange": true, // Allow changing the number of rows per page
             "autoWidth": false, // Disable automatic column width calculation
             "columnDefs": [{
-                "targets": [0], // Disable sorting for the ID column (optional)
+                "targets": [0, 6],
                 "orderable": false
             }]
         });
@@ -115,4 +120,5 @@ function confirmDeletePatient(patientId) {
 <script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+@include('admin.partials.reset-password-modal')
 @endsection

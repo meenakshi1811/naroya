@@ -121,6 +121,11 @@
                                         onclick='openModal(@json($modalData))'
                                     >View Details</button>
                                     <a href="{{ route('admin.doctor.activities', $data->id) }}" class="btn btn-outline-secondary">Activity</a>
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-warning"
+                                        onclick="openResetPasswordModal({{ $data->id }}, @json(trim($data->name . ' ' . ($data->surname ?? ''))), @json(route('admin.doctor.reset-password', $data->id)))"
+                                    >Reset Password</button>
                                     <button type="button" class="btn btn-outline-danger" onclick="deleteDoctor({{ $data->id }})">Delete</button>
                                 </div>
                             </td>
@@ -453,4 +458,5 @@ $('#updatePaymentBtn').on('click', function() {
 <script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+@include('admin.partials.reset-password-modal')
 @endsection

@@ -69,7 +69,9 @@ Route::middleware(['auth:web'])->group(function () {
     Route::get('/admin/pending-doctor',[App\Http\Controllers\Admin\DoctorController::class, 'PendingList'])->name('admin.doctor');
     Route::post('/admin/doctor',[App\Http\Controllers\Admin\DoctorController::class, 'updateData'])->name('admin.approval');
     Route::delete('/admin/doctor/delete/{id}', [App\Http\Controllers\Admin\DoctorController::class, 'destroy'])->name('admin.doctor.delete');
+    Route::post('/admin/doctor/{id}/reset-password', [App\Http\Controllers\Admin\UserPasswordController::class, 'resetDoctor'])->name('admin.doctor.reset-password');
     Route::get('/admin/patient',[App\Http\Controllers\PatientController::class, 'listData'])->name('admin.patient');
+    Route::post('/admin/patient/{id}/reset-password', [App\Http\Controllers\Admin\UserPasswordController::class, 'resetPatient'])->name('admin.patient.reset-password');
     Route::post('/admin/update-payment', [App\Http\Controllers\Admin\DoctorController::class, 'updatePayment'])->name('admin.updatePayment');
     Route::delete('/admin/delete-doctor/{id}', [App\Http\Controllers\Admin\DoctorController::class, 'destroy'])->name('admin.delete-doctor');
 Route::delete('/admin/delete-patient/{id}', [App\Http\Controllers\PatientController::class, 'deletePatient'])
