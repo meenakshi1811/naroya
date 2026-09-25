@@ -124,7 +124,7 @@
                                     <button
                                         type="button"
                                         class="btn btn-outline-warning"
-                                        onclick="openResetPasswordModal({{ $data->id }}, @json(trim($data->name . ' ' . ($data->surname ?? ''))), @json(route('admin.doctor.reset-password', $data->id)))"
+                                        onclick='openResetPasswordModal({{ $data->id }}, @json(trim($data->name . ' ' . ($data->surname ?? ''))), @json(route('admin.doctor.reset-password', $data->id)))'
                                     >Reset Password</button>
                                     <button type="button" class="btn btn-outline-danger" onclick="deleteDoctor({{ $data->id }})">Delete</button>
                                 </div>

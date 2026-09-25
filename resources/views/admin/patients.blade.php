@@ -48,7 +48,7 @@
                                 <button
                                     type="button"
                                     class="btn btn-warning mr-1"
-                                    onclick="openResetPasswordModal({{ $data->id }}, @json(trim($data->name . ' ' . ($data->lastname ?? ''))), @json(route('admin.patient.reset-password', $data->id)))"
+                                    onclick='openResetPasswordModal({{ $data->id }}, @json(trim($data->name . ' ' . ($data->lastname ?? ''))), @json(route('admin.patient.reset-password', $data->id)))'
                                 >Reset Password</button>
                                 <button type="button" class="btn btn-danger" onclick="confirmDeletePatient({{ $data->id }})">Delete</button>
                             </td>
