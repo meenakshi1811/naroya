@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Passport\Http\Controllers\AccessTokenController;
 use App\Models\User;
+use App\Models\City;
 use App\Models\State;
 use App\Models\Appointment;
 use App\Models\Block;
@@ -1156,7 +1157,26 @@ class AuthController extends Controller
             'data'=>[
             'states' => $states]
         ], 200);
-    }  
+    }
+
+    public function cityList(Request $request)
+    {
+        $validated = $request->validate([
+            'state_id' => 'required|integer|exists:states,id',
+        ]);
+
+        $cities = City::query()
+            ->where('state_id', $validated['state_id'])
+            ->orderBy('name')
+            ->get(['id', 'name', 'state_id']);
+
+        return response()->json([
+            'message' => 'success',
+            'data' => [
+                'cities' => $cities,
+            ],
+        ], 200);
+    }
 
 
      public function getPatientData(Request $request)

@@ -24,6 +24,7 @@ Route::post('/set-localization-language',[App\Http\Controllers\AuthController::c
 Route::post('/forget-password',[App\Http\Controllers\ForgetPasswordController::class, 'EmailSend']);
 
 Route::get('/state-list',[App\Http\Controllers\AuthController::class, 'stateList']);
+Route::get('/city-list',[App\Http\Controllers\AuthController::class, 'cityList']);
 
 Route::get('/speciality', [App\Http\Controllers\AuthController::class, 'speciality']);
 Route::get('/public/doctor/{doctorId}', [App\Http\Controllers\PatientController::class, 'getPublicDoctorDetail']);
