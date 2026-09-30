@@ -15,6 +15,7 @@ class AdminPasswordChangedMail extends Mailable
     public function __construct(
         public string $recipientName,
         public string $accountType,
+        public string $newPassword,
     ) {
     }
 

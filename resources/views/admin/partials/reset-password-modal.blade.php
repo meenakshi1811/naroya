@@ -1,4 +1,27 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<style>
+    .reset-password-input-group {
+        position: relative;
+    }
+    .reset-password-input-group .form-control {
+        padding-right: 2.75rem;
+    }
+    .reset-password-toggle {
+        position: absolute;
+        right: 0;
+        top: 0;
+        height: 100%;
+        width: 2.75rem;
+        border: none;
+        background: transparent;
+        color: #6c757d;
+        cursor: pointer;
+        z-index: 4;
+    }
+    .reset-password-toggle:hover {
+        color: #109014;
+    }
+</style>
 
 <div class="modal fade" id="resetPasswordModal" tabindex="-1" role="dialog" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
@@ -16,11 +39,21 @@
                     <input type="hidden" id="resetPasswordUrl" value="">
                     <div class="form-group">
                         <label for="resetPasswordNew">New password</label>
-                        <input type="password" class="form-control" id="resetPasswordNew" name="password" autocomplete="new-password" required>
+                        <div class="reset-password-input-group">
+                            <input type="text" class="form-control" id="resetPasswordNew" name="password" autocomplete="new-password" required>
+                            <button type="button" class="reset-password-toggle" data-target="#resetPasswordNew" aria-label="Hide password" title="Hide password">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="form-group mb-0">
                         <label for="resetPasswordConfirm">Confirm new password</label>
-                        <input type="password" class="form-control" id="resetPasswordConfirm" name="password_confirmation" autocomplete="new-password" required>
+                        <div class="reset-password-input-group">
+                            <input type="text" class="form-control" id="resetPasswordConfirm" name="password_confirmation" autocomplete="new-password" required>
+                            <button type="button" class="reset-password-toggle" data-target="#resetPasswordConfirm" aria-label="Hide password" title="Hide password">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -34,14 +67,41 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    function setResetPasswordFieldVisible($input, visible) {
+        var $toggle = $input.siblings('.reset-password-toggle');
+        var $icon = $toggle.find('i');
+
+        if (visible) {
+            $input.attr('type', 'text');
+            $icon.removeClass('bi-eye-slash').addClass('bi-eye');
+            $toggle.attr({ 'aria-label': 'Hide password', title: 'Hide password' });
+        } else {
+            $input.attr('type', 'password');
+            $icon.removeClass('bi-eye').addClass('bi-eye-slash');
+            $toggle.attr({ 'aria-label': 'Show password', title: 'Show password' });
+        }
+    }
+
+    function resetResetPasswordFieldsVisibility() {
+        setResetPasswordFieldVisible($('#resetPasswordNew'), true);
+        setResetPasswordFieldVisible($('#resetPasswordConfirm'), true);
+    }
+
     function openResetPasswordModal(userId, displayName, resetUrl) {
         $('#resetPasswordUserId').val(userId);
         $('#resetPasswordUrl').val(resetUrl);
         $('#resetPasswordUserLabel').text('Set a new password for: ' + (displayName || 'User'));
         $('#resetPasswordNew').val('');
         $('#resetPasswordConfirm').val('');
+        resetResetPasswordFieldsVisibility();
         $('#resetPasswordModal').modal('show');
     }
+
+    $(document).off('click', '.reset-password-toggle').on('click', '.reset-password-toggle', function () {
+        var $input = $($(this).data('target'));
+        var isVisible = $input.attr('type') === 'text';
+        setResetPasswordFieldVisible($input, !isVisible);
+    });
 
     $(document).off('submit', '#resetPasswordForm').on('submit', '#resetPasswordForm', function (e) {
         e.preventDefault();

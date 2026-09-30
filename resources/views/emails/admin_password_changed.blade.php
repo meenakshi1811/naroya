@@ -9,6 +9,7 @@
         .header img { max-width: 150px; }
         .content { padding: 20px; line-height: 1.6; }
         .content h2 { color: #109014; margin-top: 0; }
+        .password-box { background: #f8f9fb; border: 1px solid #e7ebf2; border-radius: 8px; padding: 12px 16px; font-family: Consolas, Monaco, monospace; font-size: 16px; letter-spacing: 0.5px; margin: 16px 0; word-break: break-all; }
         .footer { text-align: center; padding: 20px; background-color: #f8f9fa; font-size: 12px; color: #777; }
     </style>
 </head>
@@ -21,6 +22,9 @@
             <h2>Password changed</h2>
             <p>Hello {{ $recipientName }},</p>
             <p>Your {{ $accountType }} account password on {{ config('app.name') }} was changed by an administrator.</p>
+            <p>Your new password is:</p>
+            <div class="password-box">{{ $newPassword }}</div>
+            <p>Please sign in with this password and change it after logging in if you prefer.</p>
             <p>If you did not expect this change, please contact support immediately.</p>
             <p>Thank you,<br>{{ config('app.name') }}</p>
         </div>

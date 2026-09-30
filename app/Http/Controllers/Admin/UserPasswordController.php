@@ -40,10 +40,12 @@ class UserPasswordController extends Controller
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
-        $user->password = Hash::make($validated['password']);
+        $plainPassword = $validated['password'];
+
+        $user->password = Hash::make($plainPassword);
         $user->save();
 
-        $emailSent = $this->notifyPasswordChanged($user, $accountType, $displayName($user));
+        $emailSent = $this->notifyPasswordChanged($user, $accountType, $displayName($user), $plainPassword);
 
         $message = $emailSent
             ? 'Password updated successfully. A notification email was sent to the user.'
@@ -56,7 +58,7 @@ class UserPasswordController extends Controller
         ]);
     }
 
-    private function notifyPasswordChanged($user, string $accountType, string $recipientName): bool
+    private function notifyPasswordChanged($user, string $accountType, string $recipientName, string $newPassword): bool
     {
         $email = trim((string) ($user->email ?? ''));
 
@@ -66,7 +68,13 @@ class UserPasswordController extends Controller
 
         $name = $recipientName !== '' ? $recipientName : 'there';
 
-        Mail::to($email)->send(new AdminPasswordChangedMail($name, $accountType));
+        try {
+            Mail::to($email)->send(new AdminPasswordChangedMail($name, $accountType, $newPassword));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return false;
+        }
 
         return true;
     }
