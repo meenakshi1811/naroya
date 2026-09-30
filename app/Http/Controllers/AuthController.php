@@ -64,6 +64,64 @@ class AuthController extends Controller
 
         return false;
     }
+
+    private function validateDoctorCityId(Request $request, ?User $user = null): ?\Illuminate\Http\JsonResponse
+    {
+        if (! $request->filled('city_id')) {
+            return null;
+        }
+
+        $request->validate([
+            'city_id' => 'required|integer|exists:cities,id',
+        ]);
+
+        $city = City::query()->find((int) $request->city_id);
+        $stateId = $request->filled('state')
+            ? (int) $request->state
+            : ($user ? (int) $user->state : null);
+
+        if ($stateId && (int) $city->state_id !== $stateId) {
+            return response()->json([
+                'message' => 'Please Provide Valid details!',
+                'data' => [
+                    'error' => 'City does not belong to the selected state.',
+                ],
+            ], 400);
+        }
+
+        return null;
+    }
+
+    private function resolveCityIdFromRequest(Request $request): ?int
+    {
+        if (! $request->filled('city_id')) {
+            return null;
+        }
+
+        return (int) $request->city_id;
+    }
+
+    private function syncDoctorCityAfterStateChange(User $user, Request $request): void
+    {
+        if ($request->has('city_id') || ! $request->has('state') || ! $user->city_id) {
+            return;
+        }
+
+        $city = City::query()->find((int) $user->city_id);
+        if ($city && (int) $city->state_id !== (int) $request->state) {
+            $user->city_id = null;
+        }
+    }
+
+    private function appendDoctorCityToProfile(User $user): User
+    {
+        $user->loadMissing('cityRel:id,name,state_id');
+        $user->city_name = $user->cityRel?->name;
+        $user->makeHidden(['cityRel']);
+
+        return $user;
+    }
+
     public function login(Request $request)
     {
         try {
@@ -369,6 +427,7 @@ class AuthController extends Controller
             'users.category',
             'users.country',
             'users.state',
+            'users.city_id',
             'users.email',
             'users.phoneNumber',
             'users.gmc_registration_no',
@@ -390,9 +449,11 @@ class AuthController extends Controller
             'users.bio_handle',
             'users.language_ids',
             'users.localization_id',
-            'language_master.language_name as localization_language_name'
+            'language_master.language_name as localization_language_name',
+            'cities.name as city_name'
         )
             ->leftJoin('language_master', 'users.localization_id', '=', 'language_master.id')
+            ->leftJoin('cities', 'users.city_id', '=', 'cities.id')
             ->where('users.id', $userId)
             ->first();
         $current_work_org = $this->getCurrentWorkOrg($userId, true);
@@ -735,8 +796,14 @@ class AuthController extends Controller
                 'language_ids' => 'nullable',
                 'bio_handle' => 'nullable|string',
                 'phoneNumber' => 'nullable|string|max:30',
+                'city_id' => 'nullable|integer|exists:cities,id',
                 // 'fcm_token' => 'required|string',
             ]);
+
+            $cityValidationResponse = $this->validateDoctorCityId($request);
+            if ($cityValidationResponse) {
+                return $cityValidationResponse;
+            }
 
             $languageIds = [];
 
@@ -781,6 +848,7 @@ class AuthController extends Controller
             $user->category = $request->category;
             $user->country = $request->country;
             $user->state = $request->state;
+            $user->city_id = $this->resolveCityIdFromRequest($request);
             $user->email = $request->email;
             $user->phoneNumber = $this->getPhoneNumberFromRequest($request);
             $user->password = bcrypt($request->password);
@@ -831,6 +899,8 @@ class AuthController extends Controller
              if (!empty($user)) {
                 $user->isPaymentFlowRegistered = ($user->isPaymentFlowRegistered == 0)? 'false':'true';
             }
+
+            $this->appendDoctorCityToProfile($user);
 
             // Send push notification using NotificationController
             if(isset($request->fcm_token) && !empty($request->fcm_token)){
@@ -891,14 +961,36 @@ class AuthController extends Controller
 
     public function update(Request $request){
         $userId = $request->user()->id;
-        if(isset($userId) && !empty($userId)){      
+        if(isset($userId) && !empty($userId)){
             $user = User::find($userId);
+            if (! $user) {
+                return response()->json([
+                    'message' => 'Invalid details!',
+                    'data' => [
+                        'error' => 'Invalid details!',
+                    ],
+                ], 400);
+            }
+
+            $request->validate([
+                'city_id' => 'nullable|integer|exists:cities,id',
+            ]);
+
+            $cityValidationResponse = $this->validateDoctorCityId($request, $user);
+            if ($cityValidationResponse) {
+                return $cityValidationResponse;
+            }
+
             $user->name = $request->first_name;
             $user->surname = $request->surname;
             $user->bio_handle = $request->bio_handle;
             $user->category = $request->category;
             $user->country = $request->country;
             $user->state = $request->state;
+            if ($request->has('city_id')) {
+                $user->city_id = $this->resolveCityIdFromRequest($request);
+            }
+            $this->syncDoctorCityAfterStateChange($user, $request);
             if ($this->requestHasPhoneNumber($request)) {
                 $user->phoneNumber = $this->getPhoneNumberFromRequest($request);
             }
@@ -993,6 +1085,7 @@ class AuthController extends Controller
                 $user->varProfile = config('app.url').'api/docterprofile/'.$user->varProfile;
             }
 
+            $this->appendDoctorCityToProfile($user);
 
             return response()->json([
                 'message' => 'Successfully Updated user!',

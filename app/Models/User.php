@@ -29,6 +29,7 @@ class User extends Authenticatable
         'category',
         'country',
         'state',
+        'city_id',
         'localization_id',
         'gmc_registration_no',
         'ind_registration_no',
@@ -154,6 +155,11 @@ class User extends Authenticatable
     public function stateRel()
     {
         return $this->belongsTo(State::class, 'state');
+    }
+
+    public function cityRel()
+    {
+        return $this->belongsTo(City::class, 'city_id');
     }
 
     public function paymentLogs()

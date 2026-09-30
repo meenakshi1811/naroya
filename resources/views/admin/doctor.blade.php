@@ -68,6 +68,7 @@
                                 'category' => optional($data->categoryRel)->title ?? '-',
                                 'country' => optional($data->countryRel)->countryname ?? '-',
                                 'state' => optional($data->stateRel)->name ?? ($data->state ?? '-'),
+                                'city' => optional($data->cityRel)->name ?? '-',
                                 'languages' => $data->language_names ?? [],
                                 'gmc_registration_no' => $data->gmc_registration_no,
                                 'indemnity_insurance_provider' => $data->indemnity_insurance_provider,
@@ -159,6 +160,7 @@
                     <div><div class="detail-label">Surname</div><div class="detail-value" id="modalSurname">-</div></div>
                     <div><div class="detail-label">Category</div><div class="detail-value" id="modalCategory">-</div></div>
                     <div><div class="detail-label">State</div><div class="detail-value" id="modalState">-</div></div>
+                    <div><div class="detail-label">City</div><div class="detail-value" id="modalCity">-</div></div>
                     <div><div class="detail-label">Languages</div><div class="detail-value" id="modalLanguages">-</div></div>
                     <div><div class="detail-label">GMC Registration No</div><div class="detail-value" id="modalGMCRegistrationNo">-</div></div>
                     <div><div class="detail-label">Indemnity Insurance Provider</div><div class="detail-value" id="modalIndemnityInsuranceProvider">-</div></div>
@@ -279,6 +281,7 @@
         document.getElementById('modalSurname').innerText = data.surname || '-';
         document.getElementById('modalCategory').innerText = data.category || '-';
         document.getElementById('modalState').innerText = data.state || '-';
+        document.getElementById('modalCity').innerText = data.city || '-';
         renderBadgeList('modalLanguages', data.languages || []);
         document.getElementById('modalGMCRegistrationNo').innerText = data.gmc_registration_no || '-';
         document.getElementById('modalIndemnityInsuranceProvider').innerText = data.indemnity_insurance_provider || '-';
