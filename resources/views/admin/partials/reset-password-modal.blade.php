@@ -28,7 +28,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="resetPasswordModalLabel">Reset Password</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <button type="button" class="close" aria-label="Close" onclick="closeResetPasswordModal()">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
@@ -57,7 +57,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-light" onclick="closeResetPasswordModal()">Cancel</button>
                     <button type="submit" class="btn btn-primary" id="resetPasswordSubmitBtn">Update Password</button>
                 </div>
             </form>
@@ -87,6 +87,26 @@
         setResetPasswordFieldVisible($('#resetPasswordConfirm'), true);
     }
 
+    function closeResetPasswordModal() {
+        var modalEl = document.getElementById('resetPasswordModal');
+        var $modal = $('#resetPasswordModal');
+
+        if ($modal.length && typeof $modal.modal === 'function') {
+            $modal.modal('hide');
+        }
+
+        if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            var instance = bootstrap.Modal.getInstance(modalEl);
+            if (instance) {
+                instance.hide();
+            }
+        }
+
+        $modal.removeClass('show').css('display', 'none').attr('aria-hidden', 'true');
+        $('body').removeClass('modal-open');
+        $('.modal-backdrop').remove();
+    }
+
     function openResetPasswordModal(userId, displayName, resetUrl) {
         $('#resetPasswordUserId').val(userId);
         $('#resetPasswordUrl').val(resetUrl);
@@ -94,7 +114,21 @@
         $('#resetPasswordNew').val('');
         $('#resetPasswordConfirm').val('');
         resetResetPasswordFieldsVisibility();
-        $('#resetPasswordModal').modal('show');
+
+        var modalEl = document.getElementById('resetPasswordModal');
+        var $modal = $('#resetPasswordModal');
+
+        if ($modal.length && typeof $modal.modal === 'function') {
+            $modal.modal('show');
+        } else if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        } else {
+            $modal.addClass('show').css('display', 'block').attr('aria-hidden', 'false');
+            $('body').addClass('modal-open');
+            if (!$('.modal-backdrop').length) {
+                $('<div class="modal-backdrop fade show"></div>').appendTo('body');
+            }
+        }
     }
 
     $(document).off('click', '.reset-password-toggle').on('click', '.reset-password-toggle', function () {
@@ -132,7 +166,7 @@
                 password_confirmation: passwordConfirmation
             },
             success: function (response) {
-                $('#resetPasswordModal').modal('hide');
+                closeResetPasswordModal();
                 Swal.fire({
                     icon: 'success',
                     title: 'Success',
