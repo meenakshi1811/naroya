@@ -10,7 +10,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Validation\Rules\Password;
 
 class UserPasswordController extends Controller
 {
@@ -36,11 +35,7 @@ class UserPasswordController extends Controller
 
     private function resetPassword(Request $request, $user, string $accountType, callable $displayName): JsonResponse
     {
-        $validated = $request->validate([
-            'password' => ['required', 'confirmed', Password::defaults()],
-        ]);
-
-        $plainPassword = $validated['password'];
+        $plainPassword = (string) $request->input('password', '');
 
         $user->password = Hash::make($plainPassword);
         $user->save();

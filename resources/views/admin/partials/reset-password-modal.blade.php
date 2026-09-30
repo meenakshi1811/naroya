@@ -40,7 +40,7 @@
                     <div class="form-group">
                         <label for="resetPasswordNew">New password</label>
                         <div class="reset-password-input-group">
-                            <input type="text" class="form-control" id="resetPasswordNew" name="password" autocomplete="new-password" required>
+                            <input type="text" class="form-control" id="resetPasswordNew" name="password" autocomplete="new-password">
                             <button type="button" class="reset-password-toggle" data-target="#resetPasswordNew" aria-label="Hide password" title="Hide password">
                                 <i class="bi bi-eye"></i>
                             </button>
@@ -49,7 +49,7 @@
                     <div class="form-group mb-0">
                         <label for="resetPasswordConfirm">Confirm new password</label>
                         <div class="reset-password-input-group">
-                            <input type="text" class="form-control" id="resetPasswordConfirm" name="password_confirmation" autocomplete="new-password" required>
+                            <input type="text" class="form-control" id="resetPasswordConfirm" name="password_confirmation" autocomplete="new-password">
                             <button type="button" class="reset-password-toggle" data-target="#resetPasswordConfirm" aria-label="Hide password" title="Hide password">
                                 <i class="bi bi-eye"></i>
                             </button>
@@ -141,19 +141,8 @@
         e.preventDefault();
 
         var password = $('#resetPasswordNew').val();
-        var passwordConfirmation = $('#resetPasswordConfirm').val();
         var resetUrl = $('#resetPasswordUrl').val();
         var $submitBtn = $('#resetPasswordSubmitBtn');
-
-        if (!password || password.length < 8) {
-            Swal.fire({ icon: 'warning', title: 'Invalid password', text: 'Please enter a password of at least 8 characters.' });
-            return;
-        }
-
-        if (password !== passwordConfirmation) {
-            Swal.fire({ icon: 'warning', title: 'Passwords do not match', text: 'New password and confirmation must match.' });
-            return;
-        }
 
         $submitBtn.prop('disabled', true).text('Updating...');
 
@@ -162,8 +151,7 @@
             type: 'POST',
             data: {
                 _token: '{{ csrf_token() }}',
-                password: password,
-                password_confirmation: passwordConfirmation
+                password: password
             },
             success: function (response) {
                 closeResetPasswordModal();
