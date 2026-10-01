@@ -24,6 +24,7 @@ use Laravel\Passport\Token;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\DoctorRegistrationReceivedMail;
 use App\Models\DoctorActivity;
+use App\Models\Payment;
 
 class AuthController extends Controller
 {
@@ -1142,6 +1143,28 @@ class AuthController extends Controller
 
                         if ((int) $requestData->is_freeslot === 1) {
                             $requestData->charIsPaid = 'Y';
+
+                            if ($requestData->amount === null || $requestData->amount === '') {
+                                $feeDoctor = User::find($requestData->dr_id);
+                                if ($feeDoctor) {
+                                    $requestData->amount = $feeDoctor->varFees ?? null;
+                                }
+                            }
+
+                            $hasSuccessPayment = Payment::where('appointment_id', $requestData->id)
+                                ->where('status', 'success')
+                                ->exists();
+
+                            if (! $hasSuccessPayment) {
+                                Payment::create([
+                                    'status'         => 'success',
+                                    'transaction_id' => 'free_slot:' . $requestData->id,
+                                    'patient_id'     => $requestData->patient_id,
+                                    'doctor_id'      => $requestData->dr_id,
+                                    'appointment_id' => $requestData->id,
+                                    'created_at'     => now(),
+                                ]);
+                            }
                         }
                         
                         if (! empty($patient->fcm_token)) {
