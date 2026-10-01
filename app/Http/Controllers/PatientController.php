@@ -575,7 +575,7 @@ class PatientController extends Controller
                         $page = !empty($request->pageNumber) ? $request->pageNumber : 1;
                         $topDoctorPageSize = max(1, min((int) $request->input('topDoctorPageSize', $request->input('pageSize', 5)), 100));
                         $topDoctorPage = max(1, (int) $request->input('topDoctorPageNumber', $request->input('pageNumber', 1)));
-                        $stateIds = $this->normalizeIdFilter($request->input('state_id', $request->input('state_ids')));
+                        $cityIds = $this->normalizeIdFilter($request->input('city_id', $request->input('city_ids')));
                         $languageIds = $this->normalizeIdFilter($request->input('language_id', $request->input('language_ids')));
 
                         if (isset($request->topDoctor) && $request->topDoctor == 'Y') {
@@ -611,8 +611,8 @@ class PatientController extends Controller
                                 ->where('users.category', $request->speciality)
                                 ->join('dr_category', 'users.category', '=', 'dr_category.id')
                                 ->where('users.country', $patient->country)
-                                ->when(!empty($stateIds), function ($query) use ($stateIds) {
-                                    return $query->whereIn('users.state', $stateIds);
+                                ->when(!empty($cityIds), function ($query) use ($cityIds) {
+                                    return $query->whereIn('users.city_id', $cityIds);
                                 })
                                 ->when(!empty($languageIds), function ($query) use ($languageIds) {
                                     return $query->where(function ($languageQuery) use ($languageIds) {
@@ -664,8 +664,8 @@ class PatientController extends Controller
                                 ->join('users', 'favourite.user_id', '=', 'users.id') // Ensure user_id exists in the favourite table
                                 ->join('dr_category', 'users.category', '=', 'dr_category.id')
                                 ->where('users.category', $request->speciality)
-                                ->when(!empty($stateIds), function ($query) use ($stateIds) {
-                                    return $query->whereIn('users.state', $stateIds);
+                                ->when(!empty($cityIds), function ($query) use ($cityIds) {
+                                    return $query->whereIn('users.city_id', $cityIds);
                                 })
                                 ->when(!empty($languageIds), function ($query) use ($languageIds) {
                                     return $query->where(function ($languageQuery) use ($languageIds) {
