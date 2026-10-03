@@ -67,7 +67,7 @@ class Appointment extends Model
     }
 
 
-    public static function getAllAcceptedList($patientId = false, $limit, $page)
+    public static function getAllAcceptedList($patientId, $limit = null, $page = null)
     {
         $currentTime = Carbon::now();  // Get the current time
         $twelveHoursLater = $currentTime->copy()->addHours(12);
@@ -132,7 +132,7 @@ class Appointment extends Model
 
         return $response;
     }
-    public static function getAllRejectedList($patientId = false, $limit, $page)
+    public static function getAllRejectedList($patientId, $limit = null, $page = null)
     {
         $currentTime = Carbon::now();  // Get the current time
         $twelveHoursLater = $currentTime->copy()->addHours(12);

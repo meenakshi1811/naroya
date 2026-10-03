@@ -13,6 +13,7 @@ use App\Services\PatientRegistrationService;
 use App\Models\Favourite;
 use App\Models\GeneralSetting;
 use App\Models\User;
+use App\Models\City;
 use App\Models\Rating;
 use Carbon\Carbon;
 use Storage;
@@ -575,7 +576,7 @@ class PatientController extends Controller
                         $page = !empty($request->pageNumber) ? $request->pageNumber : 1;
                         $topDoctorPageSize = max(1, min((int) $request->input('topDoctorPageSize', $request->input('pageSize', 5)), 100));
                         $topDoctorPage = max(1, (int) $request->input('topDoctorPageNumber', $request->input('pageNumber', 1)));
-                        $cityIds = $this->normalizeIdFilter($request->input('city_id', $request->input('city_ids')));
+                        $locationFilters = $this->resolveDoctorLocationFilters($request);
                         $languageIds = $this->normalizeIdFilter($request->input('language_id', $request->input('language_ids')));
 
                         if (isset($request->topDoctor) && $request->topDoctor == 'Y') {
@@ -611,8 +612,8 @@ class PatientController extends Controller
                                 ->where('users.category', $request->speciality)
                                 ->join('dr_category', 'users.category', '=', 'dr_category.id')
                                 ->where('users.country', $patient->country)
-                                ->when(!empty($cityIds), function ($query) use ($cityIds) {
-                                    return $query->whereIn('users.city_id', $cityIds);
+                                ->tap(function ($query) use ($locationFilters) {
+                                    $this->applyDoctorLocationFilter($query, $locationFilters);
                                 })
                                 ->when(!empty($languageIds), function ($query) use ($languageIds) {
                                     return $query->where(function ($languageQuery) use ($languageIds) {
@@ -664,8 +665,8 @@ class PatientController extends Controller
                                 ->join('users', 'favourite.user_id', '=', 'users.id') // Ensure user_id exists in the favourite table
                                 ->join('dr_category', 'users.category', '=', 'dr_category.id')
                                 ->where('users.category', $request->speciality)
-                                ->when(!empty($cityIds), function ($query) use ($cityIds) {
-                                    return $query->whereIn('users.city_id', $cityIds);
+                                ->tap(function ($query) use ($locationFilters) {
+                                    $this->applyDoctorLocationFilter($query, $locationFilters);
                                 })
                                 ->when(!empty($languageIds), function ($query) use ($languageIds) {
                                     return $query->where(function ($languageQuery) use ($languageIds) {
@@ -872,7 +873,8 @@ class PatientController extends Controller
                         $limit = !empty($request->pageSize) ? $request->pageSize : 5;
                         $page = !empty($request->pageNumber) ? $request->pageNumber : 1;
                         $search = !empty($request->searchvalue) ? $request->searchvalue : '';
-    
+                        $locationFilters = $this->resolveDoctorLocationFilters($request);
+
                         // Start the query to search for doctors
                         $searchDoctor = User::select(
                             'users.id',
@@ -902,10 +904,15 @@ class PatientController extends Controller
                             'dr_category.title as categoryName'
                         )
                             ->where('chrApproval', 'Y')  // Only approved doctors
-                            ->join('dr_category', 'users.category', '=', 'dr_category.id');
-                            // ->where('country', $patient->country)
-                            // ->where('users.category', $request->category)
-    
+                            ->join('dr_category', 'users.category', '=', 'dr_category.id')
+                            ->where('users.country', $patient->country);
+
+                        $this->applyDoctorLocationFilter($searchDoctor, $locationFilters);
+
+                        if (! empty($request->category) || ! empty($request->speciality)) {
+                            $searchDoctor->where('users.category', $request->input('category', $request->input('speciality')));
+                        }
+
                         // Exclude doctors who are blocked by the current patient
                         $searchDoctor->leftJoin('block', function($join) use ($patient) {
                             $join->on('block.dr_id', '=', 'users.id')
@@ -1543,6 +1550,108 @@ class PatientController extends Controller
         return array_values(array_unique(array_map('intval', array_filter($value, function ($id) {
             return is_numeric($id) && (int) $id > 0;
         }))));
+    }
+
+    private function resolveDoctorLocationFilters(Request $request): array
+    {
+        $stateIds = $this->normalizeIdFilter(
+            $request->input('state_id', $request->input('state_ids', $request->input('state')))
+        );
+
+        $cityIds = $this->normalizeIdFilter($request->input('city_id', $request->input('city_ids')));
+
+        if ($cityIds === [] && is_numeric($request->input('city'))) {
+            $cityIds = [(int) $request->input('city')];
+        }
+
+        if ($cityIds === [] && is_array($request->input('city'))) {
+            $cityPayload = $request->input('city');
+            if (isset($cityPayload['id']) && is_numeric($cityPayload['id'])) {
+                $cityIds = [(int) $cityPayload['id']];
+            }
+        }
+
+        $cityFilterRequested = $this->isCityFilterRequested($request);
+
+        if ($cityIds === [] && $cityFilterRequested) {
+            $cityName = trim((string) $request->input('city_name', $request->input('cityName', '')));
+            if ($cityName === '') {
+                $rawCity = trim((string) $request->input('city', ''));
+                if ($rawCity !== '' && ! is_numeric($rawCity)) {
+                    $cityName = $rawCity;
+                }
+            }
+
+            if ($cityName !== '') {
+                $cityQuery = City::query()->whereRaw('LOWER(TRIM(name)) = ?', [strtolower($cityName)]);
+                if ($stateIds !== []) {
+                    $cityQuery->whereIn('state_id', $stateIds);
+                }
+                $cityIds = $cityQuery->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+                if ($cityIds === []) {
+                    $cityQuery = City::query()->where('name', 'like', '%' . $cityName . '%');
+                    if ($stateIds !== []) {
+                        $cityQuery->whereIn('state_id', $stateIds);
+                    }
+                    $cityIds = $cityQuery->pluck('id')->map(fn ($id) => (int) $id)->all();
+                }
+            }
+        }
+
+        if ($cityIds !== [] && $stateIds !== []) {
+            $cityIds = City::query()
+                ->whereIn('id', $cityIds)
+                ->whereIn('state_id', $stateIds)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
+        return [
+            'state_ids' => $stateIds,
+            'city_ids' => $cityIds,
+            'city_filter_requested' => $cityFilterRequested,
+        ];
+    }
+
+    private function isCityFilterRequested(Request $request): bool
+    {
+        if ($request->filled('city_id') || $request->filled('city_ids') || $request->filled('city_name') || $request->filled('cityName')) {
+            return true;
+        }
+
+        if (! $request->filled('city')) {
+            return false;
+        }
+
+        $city = $request->input('city');
+        if (is_array($city)) {
+            return isset($city['id']) && is_numeric($city['id']) && (int) $city['id'] > 0;
+        }
+
+        return is_numeric($city) || trim((string) $city) !== '';
+    }
+
+    private function applyDoctorLocationFilter($query, array $locationFilters)
+    {
+        $cityIds = $locationFilters['city_ids'] ?? [];
+        $stateIds = $locationFilters['state_ids'] ?? [];
+        $cityFilterRequested = (bool) ($locationFilters['city_filter_requested'] ?? false);
+
+        if ($cityIds !== []) {
+            return $query->whereIn('users.city_id', $cityIds);
+        }
+
+        if ($cityFilterRequested) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        if ($stateIds !== []) {
+            return $query->whereIn('users.state', $stateIds);
+        }
+
+        return $query;
     }
 
     private function buildHomeDoctorQuery(Patients $patient, $speciality = null)
