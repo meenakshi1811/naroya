@@ -433,8 +433,18 @@ class PatientController extends Controller
 
                     $patient = Patients::find($tokenData['id']);
                     if (!empty($patient)) {
-                        $topDoctor = $this->getHomeTopDoctors($patient, $request->speciality, 3);
-                        $favDoctor = DB::table('favourite')
+                        $locationFilters = $this->resolveDoctorLocationFilters($request);
+                        $languageIds = $this->normalizeIdFilter($request->input('language_id', $request->input('language_ids')));
+
+                        $topDoctor = $this->getHomeTopDoctors(
+                            $patient,
+                            $request->speciality,
+                            3,
+                            $locationFilters,
+                            $languageIds
+                        );
+
+                        $favDoctorQuery = DB::table('favourite')
                             ->select(
                                 'users.id',
                                 'users.name',
@@ -467,16 +477,27 @@ class PatientController extends Controller
                             )
                             ->join('users', 'favourite.user_id', '=', 'users.id') // Ensure user_id exists in the favourite table
                             ->join('dr_category', 'users.category', '=', 'dr_category.id')
-                            ->where('category', $request->speciality)
+                            ->where('users.country', $patient->country)
                             ->where('favourite.patinet_id', $patient->id) // Make sure to prefix the column with the table name
                             ->where('favourite.chrFav', 'Y')
+                            ->when($request->filled('speciality'), function ($query) use ($request) {
+                                return $query->where('users.category', $request->speciality);
+                            })
+                            ->tap(function ($query) use ($locationFilters) {
+                                $this->applyDoctorLocationFilter($query, $locationFilters);
+                            })
+                            ->tap(function ($query) use ($languageIds) {
+                                $this->applyDoctorLanguageFilter($query, $languageIds);
+                            })
                             ->leftJoin('block', function($join) use ($patient) {
                                 $join->on('block.dr_id', '=', 'users.id')
                                      ->where('block.patient_id', '=', $patient->id)
                                      ->where('block.chrIsBlock', '=', 'Y'); // Only blocked doctors
                             })
                             ->whereNull('block.id')
-                            ->limit('5')->get();
+                            ->limit(5);
+
+                        $favDoctor = $favDoctorQuery->get();
 
                         $acceptedApointment = Appointment::getAcceptedList($patient->id);
                         // dd(now()->format('H:i'));
@@ -1654,8 +1675,25 @@ class PatientController extends Controller
         return $query;
     }
 
-    private function buildHomeDoctorQuery(Patients $patient, $speciality = null)
+    private function applyDoctorLanguageFilter($query, array $languageIds)
     {
+        if ($languageIds === []) {
+            return $query;
+        }
+
+        return $query->where(function ($languageQuery) use ($languageIds) {
+            foreach ($languageIds as $languageId) {
+                $languageQuery->orWhereJsonContains('users.language_ids', $languageId);
+            }
+        });
+    }
+
+    private function buildHomeDoctorQuery(
+        Patients $patient,
+        $speciality = null,
+        ?array $locationFilters = null,
+        array $languageIds = []
+    ) {
         $query = User::select(
             'users.id',
             'users.name',
@@ -1691,22 +1729,35 @@ class PatientController extends Controller
                     ->where('block.patient_id', '=', $patient->id)
                     ->where('block.chrIsBlock', '=', 'Y');
             })
-            ->whereNull('block.id');
+            ->whereNull('block.id')
+            ->where('users.country', $patient->country);
 
         if ($speciality !== null && $speciality !== '') {
             $query->where('users.category', $speciality);
         }
 
+        if ($locationFilters !== null) {
+            $this->applyDoctorLocationFilter($query, $locationFilters);
+        }
+
+        $this->applyDoctorLanguageFilter($query, $languageIds);
+
         return $query;
     }
 
-    private function getLatestHomeDoctors(Patients $patient, array $excludeIds, int $limit, $speciality = null)
-    {
+    private function getLatestHomeDoctors(
+        Patients $patient,
+        array $excludeIds,
+        int $limit,
+        $speciality = null,
+        ?array $locationFilters = null,
+        array $languageIds = []
+    ) {
         if ($limit <= 0) {
             return collect();
         }
 
-        $query = $this->buildHomeDoctorQuery($patient, $speciality)
+        $query = $this->buildHomeDoctorQuery($patient, $speciality, $locationFilters, $languageIds)
             ->orderByDesc('users.id');
 
         if ($excludeIds !== []) {
@@ -1716,9 +1767,16 @@ class PatientController extends Controller
         return $query->limit($limit)->get();
     }
 
-    private function getHomeTopDoctors(Patients $patient, $speciality, int $limit = 3)
-    {
-        $topDoctors = Rating::orderByAverageRatingDesc($this->buildHomeDoctorQuery($patient, $speciality))
+    private function getHomeTopDoctors(
+        Patients $patient,
+        $speciality,
+        int $limit = 3,
+        ?array $locationFilters = null,
+        array $languageIds = []
+    ) {
+        $topDoctors = Rating::orderByAverageRatingDesc(
+            $this->buildHomeDoctorQuery($patient, $speciality, $locationFilters, $languageIds)
+        )
             ->limit($limit)
             ->get();
 
@@ -1729,7 +1787,9 @@ class PatientController extends Controller
                 $patient,
                 $selectedIds,
                 $limit - $topDoctors->count(),
-                $speciality
+                $speciality,
+                $locationFilters,
+                $languageIds
             );
 
             $topDoctors = $topDoctors->concat($sameSpecialityDoctors)->values();
@@ -1740,7 +1800,10 @@ class PatientController extends Controller
             $otherDoctors = $this->getLatestHomeDoctors(
                 $patient,
                 $selectedIds,
-                $limit - $topDoctors->count()
+                $limit - $topDoctors->count(),
+                null,
+                $locationFilters,
+                $languageIds
             );
 
             $topDoctors = $topDoctors->concat($otherDoctors)->values();
