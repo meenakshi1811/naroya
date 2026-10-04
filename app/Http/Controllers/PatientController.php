@@ -433,11 +433,9 @@ class PatientController extends Controller
 
                     $patient = Patients::find($tokenData['id']);
                     if (!empty($patient)) {
-                        $locationFilters = $this->hasHomeLocationFilterRequest($request)
-                            ? $this->resolveDoctorLocationFilters($request)
-                            : null;
-                        $languageIds = $this->normalizeIdFilter($request->input('language_id', $request->input('language_ids')));
-                        $homeSpeciality = $this->resolveHomeSpeciality($request);
+                        $locationFilters = $this->resolveOptionalLocationFilters($request);
+                        $languageIds = $this->resolveOptionalLanguageIds($request);
+                        $homeSpeciality = $this->resolveOptionalSpeciality($request);
 
                         $topDoctor = $this->getHomeTopDoctors(
                             $patient,
@@ -599,8 +597,9 @@ class PatientController extends Controller
                         $page = !empty($request->pageNumber) ? $request->pageNumber : 1;
                         $topDoctorPageSize = max(1, min((int) $request->input('topDoctorPageSize', $request->input('pageSize', 5)), 100));
                         $topDoctorPage = max(1, (int) $request->input('topDoctorPageNumber', $request->input('pageNumber', 1)));
-                        $locationFilters = $this->resolveDoctorLocationFilters($request);
-                        $languageIds = $this->normalizeIdFilter($request->input('language_id', $request->input('language_ids')));
+                        $locationFilters = $this->resolveOptionalLocationFilters($request);
+                        $languageIds = $this->resolveOptionalLanguageIds($request);
+                        $speciality = $this->resolveOptionalSpeciality($request);
 
                         if (isset($request->topDoctor) && $request->topDoctor == 'Y') {
                             $topDoctor = User::select(
@@ -632,18 +631,18 @@ class PatientController extends Controller
                                 'dr_category.title as speciality'
                             )
                                 ->where('users.chrApproval', 'Y')
-                                ->where('users.category', $request->speciality)
                                 ->join('dr_category', 'users.category', '=', 'dr_category.id')
-                                ->where('users.country', $patient->country)
+                                ->when($patient->country !== null && $patient->country !== '', function ($query) use ($patient) {
+                                    return $query->where('users.country', $patient->country);
+                                })
+                                ->when($speciality !== null, function ($query) use ($speciality) {
+                                    return $query->where('users.category', $speciality);
+                                })
                                 ->tap(function ($query) use ($locationFilters) {
                                     $this->applyDoctorLocationFilter($query, $locationFilters);
                                 })
-                                ->when(!empty($languageIds), function ($query) use ($languageIds) {
-                                    return $query->where(function ($languageQuery) use ($languageIds) {
-                                        foreach ($languageIds as $languageId) {
-                                            $languageQuery->orWhereJsonContains('users.language_ids', $languageId);
-                                        }
-                                    });
+                                ->tap(function ($query) use ($languageIds) {
+                                    $this->applyDoctorLanguageFilter($query, $languageIds);
                                 })
                                 ->leftJoin('block', function($join) use ($patient) {
                                     $join->on('block.dr_id', '=', 'users.id')
@@ -687,16 +686,14 @@ class PatientController extends Controller
                                 )
                                 ->join('users', 'favourite.user_id', '=', 'users.id') // Ensure user_id exists in the favourite table
                                 ->join('dr_category', 'users.category', '=', 'dr_category.id')
-                                ->where('users.category', $request->speciality)
+                                ->when($speciality !== null, function ($query) use ($speciality) {
+                                    return $query->where('users.category', $speciality);
+                                })
                                 ->tap(function ($query) use ($locationFilters) {
                                     $this->applyDoctorLocationFilter($query, $locationFilters);
                                 })
-                                ->when(!empty($languageIds), function ($query) use ($languageIds) {
-                                    return $query->where(function ($languageQuery) use ($languageIds) {
-                                        foreach ($languageIds as $languageId) {
-                                            $languageQuery->orWhereJsonContains('users.language_ids', $languageId);
-                                        }
-                                    });
+                                ->tap(function ($query) use ($languageIds) {
+                                    $this->applyDoctorLanguageFilter($query, $languageIds);
                                 })
                                 ->where('favourite.patinet_id', $patient->id) // Make sure to prefix the column with the table name
                                 ->where('favourite.chrFav', 'Y') // Same here   
@@ -896,7 +893,9 @@ class PatientController extends Controller
                         $limit = !empty($request->pageSize) ? $request->pageSize : 5;
                         $page = !empty($request->pageNumber) ? $request->pageNumber : 1;
                         $search = !empty($request->searchvalue) ? $request->searchvalue : '';
-                        $locationFilters = $this->resolveDoctorLocationFilters($request);
+                        $locationFilters = $this->resolveOptionalLocationFilters($request);
+                        $languageIds = $this->resolveOptionalLanguageIds($request);
+                        $speciality = $this->resolveOptionalSpeciality($request);
 
                         // Start the query to search for doctors
                         $searchDoctor = User::select(
@@ -928,12 +927,15 @@ class PatientController extends Controller
                         )
                             ->where('chrApproval', 'Y')  // Only approved doctors
                             ->join('dr_category', 'users.category', '=', 'dr_category.id')
-                            ->where('users.country', $patient->country);
+                            ->when($patient->country !== null && $patient->country !== '', function ($query) use ($patient) {
+                                return $query->where('users.country', $patient->country);
+                            });
 
                         $this->applyDoctorLocationFilter($searchDoctor, $locationFilters);
+                        $this->applyDoctorLanguageFilter($searchDoctor, $languageIds);
 
-                        if (! empty($request->category) || ! empty($request->speciality)) {
-                            $searchDoctor->where('users.category', $request->input('category', $request->input('speciality')));
+                        if ($speciality !== null) {
+                            $searchDoctor->where('users.category', $speciality);
                         }
 
                         // Exclude doctors who are blocked by the current patient
@@ -1679,8 +1681,62 @@ class PatientController extends Controller
         return trim((string) $city) !== '';
     }
 
-    private function applyDoctorLocationFilter($query, array $locationFilters)
+    private function resolveOptionalLocationFilters(Request $request): ?array
     {
+        if (! $this->hasActiveLocationFilterRequest($request)) {
+            return null;
+        }
+
+        return $this->resolveDoctorLocationFilters($request);
+    }
+
+    private function resolveOptionalLanguageIds(Request $request): array
+    {
+        if (! $this->hasActiveLanguageFilterRequest($request)) {
+            return [];
+        }
+
+        return $this->normalizeIdFilter($request->input('language_id', $request->input('language_ids')));
+    }
+
+    private function resolveOptionalSpeciality(Request $request)
+    {
+        foreach (['speciality', 'category'] as $field) {
+            if (! $request->has($field)) {
+                continue;
+            }
+
+            $value = $request->input($field);
+            if ($value === null || $value === '' || $value === 'null') {
+                continue;
+            }
+
+            return $value;
+        }
+
+        return null;
+    }
+
+    private function hasActiveLocationFilterRequest(Request $request): bool
+    {
+        if ($this->normalizeIdFilter($request->input('state_id', $request->input('state_ids', $request->input('state')))) !== []) {
+            return true;
+        }
+
+        return $this->isCityFilterRequested($request);
+    }
+
+    private function hasActiveLanguageFilterRequest(Request $request): bool
+    {
+        return $this->normalizeIdFilter($request->input('language_id', $request->input('language_ids'))) !== [];
+    }
+
+    private function applyDoctorLocationFilter($query, ?array $locationFilters)
+    {
+        if ($locationFilters === null) {
+            return $query;
+        }
+
         $cityIds = $locationFilters['city_ids'] ?? [];
         $stateIds = $locationFilters['state_ids'] ?? [];
         $cityFilterRequested = (bool) ($locationFilters['city_filter_requested'] ?? false);
@@ -1767,29 +1823,6 @@ class PatientController extends Controller
         $this->applyDoctorLanguageFilter($query, $languageIds);
 
         return $query;
-    }
-
-    private function resolveHomeSpeciality(Request $request)
-    {
-        if (! $request->has('speciality')) {
-            return null;
-        }
-
-        $speciality = $request->input('speciality');
-        if ($speciality === null || $speciality === '' || $speciality === 'null') {
-            return null;
-        }
-
-        return $speciality;
-    }
-
-    private function hasHomeLocationFilterRequest(Request $request): bool
-    {
-        if ($this->normalizeIdFilter($request->input('state_id', $request->input('state_ids', $request->input('state')))) !== []) {
-            return true;
-        }
-
-        return $this->isCityFilterRequested($request);
     }
 
     private function getLatestHomeDoctors(
