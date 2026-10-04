@@ -433,12 +433,15 @@ class PatientController extends Controller
 
                     $patient = Patients::find($tokenData['id']);
                     if (!empty($patient)) {
-                        $locationFilters = $this->resolveDoctorLocationFilters($request);
+                        $locationFilters = $this->hasHomeLocationFilterRequest($request)
+                            ? $this->resolveDoctorLocationFilters($request)
+                            : null;
                         $languageIds = $this->normalizeIdFilter($request->input('language_id', $request->input('language_ids')));
+                        $homeSpeciality = $this->resolveHomeSpeciality($request);
 
                         $topDoctor = $this->getHomeTopDoctors(
                             $patient,
-                            $request->speciality,
+                            $homeSpeciality,
                             3,
                             $locationFilters,
                             $languageIds
@@ -477,13 +480,10 @@ class PatientController extends Controller
                             )
                             ->join('users', 'favourite.user_id', '=', 'users.id') // Ensure user_id exists in the favourite table
                             ->join('dr_category', 'users.category', '=', 'dr_category.id')
-                            ->tap(function ($query) use ($patient) {
-                                $this->applyPatientCountryFilter($query, $patient);
-                            })
                             ->where('favourite.patinet_id', $patient->id) // Make sure to prefix the column with the table name
                             ->where('favourite.chrFav', 'Y')
-                            ->when($request->filled('speciality'), function ($query) use ($request) {
-                                return $query->where('users.category', $request->speciality);
+                            ->when($homeSpeciality !== null, function ($query) use ($homeSpeciality) {
+                                return $query->where('users.category', $homeSpeciality);
                             })
                             ->tap(function ($query) use ($locationFilters) {
                                 $this->applyDoctorLocationFilter($query, $locationFilters);
@@ -1756,10 +1756,6 @@ class PatientController extends Controller
             })
             ->whereNull('block.id');
 
-        if ($patient->country !== null && $patient->country !== '') {
-            $query->where('users.country', $patient->country);
-        }
-
         if ($speciality !== null && $speciality !== '') {
             $query->where('users.category', $speciality);
         }
@@ -1773,13 +1769,27 @@ class PatientController extends Controller
         return $query;
     }
 
-    private function applyPatientCountryFilter($query, Patients $patient)
+    private function resolveHomeSpeciality(Request $request)
     {
-        if ($patient->country !== null && $patient->country !== '') {
-            return $query->where('users.country', $patient->country);
+        if (! $request->has('speciality')) {
+            return null;
         }
 
-        return $query;
+        $speciality = $request->input('speciality');
+        if ($speciality === null || $speciality === '' || $speciality === 'null') {
+            return null;
+        }
+
+        return $speciality;
+    }
+
+    private function hasHomeLocationFilterRequest(Request $request): bool
+    {
+        if ($this->normalizeIdFilter($request->input('state_id', $request->input('state_ids', $request->input('state')))) !== []) {
+            return true;
+        }
+
+        return $this->isCityFilterRequested($request);
     }
 
     private function getLatestHomeDoctors(
