@@ -480,14 +480,8 @@ class PatientController extends Controller
                             ->join('dr_category', 'users.category', '=', 'dr_category.id')
                             ->where('favourite.patinet_id', $patient->id) // Make sure to prefix the column with the table name
                             ->where('favourite.chrFav', 'Y')
-                            ->when($homeSpeciality !== null, function ($query) use ($homeSpeciality) {
-                                return $query->where('users.category', $homeSpeciality);
-                            })
-                            ->tap(function ($query) use ($locationFilters) {
-                                $this->applyDoctorLocationFilter($query, $locationFilters);
-                            })
-                            ->tap(function ($query) use ($languageIds) {
-                                $this->applyDoctorLanguageFilter($query, $languageIds);
+                            ->tap(function ($query) use ($locationFilters, $languageIds, $homeSpeciality) {
+                                $this->applyOptionalDoctorFilters($query, $locationFilters, $languageIds, $homeSpeciality);
                             })
                             ->leftJoin('block', function($join) use ($patient) {
                                 $join->on('block.dr_id', '=', 'users.id')
@@ -632,17 +626,8 @@ class PatientController extends Controller
                             )
                                 ->where('users.chrApproval', 'Y')
                                 ->join('dr_category', 'users.category', '=', 'dr_category.id')
-                                ->when($patient->country !== null && $patient->country !== '', function ($query) use ($patient) {
-                                    return $query->where('users.country', $patient->country);
-                                })
-                                ->when($speciality !== null, function ($query) use ($speciality) {
-                                    return $query->where('users.category', $speciality);
-                                })
-                                ->tap(function ($query) use ($locationFilters) {
-                                    $this->applyDoctorLocationFilter($query, $locationFilters);
-                                })
-                                ->tap(function ($query) use ($languageIds) {
-                                    $this->applyDoctorLanguageFilter($query, $languageIds);
+                                ->tap(function ($query) use ($locationFilters, $languageIds, $speciality) {
+                                    $this->applyOptionalDoctorFilters($query, $locationFilters, $languageIds, $speciality);
                                 })
                                 ->leftJoin('block', function($join) use ($patient) {
                                     $join->on('block.dr_id', '=', 'users.id')
@@ -686,14 +671,9 @@ class PatientController extends Controller
                                 )
                                 ->join('users', 'favourite.user_id', '=', 'users.id') // Ensure user_id exists in the favourite table
                                 ->join('dr_category', 'users.category', '=', 'dr_category.id')
-                                ->when($speciality !== null, function ($query) use ($speciality) {
-                                    return $query->where('users.category', $speciality);
-                                })
-                                ->tap(function ($query) use ($locationFilters) {
-                                    $this->applyDoctorLocationFilter($query, $locationFilters);
-                                })
-                                ->tap(function ($query) use ($languageIds) {
-                                    $this->applyDoctorLanguageFilter($query, $languageIds);
+                                ->where('users.chrApproval', 'Y')
+                                ->tap(function ($query) use ($locationFilters, $languageIds, $speciality) {
+                                    $this->applyOptionalDoctorFilters($query, $locationFilters, $languageIds, $speciality);
                                 })
                                 ->where('favourite.patinet_id', $patient->id) // Make sure to prefix the column with the table name
                                 ->where('favourite.chrFav', 'Y') // Same here   
@@ -926,17 +906,9 @@ class PatientController extends Controller
                             'dr_category.title as categoryName'
                         )
                             ->where('chrApproval', 'Y')  // Only approved doctors
-                            ->join('dr_category', 'users.category', '=', 'dr_category.id')
-                            ->when($patient->country !== null && $patient->country !== '', function ($query) use ($patient) {
-                                return $query->where('users.country', $patient->country);
-                            });
+                            ->join('dr_category', 'users.category', '=', 'dr_category.id');
 
-                        $this->applyDoctorLocationFilter($searchDoctor, $locationFilters);
-                        $this->applyDoctorLanguageFilter($searchDoctor, $languageIds);
-
-                        if ($speciality !== null) {
-                            $searchDoctor->where('users.category', $speciality);
-                        }
+                        $this->applyOptionalDoctorFilters($searchDoctor, $locationFilters, $languageIds, $speciality);
 
                         // Exclude doctors who are blocked by the current patient
                         $searchDoctor->leftJoin('block', function($join) use ($patient) {
@@ -1769,6 +1741,18 @@ class PatientController extends Controller
         });
     }
 
+    private function applyOptionalDoctorFilters($query, ?array $locationFilters, array $languageIds, $speciality)
+    {
+        if ($speciality !== null && $speciality !== '') {
+            $query->where('users.category', $speciality);
+        }
+
+        $this->applyDoctorLocationFilter($query, $locationFilters);
+        $this->applyDoctorLanguageFilter($query, $languageIds);
+
+        return $query;
+    }
+
     private function buildHomeDoctorQuery(
         Patients $patient,
         $speciality = null,
@@ -1812,15 +1796,7 @@ class PatientController extends Controller
             })
             ->whereNull('block.id');
 
-        if ($speciality !== null && $speciality !== '') {
-            $query->where('users.category', $speciality);
-        }
-
-        if ($locationFilters !== null) {
-            $this->applyDoctorLocationFilter($query, $locationFilters);
-        }
-
-        $this->applyDoctorLanguageFilter($query, $languageIds);
+        $this->applyOptionalDoctorFilters($query, $locationFilters, $languageIds, $speciality);
 
         return $query;
     }
