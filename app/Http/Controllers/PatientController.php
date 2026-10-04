@@ -594,8 +594,10 @@ class PatientController extends Controller
                         $locationFilters = $this->resolveOptionalLocationFilters($request);
                         $languageIds = $this->resolveOptionalLanguageIds($request);
                         $speciality = $this->resolveOptionalSpeciality($request);
+                        $loadTopDoctors = $this->shouldLoadViewAllTopDoctors($request);
+                        $loadFavDoctors = $this->shouldLoadViewAllFavouriteDoctors($request);
 
-                        if (isset($request->topDoctor) && $request->topDoctor == 'Y') {
+                        if ($loadTopDoctors) {
                             $topDoctor = User::select(
                                 'users.id',
                                 'users.name',
@@ -634,11 +636,13 @@ class PatientController extends Controller
                                          ->where('block.patient_id', '=', $patient->id)
                                          ->where('block.chrIsBlock', '=', 'Y'); // Only blocked doctors
                                 })
-                                ->whereNull('block.id')
+                                ->whereNull('block.id');
+
+                            $topDoctor = Rating::orderByAverageRatingDesc($topDoctor)
                                 ->paginate($topDoctorPageSize, ['*'], 'topDoctorPage', $topDoctorPage);
                         }
 
-                        if (isset($request->favDoctor) && $request->favDoctor == 'Y') {
+                        if ($loadFavDoctors) {
                             $favDoctor = DB::table('favourite')
                                 ->select(
                                     'users.id',
@@ -728,9 +732,10 @@ class PatientController extends Controller
                         }
 
 
-                        // Format topDoctor profiles
-                        if (isset($topDoctor) && count($topDoctor) > 0) {
-                            User::formatDoctorListing($topDoctor, $patient->id);
+                        if (isset($topDoctor)) {
+                            if ($topDoctor->count() > 0) {
+                                User::formatDoctorListing($topDoctor, $patient->id);
+                            }
 
                             $topDoctorResponse = [
                                 'doctor' => $topDoctor->items(),
@@ -743,9 +748,11 @@ class PatientController extends Controller
                             ];
                         }
 
-                        // Format favourite doctor profiles
-                        if (isset($favDoctor) && count($favDoctor) > 0) {
-                            User::formatDoctorListing($favDoctor, $patient->id);
+                        if (isset($favDoctor)) {
+                            if ($favDoctor->count() > 0) {
+                                User::formatDoctorListing($favDoctor, $patient->id);
+                            }
+
                             $favDoctorResponse = [
                                 'current_page' => $favDoctor->currentPage(),
                                 'doctor' => $favDoctor->items(),
@@ -1651,6 +1658,36 @@ class PatientController extends Controller
         }
 
         return trim((string) $city) !== '';
+    }
+
+    private function shouldLoadViewAllTopDoctors(Request $request): bool
+    {
+        if (strtoupper((string) $request->input('topDoctor', '')) === 'Y') {
+            return true;
+        }
+
+        if ($request->has('topDoctorPageSize') || $request->has('topDoctorPageNumber')) {
+            return true;
+        }
+
+        if (strtoupper((string) $request->input('topDoctor', '')) === 'N') {
+            return false;
+        }
+
+        return ! $request->has('favDoctor') || strtoupper((string) $request->input('favDoctor')) !== 'Y';
+    }
+
+    private function shouldLoadViewAllFavouriteDoctors(Request $request): bool
+    {
+        if (strtoupper((string) $request->input('favDoctor', '')) === 'Y') {
+            return true;
+        }
+
+        if ($request->has('pageSize') || $request->has('pageNumber')) {
+            return true;
+        }
+
+        return false;
     }
 
     private function resolveOptionalLocationFilters(Request $request): ?array
