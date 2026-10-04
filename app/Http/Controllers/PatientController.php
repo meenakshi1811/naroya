@@ -477,7 +477,9 @@ class PatientController extends Controller
                             )
                             ->join('users', 'favourite.user_id', '=', 'users.id') // Ensure user_id exists in the favourite table
                             ->join('dr_category', 'users.category', '=', 'dr_category.id')
-                            ->where('users.country', $patient->country)
+                            ->tap(function ($query) use ($patient) {
+                                $this->applyPatientCountryFilter($query, $patient);
+                            })
                             ->where('favourite.patinet_id', $patient->id) // Make sure to prefix the column with the table name
                             ->where('favourite.chrFav', 'Y')
                             ->when($request->filled('speciality'), function ($query) use ($request) {
@@ -1594,6 +1596,7 @@ class PatientController extends Controller
 
         $cityFilterRequested = $this->isCityFilterRequested($request);
 
+        $cityNameAttempted = false;
         if ($cityIds === [] && $cityFilterRequested) {
             $cityName = trim((string) $request->input('city_name', $request->input('cityName', '')));
             if ($cityName === '') {
@@ -1604,6 +1607,7 @@ class PatientController extends Controller
             }
 
             if ($cityName !== '') {
+                $cityNameAttempted = true;
                 $cityQuery = City::query()->whereRaw('LOWER(TRIM(name)) = ?', [strtolower($cityName)]);
                 if ($stateIds !== []) {
                     $cityQuery->whereIn('state_id', $stateIds);
@@ -1620,6 +1624,7 @@ class PatientController extends Controller
             }
         }
 
+        $requestedCityIds = $cityIds;
         if ($cityIds !== [] && $stateIds !== []) {
             $cityIds = City::query()
                 ->whereIn('id', $cityIds)
@@ -1627,6 +1632,18 @@ class PatientController extends Controller
                 ->pluck('id')
                 ->map(fn ($id) => (int) $id)
                 ->all();
+
+            if ($cityIds === [] && $requestedCityIds !== []) {
+                $cityIds = $requestedCityIds;
+            }
+        }
+
+        if ($cityIds !== []) {
+            $cityFilterRequested = true;
+        } elseif ($cityNameAttempted) {
+            $cityFilterRequested = true;
+        } else {
+            $cityFilterRequested = false;
         }
 
         return [
@@ -1638,7 +1655,11 @@ class PatientController extends Controller
 
     private function isCityFilterRequested(Request $request): bool
     {
-        if ($request->filled('city_id') || $request->filled('city_ids') || $request->filled('city_name') || $request->filled('cityName')) {
+        if ($this->normalizeIdFilter($request->input('city_id', $request->input('city_ids'))) !== []) {
+            return true;
+        }
+
+        if ($request->filled('city_name') || $request->filled('cityName')) {
             return true;
         }
 
@@ -1651,7 +1672,11 @@ class PatientController extends Controller
             return isset($city['id']) && is_numeric($city['id']) && (int) $city['id'] > 0;
         }
 
-        return is_numeric($city) || trim((string) $city) !== '';
+        if (is_numeric($city) && (int) $city > 0) {
+            return true;
+        }
+
+        return trim((string) $city) !== '';
     }
 
     private function applyDoctorLocationFilter($query, array $locationFilters)
@@ -1729,8 +1754,11 @@ class PatientController extends Controller
                     ->where('block.patient_id', '=', $patient->id)
                     ->where('block.chrIsBlock', '=', 'Y');
             })
-            ->whereNull('block.id')
-            ->where('users.country', $patient->country);
+            ->whereNull('block.id');
+
+        if ($patient->country !== null && $patient->country !== '') {
+            $query->where('users.country', $patient->country);
+        }
 
         if ($speciality !== null && $speciality !== '') {
             $query->where('users.category', $speciality);
@@ -1741,6 +1769,15 @@ class PatientController extends Controller
         }
 
         $this->applyDoctorLanguageFilter($query, $languageIds);
+
+        return $query;
+    }
+
+    private function applyPatientCountryFilter($query, Patients $patient)
+    {
+        if ($patient->country !== null && $patient->country !== '') {
+            return $query->where('users.country', $patient->country);
+        }
 
         return $query;
     }
