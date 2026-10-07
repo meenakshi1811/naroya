@@ -436,6 +436,7 @@ class PatientController extends Controller
 
                     if (!empty($patient)) {
                         $patient->varProfile =  !empty($patient->varProfile) ? config('app.url') . 'api/patientprofile/' . $patient->varProfile : 'null';
+                        $patient->profileCompleted = trim((string) $patient->name) !== '';
                         return response()->json([
                             'message' => 'success',
                             'data' => [
