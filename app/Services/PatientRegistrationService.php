@@ -10,6 +10,7 @@ use App\Models\Patients;
 use App\Models\State;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class PatientRegistrationService
 {
@@ -146,6 +147,26 @@ class PatientRegistrationService
         return $this->createPatient($validated, $affiliateId, $request);
     }
 
+    public function createFromPhoneAuth(string $phone, ?string $fcmToken = null): Patients
+    {
+        $patient = new Patients();
+        $patient->name = '';
+        $patient->lastname = '';
+        $patient->phone = $phone;
+        $patient->country = $this->indiaCountryId();
+        $patient->state = null;
+        $patient->language_id = 1;
+        $patient->localization_id = 1;
+        $patient->password = Hash::make(Str::random(32));
+        $patient->fcm_token = $fcmToken;
+
+        $patient->save();
+
+        $this->sendWelcomeNotification($patient);
+
+        return $patient;
+    }
+
     public function createPatient(array $data, ?int $affiliateId = null, ?Request $request = null): Patients
     {
         $patient = new Patients();
@@ -203,7 +224,7 @@ class PatientRegistrationService
         );
     }
 
-    private function normalizePhone(string $phone): string
+    public function normalizePhone(string $phone): string
     {
         $digits = preg_replace('/\D/', '', $phone);
 

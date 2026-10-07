@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use App\Services\PatientOtpService;
 use Laravel\Passport\Http\Controllers\AccessTokenController;
 use Illuminate\Support\Facades\Http;
 use App\Models\Patients;
@@ -71,50 +73,7 @@ class PatientController extends Controller
 
             // Check if the patient exists and the password is correct
             if ($patient && Hash::check($request->password, $patient->password)) {
-                $patientsData = ["id" => $patient->id];
-                $encodeToken = encrypt($patientsData);
-
-                $patient->remember_token = $encodeToken;
-                $patient->save();
-                
-                // Check for a new device (new FCM token)
-                if ($request->fcm_token && $patient->fcm_token !== $request->fcm_token) {
-                    // New Device Login notification temporarily disabled
-                    // if ($patient->fcm_token) {
-                    //     $notificationController = new NotificationController();
-                    //     $notificationController->sendPushNotification(
-                    //         $patient->fcm_token,
-                    //         'New Device Login',
-                    //         'Your account was logged in from a new device. If this was not you, please contact support.',
-                    //         'patient',
-                    //         [],
-                    //         'patient_new_device_login'
-                    //     );
-                    // }
-
-                    // Update the patient's FCM token to the new token
-                    $patient->fcm_token = $request->fcm_token;
-                    $patient->save();
-                }
-
-
-
-                return response()->json([
-                    'message' => 'Login successful!',
-                    'data' => [
-                        'user' => [
-                            'id' => $patient->id,
-                            'name' => $patient->name,
-                            'lastname' => $patient->lastname,
-                            'country' => $patient->country,
-                            'email' => $patient->email,
-                            'phone' => $patient->phone,
-                            'profile' => !empty($patient->varProfile) ? config('app.url') . 'api/patientprofile/' . $patient->varProfile : 'null'
-                        ],
-                        'token_type' => "Bearer",
-                        'access_token' => $encodeToken
-                    ]
-                ], 200);
+                return $this->issuePatientLoginToken($patient, $request->fcm_token);
             }
 
             return response()->json([
@@ -140,6 +99,155 @@ class PatientController extends Controller
                 ],
             ], 400);
         }
+    }
+
+    public function sendOtp(Request $request)
+    {
+        try {
+            $request->validate([
+                'phone' => 'required|string',
+            ]);
+
+            $registrationService = app(PatientRegistrationService::class);
+            $phone = $registrationService->normalizePhone((string) $request->phone);
+
+            $phoneValidator = Validator::make(
+                ['phone' => $phone],
+                ['phone' => ['required', 'digits:10', 'valid_indian_mobile']]
+            );
+
+            if ($phoneValidator->fails()) {
+                return response()->json([
+                    'message' => 'Please enter a valid mobile number!',
+                    'data' => [
+                        'error' => 'Please enter a valid mobile number!',
+                    ],
+                ], 400);
+            }
+
+            $otpService = app(PatientOtpService::class);
+            $otp = $otpService->generateOtp();
+            $otpService->store($phone, $otp);
+
+            // TODO: integrate SMS provider to deliver $otp to the patient's phone.
+
+            return response()->json([
+                'message' => 'OTP sent successfully!',
+                'data' => [
+                    'success' => true,
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            if ($e instanceof \Illuminate\Validation\ValidationException) {
+                return response()->json([
+                    'message' => 'Please Provide Valid details!',
+                    'data' => [
+                        'error' => 'Please Provide Valid details!',
+                    ],
+                ], 400);
+            }
+
+            return response()->json([
+                'message' => 'Something went wrong!',
+                'data' => [
+                    'error' => $e->getMessage(),
+                ],
+            ], 400);
+        }
+    }
+
+    public function otpLogin(Request $request)
+    {
+        try {
+            $request->validate([
+                'phone' => 'required|string',
+                'otp' => 'required|string|digits:6',
+                'fcm_token' => 'nullable|string',
+            ]);
+
+            $registrationService = app(PatientRegistrationService::class);
+            $phone = $registrationService->normalizePhone((string) $request->phone);
+
+            $phoneValidator = Validator::make(
+                ['phone' => $phone],
+                ['phone' => ['required', 'digits:10', 'valid_indian_mobile']]
+            );
+
+            if ($phoneValidator->fails()) {
+                return response()->json([
+                    'message' => 'Please enter a valid mobile number!',
+                    'data' => [
+                        'error' => 'Please enter a valid mobile number!',
+                    ],
+                ], 400);
+            }
+
+            $otpService = app(PatientOtpService::class);
+            if (! $otpService->verify($phone, $request->otp)) {
+                return response()->json([
+                    'message' => 'Invalid or expired OTP!',
+                    'data' => [
+                        'error' => 'Invalid or expired OTP!',
+                    ],
+                ], 400);
+            }
+
+            $patient = Patients::where('phone', $phone)->first();
+            $message = 'Login successful!';
+
+            if (! $patient) {
+                $patient = $registrationService->createFromPhoneAuth($phone, $request->fcm_token);
+                $message = 'Successfully created user!';
+            }
+
+            return $this->issuePatientLoginToken($patient, $request->fcm_token, $message);
+        } catch (\Exception $e) {
+            if ($e instanceof \Illuminate\Validation\ValidationException) {
+                return response()->json([
+                    'message' => 'Please Provide Valid details!',
+                    'data' => [
+                        'error' => 'Please Provide Valid details!',
+                    ],
+                ], 400);
+            }
+
+            return response()->json([
+                'message' => 'Please Provide Valid details!',
+                'data' => [
+                    'error' => 'Please Provide Valid details!',
+                ],
+            ], 400);
+        }
+    }
+
+    private function issuePatientLoginToken(Patients $patient, ?string $fcmToken, string $message = 'Login successful!')
+    {
+        $encodeToken = encrypt(['id' => $patient->id]);
+
+        $patient->remember_token = $encodeToken;
+
+        if ($fcmToken && $patient->fcm_token !== $fcmToken) {
+            $patient->fcm_token = $fcmToken;
+        }
+
+        $patient->save();
+
+        return response()->json([
+            'message' => $message,
+            'data' => [
+                'user' => [
+                    'id' => $patient->id,
+                    'name' => $patient->name,
+                    'lastname' => $patient->lastname,
+                    'country' => $patient->country,
+                    'email' => $patient->email,
+                    'phone' => $patient->phone,
+                    'profile' => ! empty($patient->varProfile) ? config('app.url').'api/patientprofile/'.$patient->varProfile : 'null',
+                ],
+                'token_type' => 'Bearer',
+                'access_token' => $encodeToken,
+            ],
+        ], 200);
     }
     
      public function logout(Request $request)
