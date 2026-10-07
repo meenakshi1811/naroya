@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use App\Services\PatientOtpService;
 use Laravel\Passport\Http\Controllers\AccessTokenController;
 use Illuminate\Support\Facades\Http;
 use App\Models\Patients;
@@ -101,67 +100,11 @@ class PatientController extends Controller
         }
     }
 
-    public function sendOtp(Request $request)
+    public function phoneLogin(Request $request)
     {
         try {
             $request->validate([
                 'phone' => 'required|string',
-            ]);
-
-            $registrationService = app(PatientRegistrationService::class);
-            $phone = $registrationService->normalizePhone((string) $request->phone);
-
-            $phoneValidator = Validator::make(
-                ['phone' => $phone],
-                ['phone' => ['required', 'digits:10', 'valid_indian_mobile']]
-            );
-
-            if ($phoneValidator->fails()) {
-                return response()->json([
-                    'message' => 'Please enter a valid mobile number!',
-                    'data' => [
-                        'error' => 'Please enter a valid mobile number!',
-                    ],
-                ], 400);
-            }
-
-            $otpService = app(PatientOtpService::class);
-            $otp = $otpService->generateOtp();
-            $otpService->store($phone, $otp);
-
-            // TODO: integrate SMS provider to deliver $otp to the patient's phone.
-
-            return response()->json([
-                'message' => 'OTP sent successfully!',
-                'data' => [
-                    'success' => true,
-                ],
-            ], 200);
-        } catch (\Exception $e) {
-            if ($e instanceof \Illuminate\Validation\ValidationException) {
-                return response()->json([
-                    'message' => 'Please Provide Valid details!',
-                    'data' => [
-                        'error' => 'Please Provide Valid details!',
-                    ],
-                ], 400);
-            }
-
-            return response()->json([
-                'message' => 'Something went wrong!',
-                'data' => [
-                    'error' => $e->getMessage(),
-                ],
-            ], 400);
-        }
-    }
-
-    public function otpLogin(Request $request)
-    {
-        try {
-            $request->validate([
-                'phone' => 'required|string',
-                'otp' => 'required|string|digits:6',
                 'fcm_token' => 'nullable|string',
             ]);
 
@@ -178,16 +121,6 @@ class PatientController extends Controller
                     'message' => 'Please enter a valid mobile number!',
                     'data' => [
                         'error' => 'Please enter a valid mobile number!',
-                    ],
-                ], 400);
-            }
-
-            $otpService = app(PatientOtpService::class);
-            if (! $otpService->verify($phone, $request->otp)) {
-                return response()->json([
-                    'message' => 'Invalid or expired OTP!',
-                    'data' => [
-                        'error' => 'Invalid or expired OTP!',
                     ],
                 ], 400);
             }

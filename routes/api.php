@@ -59,8 +59,7 @@ Route::middleware('auth:api')->group(function () {
 });
 
 Route::post('/patient-login',[App\Http\Controllers\PatientController::class, 'login']);
-Route::post('/patient-send-otp',[App\Http\Controllers\PatientController::class, 'sendOtp'])->middleware('throttle:10,1');
-Route::post('/patient-otp-login',[App\Http\Controllers\PatientController::class, 'otpLogin']);
+Route::post('/patient-phone-login',[App\Http\Controllers\PatientController::class, 'phoneLogin']);
 Route::post('/patients-register',[App\Http\Controllers\PatientController::class, 'register']);
 Route::middleware([AuthenticateToken::class])->group(function () {
 Route::post('/patient/home',[App\Http\Controllers\PatientController::class, 'home']);
