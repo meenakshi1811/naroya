@@ -19,6 +19,8 @@ class Appointment extends Model
         'id',
         'patient_id',
         'dr_id',
+        'clinic_id',
+        'token_no',
         'amount',
         'is_freeslot',
         'varAppointment',

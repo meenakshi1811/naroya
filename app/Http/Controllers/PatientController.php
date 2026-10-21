@@ -15,6 +15,8 @@ use App\Models\Favourite;
 use App\Models\GeneralSetting;
 use App\Models\User;
 use App\Models\City;
+use App\Models\Clinic;
+use App\Exceptions\ClinicTokensUnavailableException;
 use App\Models\Rating;
 use Carbon\Carbon;
 use Storage;
@@ -1298,30 +1300,43 @@ class PatientController extends Controller
                         $freeSlotApplied = false;
                         $freeSlotsLeftAfterBooking = null;
 
-                        if ($requestedFreeSlot) {
-                            $freeSlotResult = DB::transaction(function () use ($patient, $request, $doctor) {
-                                $consumeResult = $this->tryConsumeGlobalFreeSlot();
-                                $appointment = $this->makeAppointmentFromRequest(
-                                    $patient,
-                                    $request,
-                                    $doctor,
-                                    $consumeResult['consumed']
-                                );
-                                $appointment->save();
+                        try {
+                            if ($requestedFreeSlot) {
+                                $freeSlotResult = DB::transaction(function () use ($patient, $request, $doctor) {
+                                    $consumeResult = $this->tryConsumeGlobalFreeSlot();
+                                    $appointment = $this->makeAppointmentFromRequest(
+                                        $patient,
+                                        $request,
+                                        $doctor,
+                                        $consumeResult['consumed']
+                                    );
+                                    $this->assignClinicToken($appointment, $doctor);
+                                    $appointment->save();
 
-                                return [
-                                    'appointment' => $appointment,
-                                    'free_slot_applied' => $consumeResult['consumed'],
-                                    'free_slots_left' => $consumeResult['free_slots_left'],
-                                ];
-                            });
+                                    return [
+                                        'appointment' => $appointment,
+                                        'free_slot_applied' => $consumeResult['consumed'],
+                                        'free_slots_left' => $consumeResult['free_slots_left'],
+                                    ];
+                                });
 
-                            $appointment = $freeSlotResult['appointment'];
-                            $freeSlotApplied = $freeSlotResult['free_slot_applied'];
-                            $freeSlotsLeftAfterBooking = $freeSlotResult['free_slots_left'];
-                        } else {
-                            $appointment = $this->makeAppointmentFromRequest($patient, $request, $doctor, false);
-                            $appointment->save();
+                                $appointment = $freeSlotResult['appointment'];
+                                $freeSlotApplied = $freeSlotResult['free_slot_applied'];
+                                $freeSlotsLeftAfterBooking = $freeSlotResult['free_slots_left'];
+                            } else {
+                                $appointment = DB::transaction(function () use ($patient, $request, $doctor) {
+                                    $appointment = $this->makeAppointmentFromRequest($patient, $request, $doctor, false);
+                                    $this->assignClinicToken($appointment, $doctor);
+                                    $appointment->save();
+
+                                    return $appointment;
+                                });
+                            }
+                        } catch (ClinicTokensUnavailableException $e) {
+                            return response()->json([
+                                'message' => $e->getMessage(),
+                                'data' => new \stdClass(),
+                            ], 200);
                         }
 
                         if ($doctor && $doctor->fcm_token) {
@@ -1341,6 +1356,11 @@ class PatientController extends Controller
                         
                         $responseData = [
                             'appointment' => $appointment,
+                            // Set only when the doctor belongs to an active clinic.
+                            'token_no' => $appointment->token_no,
+                            'clinic' => $appointment->clinic_id
+                                ? ['id' => $appointment->clinic_id, 'name' => $doctor->clinic?->name]
+                                : null,
                         ];
 
                         if ($requestedFreeSlot) {
@@ -2038,6 +2058,49 @@ class PatientController extends Controller
             'consumed' => true,
             'free_slots_left' => $remaining - 1,
         ];
+    }
+
+    /**
+     * Gives the appointment the next token at the doctor's clinic for that date.
+     * Cancelled and rejected requests free their number, and the lowest free
+     * number is reused, so tokens stay within the clinic's daily maximum.
+     * Must run inside a transaction: the clinic row lock keeps two concurrent
+     * bookings from taking the same token.
+     */
+    private function assignClinicToken(Appointment $appointment, ?User $doctor): void
+    {
+        if (! $doctor || ! $doctor->clinic_id) {
+            return;
+        }
+
+        $clinic = Clinic::whereKey($doctor->clinic_id)
+            ->where('is_active', true)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $clinic) {
+            return;
+        }
+
+        $takenTokens = Appointment::where('clinic_id', $clinic->id)
+            ->where('varAppointment', $appointment->varAppointment)
+            ->where('chrIsCanceled', 'N')
+            ->where('chrIsRejected', 'N')
+            ->pluck('token_no')
+            ->map(fn ($token) => (int) $token)
+            ->flip();
+
+        if ($clinic->max_tokens && $takenTokens->count() >= $clinic->max_tokens) {
+            throw new ClinicTokensUnavailableException($clinic);
+        }
+
+        $token = 1;
+        while ($takenTokens->has($token)) {
+            $token++;
+        }
+
+        $appointment->clinic_id = $clinic->id;
+        $appointment->token_no = $token;
     }
 
     private function makeAppointmentFromRequest(Patients $patient, Request $request, ?User $doctor, bool $isFreeSlot): Appointment
