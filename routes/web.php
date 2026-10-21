@@ -134,6 +134,23 @@ Route::delete('/admin/delete-patient/{id}', [App\Http\Controllers\PatientControl
     Route::put('/admin/affiliate/{affiliate}', [App\Http\Controllers\Admin\AffiliateController::class, 'update'])->name('admin.affiliate.update');
     Route::delete('/admin/affiliate/{affiliate}', [App\Http\Controllers\Admin\AffiliateController::class, 'destroy'])->name('admin.affiliate.destroy');
 
+    // Clinics
+    Route::get('/admin/clinic', [App\Http\Controllers\Admin\ClinicController::class, 'index'])->name('admin.clinic');
+    Route::get('/admin/clinic/create', [App\Http\Controllers\Admin\ClinicController::class, 'create'])->name('admin.clinic.create');
+    Route::post('/admin/clinic', [App\Http\Controllers\Admin\ClinicController::class, 'store'])->name('admin.clinic.store');
+    Route::get('/admin/clinic/{clinic}', [App\Http\Controllers\Admin\ClinicController::class, 'show'])->name('admin.clinic.show');
+    Route::get('/admin/clinic/{clinic}/edit', [App\Http\Controllers\Admin\ClinicController::class, 'edit'])->name('admin.clinic.edit');
+    Route::put('/admin/clinic/{clinic}', [App\Http\Controllers\Admin\ClinicController::class, 'update'])->name('admin.clinic.update');
+    Route::delete('/admin/clinic/{clinic}', [App\Http\Controllers\Admin\ClinicController::class, 'destroy'])->name('admin.clinic.destroy');
+
+    // Clinic members (doctors and employees)
+    Route::get('/admin/clinic/{clinic}/members/create', [App\Http\Controllers\Admin\ClinicMemberController::class, 'create'])->name('admin.clinic.members.create');
+    Route::post('/admin/clinic/{clinic}/members', [App\Http\Controllers\Admin\ClinicMemberController::class, 'store'])->name('admin.clinic.members.store');
+    Route::post('/admin/clinic/{clinic}/members/link', [App\Http\Controllers\Admin\ClinicMemberController::class, 'link'])->name('admin.clinic.members.link');
+    Route::get('/admin/clinic/{clinic}/members/{member}/edit', [App\Http\Controllers\Admin\ClinicMemberController::class, 'edit'])->name('admin.clinic.members.edit');
+    Route::put('/admin/clinic/{clinic}/members/{member}', [App\Http\Controllers\Admin\ClinicMemberController::class, 'update'])->name('admin.clinic.members.update');
+    Route::delete('/admin/clinic/{clinic}/members/{member}', [App\Http\Controllers\Admin\ClinicMemberController::class, 'destroy'])->name('admin.clinic.members.destroy');
+
 });
 
 Route::get('password/reset/{token}', [\App\Http\Controllers\ResePasswordController::class, 'create'])

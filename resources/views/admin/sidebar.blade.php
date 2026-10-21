@@ -17,6 +17,9 @@
                          <li class="nav-item"> <a href="{{ url('/admin/pending-doctor') }}" class="nav-link {{  (Request::segment('2') == 'pending-doctor') ? 'active': ''}}"> <i class="nav-icon bi bi-circle"></i>
                             <p>Pending Approval Doctor</p>
                         </a> </li>
+                        <li class="nav-item"> <a href="{{ url('/admin/clinic') }}" class="nav-link {{ (Request::segment('2') == 'clinic') ? 'active': ''}}"> <i class="nav-icon bi bi-hospital"></i>
+                            <p>Clinics</p>
+                        </a> </li>
                         <li class="nav-item"> <a href="{{ url('/admin/patient') }}" class="nav-link {{ (Request::segment('2') == 'patient') ? 'active': ''}}"> <i class="nav-icon bi bi-circle"></i>
                                 <p>Patient</p>
                             </a> </li>

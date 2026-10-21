@@ -37,7 +37,8 @@ class DoctorController extends Controller
 
         $doctorBankDetails = DoctorBankDetail::get()->keyBy('doctor_id');
 
-        $doctors = User::where('chrApproval', $approval)
+        $doctors = User::doctors()
+            ->where('chrApproval', $approval)
             ->with(['categoryRel:id,title', 'countryRel:id,countryname', 'stateRel:id,name', 'cityRel:id,name,state_id'])
             ->withSum('paymentLogs as total_payment', 'amount')
             ->with(['paymentLogs' => function ($q) {

@@ -1483,7 +1483,8 @@ class PatientController extends Controller
             ->selectRaw('IFNULL(AVG(ratings.rating), 0) as ratings')
             ->selectRaw('IFNULL(COUNT(ratings.rating), 0) as review_count')
             ->selectRaw('IFNULL(COUNT(DISTINCT appointment.patient_id), 0) as patient_count')
-            ->where('users.id', $doctorId);
+            ->where('users.id', $doctorId)
+            ->where('users.role', User::ROLE_DOCTOR);
 
         if ($approvedOnly) {
             $doctorQuery->where('users.chrApproval', 'Y');
@@ -1822,6 +1823,9 @@ class PatientController extends Controller
 
     private function applyOptionalDoctorFilters($query, ?array $locationFilters, array $languageIds, $speciality)
     {
+        // Clinic employees share the users table but must never be listed as doctors.
+        $query->where('users.role', User::ROLE_DOCTOR);
+
         if ($speciality !== null && $speciality !== '') {
             $query->where('users.category', $speciality);
         }

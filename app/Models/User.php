@@ -15,6 +15,14 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    public const ROLE_DOCTOR = 'doctor';
+    public const ROLE_EMPLOYEE = 'employee';
+
+    public const ROLES = [
+        self::ROLE_DOCTOR => 'Doctor',
+        self::ROLE_EMPLOYEE => 'Employee',
+    ];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -37,6 +45,8 @@ class User extends Authenticatable
         'email_verified_at',
         'remember_token',
         'chrApproval',
+        'role',
+        'clinic_id',
         'created_at',
         'updated_at',
     ];
@@ -180,6 +190,21 @@ class User extends Authenticatable
     public function experiences()
     {
         return $this->hasMany(OrgExperience::class, 'user_id');
+    }
+
+    public function clinic()
+    {
+        return $this->belongsTo(Clinic::class, 'clinic_id');
+    }
+
+    public function scopeDoctors($query)
+    {
+        return $query->where('users.role', self::ROLE_DOCTOR);
+    }
+
+    public function isEmployee(): bool
+    {
+        return $this->role === self::ROLE_EMPLOYEE;
     }
 
 

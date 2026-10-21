@@ -15,10 +15,12 @@ class UserPasswordController extends Controller
 {
     public function resetDoctor(Request $request, int $id): JsonResponse
     {
+        $user = User::findOrFail($id);
+
         return $this->resetPassword(
             $request,
-            User::findOrFail($id),
-            'doctor',
+            $user,
+            $user->isEmployee() ? 'employee' : 'doctor',
             fn ($user) => trim($user->name.' '.($user->surname ?? ''))
         );
     }

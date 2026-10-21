@@ -58,7 +58,8 @@ class AffiliateController extends Controller
             $totalUsers += $stats['users'];
         }
 
-        $approvedDoctors = User::where('chrApproval', 'Y')
+        $approvedDoctors = User::doctors()
+            ->where('chrApproval', 'Y')
             ->orderBy('name')
             ->get(['id', 'name', 'surname', 'email']);
 

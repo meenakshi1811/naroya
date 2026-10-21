@@ -106,7 +106,7 @@ class PaymentLogController extends Controller
 
     private function buildMonthlySummariesForDoctors(Carbon $startOfMonth, Carbon $endOfMonth, float $commissionPercentage, ?int $doctorId = null)
     {
-        $doctorsQuery = User::query()
+        $doctorsQuery = User::doctors()
             ->select('id', 'name', 'surname', 'email', 'varProfile', 'monthly_payout')
             ->where('chrApproval', 'Y');
 
