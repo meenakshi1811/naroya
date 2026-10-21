@@ -28,6 +28,8 @@ Route::get('/city-list',[App\Http\Controllers\AuthController::class, 'cityList']
 
 Route::get('/speciality', [App\Http\Controllers\AuthController::class, 'speciality']);
 Route::get('/public/doctor/{doctorId}', [App\Http\Controllers\PatientController::class, 'getPublicDoctorDetail']);
+// Accepts a patient or a doctor login token; the controller checks which one.
+Route::match(['get', 'post'], '/clinic-running-token', [App\Http\Controllers\ClinicTokenController::class, 'running']);
 Route::post('/stripe/webhook', [App\Http\Controllers\StripeWebhookController::class, 'handle']);
 Route::post('/refund', [App\Http\Controllers\PaymentController::class, 'processRefund'])->middleware('throttle:payment');
 Route::post('/generate-agora-details', [App\Http\Controllers\AgoraController::class, 'generateAgoraDetails']);
@@ -50,6 +52,9 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/doctor/patient-history',[App\Http\Controllers\AuthController::class, 'getPatientHistory']);  
     Route::post('/doctor/patient-block',[App\Http\Controllers\AuthController::class, 'BlockUnblock']);
      Route::post('/doctor/schedule',[App\Http\Controllers\AuthController::class, 'getSchedule']);
+    // Clinic token queue (doctors and clinic employees)
+    Route::post('/doctor/clinic-token/next', [App\Http\Controllers\ClinicTokenController::class, 'next']);
+    Route::post('/doctor/clinic-token/set', [App\Http\Controllers\ClinicTokenController::class, 'set']);
      Route::post('/doctor/prescription',[App\Http\Controllers\AppointmentController::class, 'handlePrescription']);
      Route::post('/update-payment-setup', [App\Http\Controllers\PaymentController::class, 'updatePaymentSetupStatus']);
     Route::post('/doctor/bank-details', [App\Http\Controllers\DoctorBankDetailController::class, 'upsert']);
