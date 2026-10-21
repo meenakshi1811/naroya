@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -21,6 +22,8 @@ class Clinic extends Model
         'state',
         'city_id',
         'postal_code',
+        'timings',
+        'max_tokens',
         'description',
         'logo',
         'is_active',
@@ -28,6 +31,8 @@ class Clinic extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'timings' => 'array',
+        'max_tokens' => 'integer',
     ];
 
     public function members(): HasMany
@@ -75,6 +80,23 @@ class Clinic extends Model
             ->implode('');
 
         return $initials !== '' ? $initials : 'C';
+    }
+
+    /**
+     * Sessions as display labels, e.g. ["9 AM – 1 PM", "4 PM – 8 PM"].
+     */
+    public function getTimingLabelsAttribute(): array
+    {
+        return collect($this->timings ?? [])
+            ->map(fn (array $session) => self::formatTime($session['start']) . ' – ' . self::formatTime($session['end']))
+            ->all();
+    }
+
+    private static function formatTime(string $time): string
+    {
+        $parsed = Carbon::createFromFormat('H:i', $time);
+
+        return $parsed->format($parsed->minute === 0 ? 'g A' : 'g:i A');
     }
 
     public function getLocationLabelAttribute(): string

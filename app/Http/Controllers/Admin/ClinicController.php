@@ -11,6 +11,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class ClinicController extends Controller
 {
@@ -153,7 +154,7 @@ class ClinicController extends Controller
             $request->merge(['website' => 'https://' . $website]);
         }
 
-        return $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
             'registration_no' => 'nullable|string|max:100',
             'email' => 'nullable|email|max:255',
@@ -164,16 +165,76 @@ class ClinicController extends Controller
             'state' => 'nullable|integer|exists:states,id',
             'city_id' => ['nullable', 'integer', $this->cityInSelectedStateRule($request)],
             'postal_code' => 'nullable|string|max:20',
+            'timings' => 'nullable|array|max:6',
+            'timings.*.start' => 'nullable|date_format:H:i',
+            'timings.*.end' => 'nullable|date_format:H:i',
+            'max_tokens' => 'nullable|integer|min:1|max:1000',
             'description' => 'nullable|string|max:2000',
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ], [
             'city_id.exists' => 'The selected city does not belong to the selected state.',
             'logo.max' => 'The logo must not be larger than 2 MB.',
+            'timings.max' => 'A clinic can have at most 6 sessions a day.',
+            'timings.*.start.date_format' => 'Enter a valid start time.',
+            'timings.*.end.date_format' => 'Enter a valid end time.',
         ], [
             'name' => 'clinic name',
             'registration_no' => 'registration number',
             'city_id' => 'city',
+            'max_tokens' => 'max tokens',
         ]);
+
+        $validated['timings'] = $this->normalizeTimings($validated['timings'] ?? []);
+
+        return $validated;
+    }
+
+    /**
+     * Drops blank rows, checks each session ends after it starts and that
+     * sessions don't overlap, and returns them sorted by start time.
+     */
+    private function normalizeTimings(array $sessions): ?array
+    {
+        $errors = [];
+        $clean = [];
+
+        foreach ($sessions as $index => $session) {
+            $start = $session['start'] ?? null;
+            $end = $session['end'] ?? null;
+
+            if (! $start && ! $end) {
+                continue;
+            }
+
+            if (! $start || ! $end) {
+                $errors["timings.$index." . ($start ? 'end' : 'start')] = 'Enter both a start and an end time for this session.';
+                continue;
+            }
+
+            // H:i strings compare correctly as text.
+            if ($end <= $start) {
+                $errors["timings.$index.end"] = 'The session must end after it starts.';
+                continue;
+            }
+
+            $clean[] = ['index' => $index, 'start' => $start, 'end' => $end];
+        }
+
+        usort($clean, fn ($a, $b) => strcmp($a['start'], $b['start']));
+
+        for ($i = 1; $i < count($clean); $i++) {
+            if ($clean[$i]['start'] < $clean[$i - 1]['end']) {
+                $errors["timings.{$clean[$i]['index']}.start"] = 'This session overlaps another session.';
+            }
+        }
+
+        if ($errors) {
+            throw ValidationException::withMessages($errors);
+        }
+
+        return $clean
+            ? array_map(fn ($session) => ['start' => $session['start'], 'end' => $session['end']], $clean)
+            : null;
     }
 
     private function storeLogo(UploadedFile $file): string

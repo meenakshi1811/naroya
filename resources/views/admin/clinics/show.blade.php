@@ -44,6 +44,9 @@
                     </div>
                     <div class="cm-hero-sub">
                         {{ $clinic->registration_no ? 'Registration no. ' . $clinic->registration_no : 'No registration number on file' }}
+                        @if($clinic->created_at)
+                            · Added {{ $clinic->created_at->format('d M Y') }}
+                        @endif
                     </div>
                     <div class="cm-hero-meta">
                         @if($addressLine !== '')
@@ -80,12 +83,24 @@
                 <div class="cm-hero-stat-value">{{ $employeeCount }}</div>
             </div>
             <div>
-                <div class="cm-stat-label">Location</div>
-                <div class="cm-hero-stat-text">{{ $clinic->location_label ?: '—' }}</div>
+                <div class="cm-stat-label">Clinic hours</div>
+                <div class="cm-hero-stat-text">
+                    @forelse($clinic->timing_labels as $label)
+                        <div>{{ $label }}</div>
+                    @empty
+                        <span class="cm-muted">Not set</span>
+                    @endforelse
+                </div>
             </div>
             <div>
-                <div class="cm-stat-label">Added on</div>
-                <div class="cm-hero-stat-text">{{ optional($clinic->created_at)->format('d M Y') ?? '—' }}</div>
+                <div class="cm-stat-label">Max tokens / day</div>
+                <div class="cm-hero-stat-value">
+                    @if($clinic->max_tokens)
+                        {{ number_format($clinic->max_tokens) }}
+                    @else
+                        <span class="cm-hero-stat-text cm-muted d-inline-block">No limit set</span>
+                    @endif
+                </div>
             </div>
         </div>
     </div>

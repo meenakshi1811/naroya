@@ -935,6 +935,68 @@
         font-size: 0.88rem;
     }
 
+    /* ---------- Clinic hours sessions ---------- */
+    .cm-session-list {
+        display: grid;
+        gap: 0.6rem;
+        counter-reset: cm-session;
+    }
+
+    .cm-session {
+        display: grid;
+        grid-template-columns: 82px minmax(0, 1fr) auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 0.4rem 0.65rem;
+        max-width: 560px;
+        counter-increment: cm-session;
+    }
+
+    .cm-session-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--cm-muted);
+    }
+
+    .cm-session-label::before {
+        content: 'Session ' counter(cm-session);
+    }
+
+    /* The time picker has its own icon; Bootstrap's invalid icon would sit on top of it. */
+    .cm .cm-session .form-control.is-invalid {
+        background-image: none;
+        padding-right: 0.85rem;
+    }
+
+    .cm-session-sep {
+        color: var(--cm-muted);
+        font-size: 0.85rem;
+    }
+
+    .cm-session-error {
+        grid-column: 2 / -1;
+        color: #dc2626;
+        font-size: 0.8rem;
+    }
+
+    @media (max-width: 575px) {
+        .cm-session {
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+        }
+
+        .cm-session-label,
+        .cm-session-error {
+            grid-column: 1 / -1;
+        }
+    }
+
+    .cm-hours {
+        display: grid;
+        gap: 0.1rem;
+        white-space: nowrap;
+    }
+
     /* ---------- Clinic profile hero ---------- */
     .cm-hero {
         margin-bottom: 1.5rem;

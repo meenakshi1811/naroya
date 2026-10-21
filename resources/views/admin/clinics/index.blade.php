@@ -88,6 +88,7 @@
                         <tr>
                             <th>Clinic</th>
                             <th>Location</th>
+                            <th>Hours</th>
                             <th>Contact</th>
                             <th>Doctors</th>
                             <th>Employees</th>
@@ -123,6 +124,20 @@
                                         {{ $clinic->location_label }}
                                     @else
                                         <span class="cm-muted">—</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($clinic->timing_labels)
+                                        <div class="cm-hours">
+                                            @foreach($clinic->timing_labels as $label)
+                                                <span>{{ $label }}</span>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <span class="cm-muted">—</span>
+                                    @endif
+                                    @if($clinic->max_tokens)
+                                        <div class="cm-small cm-muted cm-nowrap">Max {{ number_format($clinic->max_tokens) }} tokens/day</div>
                                     @endif
                                 </td>
                                 <td class="cm-nowrap">

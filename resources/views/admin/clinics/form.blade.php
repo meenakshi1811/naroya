@@ -7,6 +7,9 @@
     $logoUrl = $clinic->logo_url;
     $selectedState = old('state', $clinic->state);
     $selectedCity = old('city_id', $clinic->city_id);
+    // Start with one empty session so the inputs are visible; blank rows are ignored on save.
+    $sessionRows = old('timings', $clinic->timings ?? []) ?: [['start' => '', 'end' => '']];
+    $nextSessionIndex = max(array_map('intval', array_keys($sessionRows))) + 1;
 @endphp
 
 <div class="container-fluid cm">
@@ -157,6 +160,39 @@
 
         <section class="cm-form-section">
             <div>
+                <h2 class="cm-section-heading"><i class="bi bi-clock"></i> Hours &amp; tokens</h2>
+                <p class="cm-section-desc">Daily consultation sessions and how many patient tokens the clinic issues. Add a second session for split shifts, e.g. 9 AM – 1 PM and 4 PM – 8 PM.</p>
+            </div>
+            <div>
+                <span class="form-label d-block">Clinic hours</span>
+                <div class="cm-session-list" id="sessionList">
+                    @foreach($sessionRows as $index => $session)
+                        @include('admin.clinics.partials.session-row', ['index' => $index, 'session' => $session])
+                    @endforeach
+                </div>
+                <div class="cm-repeater-empty" id="sessionEmpty" hidden>No sessions added. Clinic hours won't be shown.</div>
+                @error('timings')<div class="text-danger cm-small mt-1">{{ $message }}</div>@enderror
+                <button type="button" class="btn btn-outline-primary btn-sm mt-3" id="addSession">
+                    <i class="bi bi-plus-lg me-1"></i> Add session
+                </button>
+                <template id="sessionTemplate">
+                    @include('admin.clinics.partials.session-row', ['index' => '__INDEX__', 'session' => []])
+                </template>
+
+                <div class="mt-4" style="max-width: 280px;">
+                    <label for="max_tokens" class="form-label">Max tokens per day<span class="cm-optional">Optional</span></label>
+                    <div class="input-group has-validation">
+                        <input type="number" id="max_tokens" name="max_tokens" min="1" max="1000" step="1" inputmode="numeric" class="form-control @error('max_tokens') is-invalid @enderror" value="{{ old('max_tokens', $clinic->max_tokens) }}" placeholder="e.g. 100">
+                        <span class="input-group-text">tokens</span>
+                        @error('max_tokens')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="form-text">Leave blank if the clinic has no daily limit.</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="cm-form-section">
+            <div>
                 <h2 class="cm-section-heading"><i class="bi bi-toggle-on"></i> Status</h2>
                 <p class="cm-section-desc">Mark clinics you no longer work with as inactive instead of deleting them.</p>
             </div>
@@ -182,4 +218,41 @@
 </div>
 
 @include('admin.clinics.partials.form-scripts')
+<script>
+    (function () {
+        // Clinic hours repeater.
+        var sessionList = document.getElementById('sessionList');
+        var sessionEmpty = document.getElementById('sessionEmpty');
+        var sessionTemplate = document.getElementById('sessionTemplate');
+        var addSessionButton = document.getElementById('addSession');
+        var maxSessions = 6;
+        var nextSessionIndex = {{ $nextSessionIndex }};
+
+        function syncSessions() {
+            var count = sessionList.children.length;
+            sessionEmpty.hidden = count > 0;
+            addSessionButton.disabled = count >= maxSessions;
+        }
+
+        addSessionButton.addEventListener('click', function () {
+            var wrapper = document.createElement('div');
+            wrapper.innerHTML = sessionTemplate.innerHTML.replace(/__INDEX__/g, String(nextSessionIndex++)).trim();
+            var row = wrapper.firstElementChild;
+            sessionList.appendChild(row);
+            syncSessions();
+            row.querySelector('input').focus();
+        });
+
+        sessionList.addEventListener('click', function (event) {
+            var removeButton = event.target.closest('[data-remove-session]');
+            if (!removeButton) {
+                return;
+            }
+            removeButton.closest('[data-session-row]').remove();
+            syncSessions();
+        });
+
+        syncSessions();
+    })();
+</script>
 @endsection
