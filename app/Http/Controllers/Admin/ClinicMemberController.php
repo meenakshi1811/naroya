@@ -17,6 +17,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -26,6 +27,8 @@ class ClinicMemberController extends Controller
 
     // Same folder the doctor API uses, so existing profile URLs keep working.
     private const PROFILE_PATH = 'api/docterprofile';
+
+    private ?array $notNullableUserColumns = null;
 
     public function create(Request $request, Clinic $clinic)
     {
@@ -247,47 +250,79 @@ class ClinicMemberController extends Controller
 
     private function fillMember(User $member, Request $request, array $data): void
     {
-        $member->role = $data['role'];
-        $member->name = $data['first_name'];
-        $member->surname = $data['surname'] ?? null;
-        $member->email = $data['email'];
-        $member->phoneNumber = $data['phoneNumber'] ?? null;
-        $member->country = $data['country'] ?? null;
-        $member->state = $data['state'] ?? null;
-        $member->city_id = $data['city_id'] ?? null;
-
         $languageIds = array_values(array_unique(array_map('intval', $data['language_ids'] ?? [])));
-        $member->language_ids = ! empty($languageIds) ? $languageIds : null;
+
+        $this->assignColumns($member, [
+            'role' => $data['role'],
+            'name' => $data['first_name'],
+            'surname' => $data['surname'] ?? null,
+            'email' => $data['email'],
+            'phoneNumber' => $data['phoneNumber'] ?? null,
+            'country' => $data['country'] ?? null,
+            'state' => $data['state'] ?? null,
+            'city_id' => $data['city_id'] ?? null,
+            'language_ids' => ! empty($languageIds) ? $languageIds : null,
+        ]);
 
         if ($request->hasFile('profile_picture')) {
             $this->deleteProfilePicture($member->varProfile);
             $member->varProfile = $this->storeProfilePicture($request->file('profile_picture'));
         } elseif ($request->boolean('remove_profile_picture')) {
             $this->deleteProfilePicture($member->varProfile);
-            $member->varProfile = null;
+            // Every reader checks empty(), so '' works where the column is NOT NULL.
+            $member->varProfile = in_array('varProfile', $this->notNullableUserColumns(), true) ? '' : null;
         }
 
         if ($member->role !== User::ROLE_DOCTOR) {
             return;
         }
 
-        $member->category = $data['category'];
-        $member->varSpeciality = $data['speciality'] ?? null;
-        $member->bio_handle = $data['bio_handle'] ?? null;
-        $member->varExperience = $data['total_experience'] ?? null;
-        $member->varFees = $data['fees'] ?? null;
-        $member->varTimeDuration = $data['consultation_time'] ?? $this->defaultConsultationTime();
-        $member->varGraduation = $data['graduation'] ?? null;
-        $member->varGraduationYear = $data['graduation_year'] ?? null;
-        $member->varPostGraduation = $data['post_graduation'] ?? null;
-        $member->varPostGraduationYear = $data['pg_year'] ?? null;
-        $member->gmc_registration_no = $data['gmc_registration_no'] ?? null;
-        $member->indemnity_insurance_provider = $data['indemnity_insurance_provider'] ?? null;
-        $member->policy_no = $data['policy_no'] ?? null;
-        $member->india_registration_no = $data['india_registration_no'] ?? null;
-        $member->dha_reg = $data['dha_reg'] ?? null;
-        $member->reg_no = $data['reg_no'] ?? null;
-        $member->chrSmartcard = $data['chrSmartcard'] ?? null;
+        $this->assignColumns($member, [
+            'category' => $data['category'],
+            'varSpeciality' => $data['speciality'] ?? null,
+            'bio_handle' => $data['bio_handle'] ?? null,
+            'varExperience' => $data['total_experience'] ?? null,
+            'varFees' => $data['fees'] ?? null,
+            'varTimeDuration' => $data['consultation_time'] ?? $this->defaultConsultationTime(),
+            'varGraduation' => $data['graduation'] ?? null,
+            'varGraduationYear' => $data['graduation_year'] ?? null,
+            'varPostGraduation' => $data['post_graduation'] ?? null,
+            'varPostGraduationYear' => $data['pg_year'] ?? null,
+            'gmc_registration_no' => $data['gmc_registration_no'] ?? null,
+            'indemnity_insurance_provider' => $data['indemnity_insurance_provider'] ?? null,
+            'policy_no' => $data['policy_no'] ?? null,
+            'india_registration_no' => $data['india_registration_no'] ?? null,
+            'dha_reg' => $data['dha_reg'] ?? null,
+            'reg_no' => $data['reg_no'] ?? null,
+            'chrSmartcard' => $data['chrSmartcard'] ?? null,
+        ]);
+    }
+
+    /**
+     * The live users table predates the migrations and has NOT NULL columns
+     * (e.g. chrSmartcard) that the app always fills. A blank optional field must
+     * not write NULL into those: on create the column default applies, and on
+     * update the current value is kept.
+     */
+    private function assignColumns(User $member, array $values): void
+    {
+        $notNullable = $this->notNullableUserColumns();
+
+        foreach ($values as $column => $value) {
+            if ($value === null && in_array($column, $notNullable, true)) {
+                continue;
+            }
+
+            $member->{$column} = $value;
+        }
+    }
+
+    private function notNullableUserColumns(): array
+    {
+        return $this->notNullableUserColumns ??= collect(Schema::getColumns('users'))
+            ->reject(fn (array $column) => $column['nullable'])
+            ->pluck('name')
+            ->all();
     }
 
     private function replaceExperiences(int $userId, array $entries): void

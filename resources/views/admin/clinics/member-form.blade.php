@@ -346,10 +346,16 @@
                     </div>
                     <div class="col-md-6">
                         <label for="chrSmartcard" class="form-label">Smartcard</label>
+                        @php
+                            $smartcard = old('chrSmartcard', $member->chrSmartcard);
+                        @endphp
                         <select id="chrSmartcard" name="chrSmartcard" class="form-select @error('chrSmartcard') is-invalid @enderror">
-                            <option value="">Not specified</option>
-                            <option value="Y" @selected(old('chrSmartcard', $member->chrSmartcard) === 'Y')>Yes</option>
-                            <option value="N" @selected(old('chrSmartcard', $member->chrSmartcard) === 'N')>No</option>
+                            {{-- Blank keeps the stored value, so only offer it when there is no Yes/No yet. --}}
+                            @unless(in_array($member->chrSmartcard, ['Y', 'N'], true))
+                                <option value="">Not specified</option>
+                            @endunless
+                            <option value="Y" @selected($smartcard === 'Y')>Yes</option>
+                            <option value="N" @selected($smartcard === 'N')>No</option>
                         </select>
                         @error('chrSmartcard')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
