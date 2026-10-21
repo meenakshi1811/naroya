@@ -1310,7 +1310,7 @@ class PatientController extends Controller
                                         $doctor,
                                         $consumeResult['consumed']
                                     );
-                                    $this->assignClinicToken($appointment, $doctor);
+                                    $this->assignClinicToken($appointment, $doctor, $request->input('token_no'));
                                     $appointment->save();
 
                                     return [
@@ -1326,7 +1326,7 @@ class PatientController extends Controller
                             } else {
                                 $appointment = DB::transaction(function () use ($patient, $request, $doctor) {
                                     $appointment = $this->makeAppointmentFromRequest($patient, $request, $doctor, false);
-                                    $this->assignClinicToken($appointment, $doctor);
+                                    $this->assignClinicToken($appointment, $doctor, $request->input('token_no'));
                                     $appointment->save();
 
                                     return $appointment;
@@ -2061,13 +2061,13 @@ class PatientController extends Controller
     }
 
     /**
-     * Gives the appointment the next token at the doctor's clinic for that date.
-     * Cancelled and rejected requests free their number, and the lowest free
-     * number is reused, so tokens stay within the clinic's daily maximum.
-     * Must run inside a transaction: the clinic row lock keeps two concurrent
-     * bookings from taking the same token.
+     * Gives the appointment a token at the doctor's clinic for that date: the one
+     * the patient picked from the token map, or else the lowest free number.
+     * Cancelled and rejected requests free their number, so tokens stay within
+     * the clinic's daily maximum. Must run inside a transaction: the clinic row
+     * lock keeps two concurrent bookings from taking the same token.
      */
-    private function assignClinicToken(Appointment $appointment, ?User $doctor): void
+    private function assignClinicToken(Appointment $appointment, ?User $doctor, $requestedToken = null): void
     {
         if (! $doctor || ! $doctor->clinic_id) {
             return;
@@ -2094,9 +2094,26 @@ class PatientController extends Controller
             throw new ClinicTokensUnavailableException($clinic);
         }
 
-        $token = 1;
-        while ($takenTokens->has($token)) {
-            $token++;
+        if ($requestedToken !== null) {
+            // Checked by hand: a failed $request->validate() here would reach the dd() in sendRequest's catch.
+            $isValid = ctype_digit((string) $requestedToken)
+                && (int) $requestedToken >= 1
+                && (! $clinic->max_tokens || (int) $requestedToken <= $clinic->max_tokens);
+
+            if (! $isValid) {
+                throw new ClinicTokensUnavailableException($clinic, 'Please choose a valid token number.');
+            }
+
+            if ($takenTokens->has((int) $requestedToken)) {
+                throw new ClinicTokensUnavailableException($clinic, 'Token ' . (int) $requestedToken . ' is already booked. Please choose another token.');
+            }
+
+            $token = (int) $requestedToken;
+        } else {
+            $token = 1;
+            while ($takenTokens->has($token)) {
+                $token++;
+            }
         }
 
         $appointment->clinic_id = $clinic->id;

@@ -30,6 +30,7 @@ Route::get('/speciality', [App\Http\Controllers\AuthController::class, 'speciali
 Route::get('/public/doctor/{doctorId}', [App\Http\Controllers\PatientController::class, 'getPublicDoctorDetail']);
 // Accepts a patient or a doctor login token; the controller checks which one.
 Route::match(['get', 'post'], '/clinic-running-token', [App\Http\Controllers\ClinicTokenController::class, 'running']);
+Route::match(['get', 'post'], '/clinic-tokens', [App\Http\Controllers\ClinicTokenController::class, 'tokens']);
 Route::post('/stripe/webhook', [App\Http\Controllers\StripeWebhookController::class, 'handle']);
 Route::post('/refund', [App\Http\Controllers\PaymentController::class, 'processRefund'])->middleware('throttle:payment');
 Route::post('/generate-agora-details', [App\Http\Controllers\AgoraController::class, 'generateAgoraDetails']);
