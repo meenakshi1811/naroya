@@ -56,6 +56,7 @@ Route::middleware('auth:api')->group(function () {
     // Clinic token queue (doctors and clinic employees)
     Route::post('/doctor/clinic-token/next', [App\Http\Controllers\ClinicTokenController::class, 'next']);
     Route::post('/doctor/clinic-token/set', [App\Http\Controllers\ClinicTokenController::class, 'set']);
+    Route::post('/doctor/clinic-token/clear', [App\Http\Controllers\ClinicTokenController::class, 'clear']);
      Route::post('/doctor/prescription',[App\Http\Controllers\AppointmentController::class, 'handlePrescription']);
      Route::post('/update-payment-setup', [App\Http\Controllers\PaymentController::class, 'updatePaymentSetupStatus']);
     Route::post('/doctor/bank-details', [App\Http\Controllers\DoctorBankDetailController::class, 'upsert']);

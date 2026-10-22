@@ -157,6 +157,53 @@ class ClinicTokenController extends Controller
         );
     }
 
+    /**
+     * POST /api/doctor/clinic-token/clear with optional date (Y-m-d, today or later; default today).
+     * Frees every booked token at the user's clinic for that date and resets the
+     * running token. The appointments stay as they are; only their token numbers go.
+     */
+    public function clear(Request $request): JsonResponse
+    {
+        $clinic = $this->staffClinic($request);
+        if ($clinic instanceof JsonResponse) {
+            return $clinic;
+        }
+
+        $validator = Validator::make($request->all(), [
+            'date' => 'nullable|date_format:Y-m-d|after_or_equal:today',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('date must be today or a later date in Y-m-d format.');
+        }
+
+        $date = $request->input('date') ?: $this->today();
+
+        $cleared = DB::transaction(function () use ($clinic, $date, $request) {
+            // Same lock as booking, so no token is handed out while clearing.
+            Clinic::whereKey($clinic->id)->lockForUpdate()->first();
+
+            $cleared = $this->activeTokens($clinic, $date)->update(['token_no' => null]);
+
+            $queue = $this->lockQueue($clinic, $date);
+            $queue->current_token = 0;
+            $queue->updated_by = $request->user()->id;
+            $queue->save();
+
+            return $cleared;
+        });
+
+        return $this->success([
+            'clinic_id' => $clinic->id,
+            'date' => $date,
+            'cleared_tokens' => $cleared,
+            'running_token' => 0,
+            'max_tokens' => $clinic->max_tokens,
+        ], $cleared > 0
+            ? 'Cleared ' . $cleared . ' booked ' . ($cleared === 1 ? 'token' : 'tokens') . '.'
+            : 'No booked tokens to clear.');
+    }
+
     private function runningToken(Clinic $clinic, ?int $doctorId): array
     {
         $date = $this->today();

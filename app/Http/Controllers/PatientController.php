@@ -2082,10 +2082,12 @@ class PatientController extends Controller
             return;
         }
 
+        // Appointments whose token staff cleared keep clinic_id but no longer hold a token.
         $takenTokens = Appointment::where('clinic_id', $clinic->id)
             ->where('varAppointment', $appointment->varAppointment)
             ->where('chrIsCanceled', 'N')
             ->where('chrIsRejected', 'N')
+            ->whereNotNull('token_no')
             ->pluck('token_no')
             ->map(fn ($token) => (int) $token)
             ->flip();
