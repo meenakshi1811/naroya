@@ -85,8 +85,27 @@ class ClinicTokenController extends Controller
         ]);
     }
 
-    /** POST /api/doctor/clinic-token/next: serve the next waiting token at the user's clinic. */
-    public function next(Request $request): JsonResponse
+    /** GET /api/doctor/clinic-token with optional date (Y-m-d, default today): the running token at the user's clinic. */
+    public function current(Request $request): JsonResponse
+    {
+        $clinic = $this->staffClinic($request);
+        if ($clinic instanceof JsonResponse) {
+            return $clinic;
+        }
+
+        $date = $this->dateFrom($request);
+        if ($date instanceof JsonResponse) {
+            return $date;
+        }
+
+        return $this->success($this->runningToken($clinic, $this->staffDoctorId($request), $date));
+    }
+
+    /**
+     * POST /api/doctor/clinic-token/increase (also /next): move today's running token
+     * up to the next booked token. Cancelled and rejected tokens are skipped.
+     */
+    public function increase(Request $request): JsonResponse
     {
         $clinic = $this->staffClinic($request);
         if ($clinic instanceof JsonResponse) {
@@ -119,6 +138,148 @@ class ClinicTokenController extends Controller
             $data,
             $advanced ? 'Now serving token ' . $data['running_token'] . '.' : 'No more tokens are waiting.'
         );
+    }
+
+    /**
+     * POST /api/doctor/clinic-token/decrease: move today's running token back to the
+     * previous booked token, or to 0 (not started) from the first one.
+     */
+    public function decrease(Request $request): JsonResponse
+    {
+        $clinic = $this->staffClinic($request);
+        if ($clinic instanceof JsonResponse) {
+            return $clinic;
+        }
+
+        $date = $this->today();
+
+        $moved = DB::transaction(function () use ($clinic, $date, $request) {
+            $queue = $this->lockQueue($clinic, $date);
+
+            if ($queue->current_token === 0) {
+                return false;
+            }
+
+            $previousToken = $this->activeTokens($clinic, $date)
+                ->where('token_no', '<', $queue->current_token)
+                ->max('token_no');
+
+            $queue->current_token = (int) ($previousToken ?? 0);
+            $queue->updated_by = $request->user()->id;
+            $queue->save();
+
+            return true;
+        });
+
+        $data = $this->runningToken($clinic, $this->staffDoctorId($request));
+
+        $message = match (true) {
+            ! $moved => 'The token queue has not started yet.',
+            $data['running_token'] === 0 => 'Back to the start of the queue.',
+            default => 'Now serving token ' . $data['running_token'] . '.',
+        };
+
+        return $this->success($data, $message);
+    }
+
+    /**
+     * GET /api/doctor/clinic-patients with optional date (Y-m-d, default today) and doctor_id.
+     * Patients holding a token at the user's clinic that day, in token order.
+     */
+    public function patients(Request $request): JsonResponse
+    {
+        $clinic = $this->staffClinic($request);
+        if ($clinic instanceof JsonResponse) {
+            return $clinic;
+        }
+
+        $date = $this->dateFrom($request);
+        if ($date instanceof JsonResponse) {
+            return $date;
+        }
+
+        $validator = Validator::make($request->all(), [
+            'doctor_id' => 'nullable|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('doctor_id must be a number.');
+        }
+
+        $appointments = $this->activeTokens($clinic, $date)
+            ->when($request->filled('doctor_id'), fn ($query) => $query->where('dr_id', (int) $request->input('doctor_id')))
+            ->with('patient:id,name,lastname,phone')
+            ->orderBy('token_no')
+            ->get();
+
+        $patients = $appointments->map(fn (Appointment $appointment) => [
+            'appointment_id' => $appointment->id,
+            'token_no' => (int) $appointment->token_no,
+            'patient_id' => $appointment->patient_id,
+            'name' => trim(($appointment->patient?->name ?? '') . ' ' . ($appointment->patient?->lastname ?? '')),
+            'mobile' => $appointment->patient?->phone,
+            'is_present' => (bool) $appointment->is_present,
+            'status' => $appointment->chrIsAccepted === 'Y' ? 'accepted' : 'pending',
+            'is_paid' => $appointment->charIsPaid === 'Y',
+            'doctor_id' => $appointment->dr_id,
+            'start_time' => $appointment->startTime,
+            'end_time' => $appointment->endTime,
+        ])->values();
+
+        return $this->success([
+            'clinic_id' => $clinic->id,
+            'date' => $date,
+            'running_token' => $this->currentToken($clinic, $date),
+            'total_patients' => $patients->count(),
+            'present_count' => $patients->where('is_present', true)->count(),
+            'patients' => $patients,
+        ]);
+    }
+
+    /**
+     * POST /api/doctor/clinic-patients/attendance with appointment_id and is_present (1 or 0).
+     * Marks whether a patient holding a token at the user's clinic has arrived.
+     */
+    public function attendance(Request $request): JsonResponse
+    {
+        $clinic = $this->staffClinic($request);
+        if ($clinic instanceof JsonResponse) {
+            return $clinic;
+        }
+
+        $validator = Validator::make($request->all(), [
+            'appointment_id' => 'required|integer',
+            'is_present' => 'required|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('appointment_id and is_present (1 or 0) are required.');
+        }
+
+        $appointment = Appointment::whereKey($request->input('appointment_id'))
+            ->where('clinic_id', $clinic->id)
+            ->where('chrIsCanceled', 'N')
+            ->where('chrIsRejected', 'N')
+            ->whereNotNull('token_no')
+            ->first();
+
+        if (! $appointment) {
+            return $this->error('Appointment not found in your clinic.');
+        }
+
+        $appointment->is_present = $request->boolean('is_present') ? 1 : 0;
+        $appointment->save();
+
+        $date = $appointment->varAppointment;
+
+        return $this->success([
+            'appointment_id' => $appointment->id,
+            'token_no' => (int) $appointment->token_no,
+            'date' => $date,
+            'is_present' => (bool) $appointment->is_present,
+            'total_patients' => $this->activeTokens($clinic, $date)->count(),
+            'present_count' => $this->activeTokens($clinic, $date)->where('is_present', 1)->count(),
+        ], $appointment->is_present ? 'Patient marked present.' : 'Patient marked not present.');
     }
 
     /** POST /api/doctor/clinic-token/set with token_no: jump to or recall a token; 0 resets. */
@@ -204,9 +365,9 @@ class ClinicTokenController extends Controller
             : 'No booked tokens to clear.');
     }
 
-    private function runningToken(Clinic $clinic, ?int $doctorId): array
+    private function runningToken(Clinic $clinic, ?int $doctorId, ?string $date = null): array
     {
-        $date = $this->today();
+        $date ??= $this->today();
 
         return [
             'clinic_id' => $clinic->id,
@@ -357,6 +518,20 @@ class ClinicTokenController extends Controller
     private function today(): string
     {
         return Carbon::now()->toDateString();
+    }
+
+    /** The optional `date` param (Y-m-d), defaulting to today. */
+    private function dateFrom(Request $request): string|JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'date' => 'nullable|date_format:Y-m-d',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error('date must be in Y-m-d format.');
+        }
+
+        return $request->input('date') ?: $this->today();
     }
 
     private function success(array $data, string $message = 'success'): JsonResponse

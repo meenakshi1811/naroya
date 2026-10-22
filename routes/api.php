@@ -54,7 +54,12 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/doctor/patient-block',[App\Http\Controllers\AuthController::class, 'BlockUnblock']);
      Route::post('/doctor/schedule',[App\Http\Controllers\AuthController::class, 'getSchedule']);
     // Clinic token queue (doctors and clinic employees)
-    Route::post('/doctor/clinic-token/next', [App\Http\Controllers\ClinicTokenController::class, 'next']);
+    Route::get('/doctor/clinic-token', [App\Http\Controllers\ClinicTokenController::class, 'current']);
+    Route::post('/doctor/clinic-token/increase', [App\Http\Controllers\ClinicTokenController::class, 'increase']);
+    Route::post('/doctor/clinic-token/next', [App\Http\Controllers\ClinicTokenController::class, 'increase']); // older name for increase
+    Route::post('/doctor/clinic-token/decrease', [App\Http\Controllers\ClinicTokenController::class, 'decrease']);
+    Route::get('/doctor/clinic-patients', [App\Http\Controllers\ClinicTokenController::class, 'patients']);
+    Route::post('/doctor/clinic-patients/attendance', [App\Http\Controllers\ClinicTokenController::class, 'attendance']);
     Route::post('/doctor/clinic-token/set', [App\Http\Controllers\ClinicTokenController::class, 'set']);
     Route::post('/doctor/clinic-token/clear', [App\Http\Controllers\ClinicTokenController::class, 'clear']);
      Route::post('/doctor/prescription',[App\Http\Controllers\AppointmentController::class, 'handlePrescription']);
