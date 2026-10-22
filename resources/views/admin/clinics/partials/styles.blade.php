@@ -997,6 +997,137 @@
         white-space: nowrap;
     }
 
+    /* ---------- Appointments & token board ---------- */
+    .cm-card-body {
+        padding: 1.25rem;
+    }
+
+    .cm-date-nav {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .cm .cm-date-nav .form-control {
+        width: auto;
+        padding: 0.45rem 0.75rem;
+    }
+
+    .cm-stat-suffix {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--cm-subtle);
+    }
+
+    .cm-stat-muted {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--cm-subtle);
+    }
+
+    .cm-badge-red { background: #fef2f2; color: #b91c1c; }
+
+    .cm-row-muted td {
+        opacity: 0.6;
+    }
+
+    .cm-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem 1rem;
+        font-size: 0.8rem;
+        color: var(--cm-muted);
+    }
+
+    .cm-legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .cm-token-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+        gap: 0.55rem;
+    }
+
+    .cm-token,
+    .cm-token-swatch {
+        position: relative;
+        border-radius: 10px;
+        border: 1px dashed var(--cm-border-strong);
+        background: #fff;
+        color: var(--cm-subtle);
+    }
+
+    .cm-token {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.88rem;
+        cursor: default;
+    }
+
+    .cm-token-swatch {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 5px;
+    }
+
+    .cm-token.is-booked,
+    .cm-token-swatch.is-booked {
+        background: var(--cm-primary);
+        border: 1px solid var(--cm-primary);
+        color: #fff;
+    }
+
+    /* White dot on a booked token: the patient has arrived. */
+    .cm-token.is-present::after,
+    .cm-token-swatch.is-present::after {
+        content: '';
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #fff;
+    }
+
+    .cm-token-swatch.is-present::after {
+        top: 3px;
+        right: 3px;
+        width: 5px;
+        height: 5px;
+    }
+
+    .cm-token.is-running,
+    .cm-token-swatch.is-running {
+        box-shadow: 0 0 0 3px #f59e0b;
+        border-color: #f59e0b;
+    }
+
+    .cm-token-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 38px;
+        padding: 0.2rem 0.5rem;
+        border-radius: 8px;
+        background: var(--cm-primary-50);
+        color: var(--cm-primary-ink);
+        font-weight: 700;
+    }
+
+    .cm-token-pill.is-running {
+        background: #fff7e6;
+        color: #b45309;
+        box-shadow: 0 0 0 2px #f59e0b;
+    }
+
     /* ---------- Clinic profile hero ---------- */
     .cm-hero {
         margin-bottom: 1.5rem;

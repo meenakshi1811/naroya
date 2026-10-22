@@ -68,6 +68,9 @@
                 </div>
             </div>
             <div class="cm-header-actions">
+                <a href="{{ route('admin.clinic.appointments', $clinic) }}" class="btn btn-outline-primary">
+                    <i class="bi bi-calendar2-week me-1"></i> Appointments &amp; tokens
+                </a>
                 <a href="{{ route('admin.clinic.edit', $clinic) }}" class="btn btn-light">
                     <i class="bi bi-pencil me-1"></i> Edit profile
                 </a>

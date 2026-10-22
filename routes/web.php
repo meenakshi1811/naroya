@@ -140,6 +140,7 @@ Route::delete('/admin/delete-patient/{id}', [App\Http\Controllers\PatientControl
     Route::post('/admin/clinic', [App\Http\Controllers\Admin\ClinicController::class, 'store'])->name('admin.clinic.store');
     Route::get('/admin/clinic/{clinic}', [App\Http\Controllers\Admin\ClinicController::class, 'show'])->name('admin.clinic.show');
     Route::get('/admin/clinic/{clinic}/edit', [App\Http\Controllers\Admin\ClinicController::class, 'edit'])->name('admin.clinic.edit');
+    Route::get('/admin/clinic/{clinic}/appointments', [App\Http\Controllers\Admin\ClinicController::class, 'appointments'])->name('admin.clinic.appointments');
     Route::put('/admin/clinic/{clinic}', [App\Http\Controllers\Admin\ClinicController::class, 'update'])->name('admin.clinic.update');
     Route::delete('/admin/clinic/{clinic}', [App\Http\Controllers\Admin\ClinicController::class, 'destroy'])->name('admin.clinic.destroy');
 

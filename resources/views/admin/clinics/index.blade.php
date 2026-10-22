@@ -166,6 +166,9 @@
                                         <a href="{{ route('admin.clinic.show', $clinic) }}" class="cm-icon-btn" title="View clinic" aria-label="View {{ $clinic->name }}">
                                             <i class="bi bi-eye"></i>
                                         </a>
+                                        <a href="{{ route('admin.clinic.appointments', $clinic) }}" class="cm-icon-btn" title="Appointments &amp; tokens" aria-label="Appointments and tokens for {{ $clinic->name }}">
+                                            <i class="bi bi-calendar2-week"></i>
+                                        </a>
                                         <a href="{{ route('admin.clinic.edit', $clinic) }}" class="cm-icon-btn" title="Edit profile" aria-label="Edit {{ $clinic->name }}">
                                             <i class="bi bi-pencil"></i>
                                         </a>

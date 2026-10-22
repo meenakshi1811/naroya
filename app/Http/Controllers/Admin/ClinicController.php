@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Admin\Concerns\ProvidesLocationOptions;
 use App\Http\Controllers\Controller;
+use App\Models\Appointment;
 use App\Models\Clinic;
+use App\Models\ClinicTokenQueue;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
@@ -99,6 +102,50 @@ class ClinicController extends Controller
             ->get(['id', 'name', 'surname', 'email', 'chrApproval', 'varProfile']);
 
         return view('admin.clinics.show', compact('clinic', 'members', 'availableDoctors'));
+    }
+
+    /**
+     * Date-wise appointments booked at the clinic and how its daily tokens are occupied.
+     */
+    public function appointments(Request $request, Clinic $clinic)
+    {
+        $date = $this->selectedDate($request->input('date'));
+        $dateString = $date->toDateString();
+
+        $appointments = Appointment::query()
+            ->where('clinic_id', $clinic->id)
+            ->where('varAppointment', $dateString)
+            ->with(['patient:id,name,lastname,phone', 'doctor:id,name,surname'])
+            // Token holders first in token order, then anything without a token.
+            ->orderByRaw('token_no IS NULL')
+            ->orderBy('token_no')
+            ->orderBy('startTime')
+            ->get();
+
+        $isActive = fn (Appointment $appointment) => $appointment->chrIsCanceled !== 'Y' && $appointment->chrIsRejected !== 'Y';
+
+        // Tokens held by active bookings, keyed by number (same rule the apps use).
+        $occupied = $appointments
+            ->filter(fn (Appointment $appointment) => $isActive($appointment) && $appointment->token_no !== null)
+            ->keyBy(fn (Appointment $appointment) => (int) $appointment->token_no);
+
+        $highestBooked = $occupied->keys()->max() ?? 0;
+        $totalTokens = max($clinic->max_tokens ?: $highestBooked + 1, $highestBooked);
+
+        $runningToken = (int) ClinicTokenQueue::where('clinic_id', $clinic->id)
+            ->where('queue_date', $dateString)
+            ->value('current_token');
+
+        $stats = [
+            'occupied' => $occupied->count(),
+            'available' => max(0, $totalTokens - $occupied->count()),
+            'present' => $occupied->filter(fn (Appointment $appointment) => (int) $appointment->is_present === 1)->count(),
+            'cancelled' => $appointments->reject($isActive)->count(),
+        ];
+
+        return view('admin.clinics.appointments', compact(
+            'clinic', 'date', 'appointments', 'occupied', 'totalTokens', 'runningToken', 'stats'
+        ));
     }
 
     public function edit(Clinic $clinic)
@@ -235,6 +282,20 @@ class ClinicController extends Controller
         return $clean
             ? array_map(fn ($session) => ['start' => $session['start'], 'end' => $session['end']], $clean)
             : null;
+    }
+
+    private function selectedDate(?string $input): Carbon
+    {
+        if ($input && preg_match('/^\d{4}-\d{2}-\d{2}$/', $input)) {
+            $parsed = Carbon::createFromFormat('!Y-m-d', $input);
+
+            // Carbon rolls impossible dates over (2026-02-31 becomes 2026-03-03); treat those as invalid.
+            if ($parsed && $parsed->format('Y-m-d') === $input) {
+                return $parsed;
+            }
+        }
+
+        return Carbon::today();
     }
 
     private function storeLogo(UploadedFile $file): string
