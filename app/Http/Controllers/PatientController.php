@@ -1411,6 +1411,154 @@ class PatientController extends Controller
     }
 
 
+    /**
+     * GET|POST /api/patient/clinics: active clinics with at least one approved doctor.
+     * Filters by state_id / city_id exactly like the doctor listings, pages with
+     * pageSize / pageNumber.
+     */
+    public function clinics(Request $request)
+    {
+        $pageSize = max(1, min((int) $request->input('pageSize', 10), 100));
+        $pageNumber = max(1, (int) $request->input('pageNumber', 1));
+        $locationFilters = $this->resolveOptionalLocationFilters($request);
+
+        $approvedDoctors = fn ($query) => $query->where('chrApproval', 'Y');
+
+        $query = Clinic::query()
+            ->where('clinics.is_active', true)
+            ->whereHas('doctors', $approvedDoctors)
+            ->withCount(['doctors' => $approvedDoctors])
+            ->with([
+                'stateRel:id,name',
+                'cityRel:id,name',
+                'countryRel:id,countryname',
+                'doctors' => fn ($doctorQuery) => $doctorQuery
+                    ->where('chrApproval', 'Y')
+                    ->with('categoryRel:id,title')
+                    ->orderBy('name')
+                    ->select(['id', 'clinic_id', 'name', 'surname', 'category', 'varSpeciality', 'varProfile', 'varFees', 'varTimeDuration']),
+            ])
+            ->orderBy('clinics.name');
+
+        $this->applyLocationFilter($query, $locationFilters, 'clinics.city_id', 'clinics.state');
+
+        $clinics = $query->paginate($pageSize, ['*'], 'pageNumber', $pageNumber);
+
+        $items = $clinics->getCollection()->map(fn (Clinic $clinic) => [
+            'id' => $clinic->id,
+            'name' => $clinic->name,
+            'logo' => $clinic->logo_url,
+            'registration_no' => $clinic->registration_no,
+            'email' => $clinic->email,
+            'phone' => $clinic->phone,
+            'website' => $clinic->website,
+            'address' => $clinic->address,
+            'full_address' => $clinic->full_address,
+            'postal_code' => $clinic->postal_code,
+            'state_id' => $clinic->state,
+            'state_name' => $clinic->stateRel?->name,
+            'city_id' => $clinic->city_id,
+            'city_name' => $clinic->cityRel?->name,
+            'description' => $clinic->description,
+            'timings' => $clinic->timings ?? [],
+            'clinic_hours' => $clinic->timing_labels,
+            'max_tokens' => $clinic->max_tokens,
+            'doctors_count' => $clinic->doctors_count,
+            'doctors' => $clinic->doctors->map(fn (User $doctor) => [
+                'id' => $doctor->id,
+                'name' => $doctor->name,
+                'surname' => $doctor->surname,
+                'speciality_id' => $doctor->category,
+                'speciality' => $doctor->categoryRel?->title,
+                'speciality_detail' => $doctor->varSpeciality,
+                'profile_picture' => $doctor->varProfile ? asset('api/docterprofile/' . $doctor->varProfile) : null,
+                'fees' => $doctor->varFees,
+                'consultation_time' => $doctor->varTimeDuration,
+            ])->values(),
+        ])->values();
+
+        return response()->json([
+            'message' => 'success',
+            'data' => [
+                'clinics' => $items,
+                'pagination' => [
+                    'current_page' => $clinics->currentPage(),
+                    'per_page' => $clinics->perPage(),
+                    'total' => $clinics->total(),
+                    'last_page' => $clinics->lastPage(),
+                ],
+            ],
+        ], 200);
+    }
+
+    /**
+     * GET|POST /api/patient/clinic-doctors?clinic_id=1: the approved doctors of an
+     * active clinic with their photo and degree, plus the clinic's address.
+     */
+    public function clinicDoctors(Request $request)
+    {
+        $clinicId = $request->input('clinic_id');
+
+        if (! is_numeric($clinicId) || (int) $clinicId < 1) {
+            return response()->json([
+                'message' => 'clinic_id is required.',
+                'data' => [
+                    'error' => 'clinic_id is required.',
+                ],
+            ], 400);
+        }
+
+        $clinic = Clinic::where('is_active', true)
+            ->with(['stateRel:id,name', 'cityRel:id,name', 'countryRel:id,countryname'])
+            ->find((int) $clinicId);
+
+        if (! $clinic) {
+            return response()->json([
+                'message' => 'Clinic not found.',
+                'data' => [
+                    'error' => 'Clinic not found.',
+                ],
+            ], 400);
+        }
+
+        $address = $clinic->full_address;
+
+        $doctors = $clinic->doctors()
+            ->where('chrApproval', 'Y')
+            ->with('categoryRel:id,title')
+            ->orderBy('name')
+            ->get(['id', 'clinic_id', 'name', 'surname', 'category', 'varProfile', 'varGraduation', 'varPostGraduation'])
+            ->map(fn (User $doctor) => [
+                'id' => $doctor->id,
+                'name' => $doctor->name,
+                'surname' => $doctor->surname,
+                'full_name' => trim($doctor->name . ' ' . ($doctor->surname ?? '')),
+                'photo' => $doctor->varProfile ? asset('api/docterprofile/' . $doctor->varProfile) : null,
+                'degree' => collect([$doctor->varGraduation, $doctor->varPostGraduation])->filter()->implode(', '),
+                'graduation' => $doctor->varGraduation,
+                'post_graduation' => $doctor->varPostGraduation,
+                'speciality' => $doctor->categoryRel?->title,
+                'clinic_address' => $address,
+            ])
+            ->values();
+
+        return response()->json([
+            'message' => 'success',
+            'data' => [
+                'clinic' => [
+                    'id' => $clinic->id,
+                    'name' => $clinic->name,
+                    'address' => $address,
+                    'city_name' => $clinic->cityRel?->name,
+                    'state_name' => $clinic->stateRel?->name,
+                    'phone' => $clinic->phone,
+                    'logo' => $clinic->logo_url,
+                ],
+                'doctors' => $doctors,
+            ],
+        ], 200);
+    }
+
     public function getPublicDoctorDetail(Request $request, $doctorId)
     {
         $doctorId = (int) $doctorId;
@@ -1812,6 +1960,12 @@ class PatientController extends Controller
 
     private function applyDoctorLocationFilter($query, ?array $locationFilters)
     {
+        return $this->applyLocationFilter($query, $locationFilters, 'users.city_id', 'users.state');
+    }
+
+    /** City wins over state; a city that was asked for but not found matches nothing. */
+    private function applyLocationFilter($query, ?array $locationFilters, string $cityColumn, string $stateColumn)
+    {
         if ($locationFilters === null) {
             return $query;
         }
@@ -1821,7 +1975,7 @@ class PatientController extends Controller
         $cityFilterRequested = (bool) ($locationFilters['city_filter_requested'] ?? false);
 
         if ($cityIds !== []) {
-            return $query->whereIn('users.city_id', $cityIds);
+            return $query->whereIn($cityColumn, $cityIds);
         }
 
         if ($cityFilterRequested) {
@@ -1829,7 +1983,7 @@ class PatientController extends Controller
         }
 
         if ($stateIds !== []) {
-            return $query->whereIn('users.state', $stateIds);
+            return $query->whereIn($stateColumn, $stateIds);
         }
 
         return $query;

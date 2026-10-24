@@ -99,6 +99,18 @@ class Clinic extends Model
         return $parsed->format($parsed->minute === 0 ? 'g A' : 'g:i A');
     }
 
+    /** One-line address, e.g. "12 Hill Road, Mumbai, Maharashtra, 400050, India". */
+    public function getFullAddressAttribute(): string
+    {
+        return collect([
+            $this->address,
+            $this->cityRel?->name,
+            $this->stateRel?->name,
+            $this->postal_code,
+            $this->countryRel?->countryname,
+        ])->filter()->implode(', ');
+    }
+
     public function getLocationLabelAttribute(): string
     {
         return collect([
