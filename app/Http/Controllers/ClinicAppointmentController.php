@@ -1,0 +1,175 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Appointment;
+use App\Models\Clinic;
+use App\Models\Patients;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+
+/**
+ * Token booking at a clinic, kept apart from PatientController::sendRequest so the
+ * time-slot booking API stays untouched. The patient picks a token on the token map
+ * instead of a time slot.
+ */
+class ClinicAppointmentController extends Controller
+{
+    /** Day window used when the clinic has no hours set (same default as the time-slot API). */
+    private const DEFAULT_START = '09:00';
+    private const DEFAULT_END = '21:00';
+
+    /**
+     * POST /api/patient/send-request-clinic with clinic_id, doctor_id, token_no,
+     * optional name and optional date (Y-m-d, today or later; default today).
+     */
+    public function sendRequest(Request $request): JsonResponse
+    {
+        // AuthenticateToken has already verified this token.
+        $patient = Patients::find(decrypt($request->bearerToken())['id'] ?? null);
+
+        if (! $patient) {
+            return $this->error('Unauthorized request', 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'clinic_id' => 'required|integer',
+            'doctor_id' => 'required|integer',
+            'token_no' => 'required|integer|min:1',
+            'name' => 'nullable|string|max:255',
+            'date' => 'nullable|date_format:Y-m-d|after_or_equal:today',
+        ], [
+            'date.after_or_equal' => 'date must be today or a later date.',
+            'date.date_format' => 'date must be in Y-m-d format.',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors()->first());
+        }
+
+        $clinic = Clinic::where('is_active', true)->find((int) $request->input('clinic_id'));
+
+        if (! $clinic) {
+            return $this->error('Clinic not found.');
+        }
+
+        $doctor = User::doctors()
+            ->whereKey((int) $request->input('doctor_id'))
+            ->where('clinic_id', $clinic->id)
+            ->where('chrApproval', 'Y')
+            ->first();
+
+        if (! $doctor) {
+            return $this->error('This doctor is not part of the selected clinic.');
+        }
+
+        $tokenNo = (int) $request->input('token_no');
+
+        if ($clinic->max_tokens && $tokenNo > $clinic->max_tokens) {
+            return $this->error('Please choose a valid token number.');
+        }
+
+        // Same rule as the existing booking API: a posted name updates the patient's profile.
+        $postedName = trim((string) $request->input('name', ''));
+        if ($postedName !== '') {
+            $patient->name = $postedName;
+            $patient->save();
+        }
+
+        $date = $request->input('date') ?: Carbon::now()->toDateString();
+        [$startTime, $endTime] = $this->clinicDayWindow($clinic);
+
+        $appointment = DB::transaction(function () use ($clinic, $doctor, $patient, $date, $tokenNo, $startTime, $endTime) {
+            // Same clinic row lock as the other booking paths, so two bookings can't take one token.
+            Clinic::whereKey($clinic->id)->lockForUpdate()->first();
+
+            $takenTokens = Appointment::where('clinic_id', $clinic->id)
+                ->where('varAppointment', $date)
+                ->where('chrIsCanceled', 'N')
+                ->where('chrIsRejected', 'N')
+                ->whereNotNull('token_no')
+                ->pluck('token_no')
+                ->map(fn ($token) => (int) $token)
+                ->flip();
+
+            if ($clinic->max_tokens && $takenTokens->count() >= $clinic->max_tokens) {
+                return 'No tokens are available at ' . $clinic->name . ' on the selected date.';
+            }
+
+            if ($takenTokens->has($tokenNo)) {
+                return 'Token ' . $tokenNo . ' is already booked. Please choose another token.';
+            }
+
+            $appointment = new Appointment();
+            $appointment->patient_id = $patient->id;
+            $appointment->dr_id = $doctor->id;
+            $appointment->clinic_id = $clinic->id;
+            $appointment->token_no = $tokenNo;
+            $appointment->amount = $doctor->varFees ?? null;
+            $appointment->is_freeslot = 0;
+            $appointment->varAppointment = $date;
+            // A token is for the clinic's day, not a slot; the hours keep it visible in
+            // the existing appointment lists, which filter on endTime.
+            $appointment->startTime = $startTime;
+            $appointment->endTime = $endTime;
+            $appointment->varSympton = '';
+            $appointment->varSymptondesc = '';
+            $appointment->save();
+
+            return $appointment;
+        });
+
+        if (is_string($appointment)) {
+            return $this->error($appointment);
+        }
+
+        if ($doctor->fcm_token) {
+            (new NotificationController())->sendPushNotification(
+                $doctor->fcm_token,
+                'New Appointment Request',
+                'You have a new appointment request from ' . $patient->name . ' (token ' . $tokenNo . ')',
+                'doctor',
+                [
+                    'type' => 'new_appointment_request',
+                    'appointmentId' => (string) $appointment->id,
+                ],
+                'new_appointment_request'
+            );
+        }
+
+        return response()->json([
+            'message' => 'Appointment request sent!',
+            'data' => [
+                'appointment' => $appointment,
+                'token_no' => $tokenNo,
+                'clinic' => ['id' => $clinic->id, 'name' => $clinic->name],
+            ],
+        ], 200);
+    }
+
+    /** First session start to last session end, or the default day window. */
+    private function clinicDayWindow(Clinic $clinic): array
+    {
+        $sessions = collect($clinic->timings ?? [])->sortBy('start')->values();
+
+        if ($sessions->isEmpty()) {
+            return [self::DEFAULT_START, self::DEFAULT_END];
+        }
+
+        return [$sessions->first()['start'], $sessions->max('end')];
+    }
+
+    private function error(string $message, int $status = 400): JsonResponse
+    {
+        return response()->json([
+            'message' => $message,
+            'data' => [
+                'error' => $message,
+            ],
+        ], $status);
+    }
+}

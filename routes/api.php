@@ -82,6 +82,7 @@ Route::post('/patient/favourite',[App\Http\Controllers\PatientController::class,
 Route::post('/patient/search',[App\Http\Controllers\PatientController::class, 'Search']);
 Route::post('/patient/timeslot',[App\Http\Controllers\PatientController::class, 'getTimeSlots']);
 Route::post('/patient/send-request',[App\Http\Controllers\PatientController::class, 'sendRequest'])->middleware('throttle:booking');
+Route::post('/patient/send-request-clinic', [App\Http\Controllers\ClinicAppointmentController::class, 'sendRequest'])->middleware('throttle:booking');
 Route::get('/patient-details',[App\Http\Controllers\PatientController::class, 'patientDetails']);
 Route::get('/patient/free-slots-offer',[App\Http\Controllers\PatientController::class, 'getFreeSlotsOffer']);
 Route::post('/patient-update-profile',[App\Http\Controllers\PatientController::class, 'updateData']);
