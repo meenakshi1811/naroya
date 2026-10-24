@@ -141,6 +141,56 @@ class ClinicTokenController extends Controller
     }
 
     /**
+     * POST /api/doctor/clinic-token/update with clinic_id and value = the token number to
+     * run next. The app works out + / − itself; any number from 0 (reset) up to the
+     * clinic's max tokens is accepted, booked or not. clinic_id must be the caller's clinic.
+     */
+    public function change(Request $request): JsonResponse
+    {
+        $clinic = $this->staffClinic($request);
+        if ($clinic instanceof JsonResponse) {
+            return $clinic;
+        }
+
+        $validator = Validator::make($request->all(), [
+            'clinic_id' => 'required|integer',
+            'value' => 'required|integer|min:0',
+        ]);
+
+        if ($validator->errors()->has('clinic_id')) {
+            return $this->error('clinic_id is required.');
+        }
+
+        if ($validator->fails()) {
+            return $this->error('value must be a token number (0 or more).');
+        }
+
+        if ((int) $request->input('clinic_id') !== (int) $clinic->id) {
+            return $this->error('You are not linked to this clinic.');
+        }
+
+        $token = (int) $request->input('value');
+
+        if ($clinic->max_tokens && $token > $clinic->max_tokens) {
+            return $this->error('value cannot be more than ' . $clinic->max_tokens . ', the clinic\'s max tokens.');
+        }
+
+        $date = $this->today();
+
+        DB::transaction(function () use ($clinic, $date, $token, $request) {
+            $queue = $this->lockQueue($clinic, $date);
+            $queue->current_token = $token;
+            $queue->updated_by = $request->user()->id;
+            $queue->save();
+        });
+
+        return $this->success(
+            $this->runningToken($clinic, $this->staffDoctorId($request)),
+            $token > 0 ? 'Now serving token ' . $token . '.' : 'Token queue reset.'
+        );
+    }
+
+    /**
      * POST /api/doctor/clinic-token/decrease: move today's running token back to the
      * previous booked token, or to 0 (not started) from the first one.
      */

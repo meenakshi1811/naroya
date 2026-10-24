@@ -58,6 +58,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/doctor/clinic-token/increase', [App\Http\Controllers\ClinicTokenController::class, 'increase']);
     Route::post('/doctor/clinic-token/next', [App\Http\Controllers\ClinicTokenController::class, 'increase']); // older name for increase
     Route::post('/doctor/clinic-token/decrease', [App\Http\Controllers\ClinicTokenController::class, 'decrease']);
+    Route::post('/doctor/clinic-token/update', [App\Http\Controllers\ClinicTokenController::class, 'change']);
     Route::get('/doctor/clinic-patients', [App\Http\Controllers\ClinicTokenController::class, 'patients']);
     Route::post('/doctor/clinic-patients/attendance', [App\Http\Controllers\ClinicTokenController::class, 'attendance']);
     Route::post('/doctor/clinic-token/set', [App\Http\Controllers\ClinicTokenController::class, 'set']);
