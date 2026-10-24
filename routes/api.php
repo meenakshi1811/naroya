@@ -77,7 +77,8 @@ Route::middleware([AuthenticateToken::class])->group(function () {
 Route::post('/patient/home',[App\Http\Controllers\PatientController::class, 'home']);
 Route::post('/patient/viewall',[App\Http\Controllers\PatientController::class, 'viewAll']);
 Route::match(['get', 'post'], '/patient/clinics', [App\Http\Controllers\PatientController::class, 'clinics']);
-Route::match(['get', 'post'], '/patient/clinic-doctors', [App\Http\Controllers\PatientController::class, 'clinicDoctors']);
+Route::match(['get', 'post'], '/patient/clinic-info', [App\Http\Controllers\PatientController::class, 'clinicDoctors']);
+Route::match(['get', 'post'], '/patient/clinic-doctors', [App\Http\Controllers\PatientController::class, 'clinicDoctors']); // older name for clinic-info
 Route::post('/patient/favourite',[App\Http\Controllers\PatientController::class, 'Favourite']);
 Route::post('/patient/search',[App\Http\Controllers\PatientController::class, 'Search']);
 Route::post('/patient/timeslot',[App\Http\Controllers\PatientController::class, 'getTimeSlots']);

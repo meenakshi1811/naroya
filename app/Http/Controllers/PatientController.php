@@ -16,6 +16,7 @@ use App\Models\GeneralSetting;
 use App\Models\User;
 use App\Models\City;
 use App\Models\Clinic;
+use App\Models\Language;
 use App\Exceptions\ClinicTokensUnavailableException;
 use App\Models\Rating;
 use Carbon\Carbon;
@@ -1412,9 +1413,9 @@ class PatientController extends Controller
 
 
     /**
-     * GET|POST /api/patient/clinics: active clinics with at least one approved doctor.
-     * Filters by state_id / city_id exactly like the doctor listings, pages with
-     * pageSize / pageNumber.
+     * GET|POST /api/patient/clinics: active clinics with at least one approved doctor,
+     * as id, name and image. Filters by state_id / city_id exactly like the doctor
+     * listings, pages with pageSize / pageNumber.
      */
     public function clinics(Request $request)
     {
@@ -1422,59 +1423,19 @@ class PatientController extends Controller
         $pageNumber = max(1, (int) $request->input('pageNumber', 1));
         $locationFilters = $this->resolveOptionalLocationFilters($request);
 
-        $approvedDoctors = fn ($query) => $query->where('chrApproval', 'Y');
-
         $query = Clinic::query()
             ->where('clinics.is_active', true)
-            ->whereHas('doctors', $approvedDoctors)
-            ->withCount(['doctors' => $approvedDoctors])
-            ->with([
-                'stateRel:id,name',
-                'cityRel:id,name',
-                'countryRel:id,countryname',
-                'doctors' => fn ($doctorQuery) => $doctorQuery
-                    ->where('chrApproval', 'Y')
-                    ->with('categoryRel:id,title')
-                    ->orderBy('name')
-                    ->select(['id', 'clinic_id', 'name', 'surname', 'category', 'varSpeciality', 'varProfile', 'varFees', 'varTimeDuration']),
-            ])
+            ->whereHas('doctors', fn ($doctorQuery) => $doctorQuery->where('chrApproval', 'Y'))
             ->orderBy('clinics.name');
 
         $this->applyLocationFilter($query, $locationFilters, 'clinics.city_id', 'clinics.state');
 
-        $clinics = $query->paginate($pageSize, ['*'], 'pageNumber', $pageNumber);
+        $clinics = $query->paginate($pageSize, ['id', 'name', 'logo'], 'pageNumber', $pageNumber);
 
         $items = $clinics->getCollection()->map(fn (Clinic $clinic) => [
             'id' => $clinic->id,
             'name' => $clinic->name,
-            'logo' => $clinic->logo_url,
-            'registration_no' => $clinic->registration_no,
-            'email' => $clinic->email,
-            'phone' => $clinic->phone,
-            'website' => $clinic->website,
-            'address' => $clinic->address,
-            'full_address' => $clinic->full_address,
-            'postal_code' => $clinic->postal_code,
-            'state_id' => $clinic->state,
-            'state_name' => $clinic->stateRel?->name,
-            'city_id' => $clinic->city_id,
-            'city_name' => $clinic->cityRel?->name,
-            'description' => $clinic->description,
-            'timings' => $clinic->timings ?? [],
-            'clinic_hours' => $clinic->timing_labels,
-            'max_tokens' => $clinic->max_tokens,
-            'doctors_count' => $clinic->doctors_count,
-            'doctors' => $clinic->doctors->map(fn (User $doctor) => [
-                'id' => $doctor->id,
-                'name' => $doctor->name,
-                'surname' => $doctor->surname,
-                'speciality_id' => $doctor->category,
-                'speciality' => $doctor->categoryRel?->title,
-                'speciality_detail' => $doctor->varSpeciality,
-                'profile_picture' => $doctor->varProfile ? asset('api/docterprofile/' . $doctor->varProfile) : null,
-                'fees' => $doctor->varFees,
-                'consultation_time' => $doctor->varTimeDuration,
-            ])->values(),
+            'image' => $clinic->logo_url,
         ])->values();
 
         return response()->json([
@@ -1492,8 +1453,8 @@ class PatientController extends Controller
     }
 
     /**
-     * GET|POST /api/patient/clinic-doctors?clinic_id=1: the approved doctors of an
-     * active clinic with their photo and degree, plus the clinic's address.
+     * GET|POST /api/patient/clinic-info?clinic_id=1 (also /clinic-doctors): an active
+     * clinic's details and hours, with full details of its approved doctors.
      */
     public function clinicDoctors(Request $request)
     {
@@ -1522,25 +1483,41 @@ class PatientController extends Controller
         }
 
         $address = $clinic->full_address;
+        $clinicTime = $clinic->timing_labels;
 
         $doctors = $clinic->doctors()
             ->where('chrApproval', 'Y')
             ->with('categoryRel:id,title')
             ->orderBy('name')
-            ->get(['id', 'clinic_id', 'name', 'surname', 'category', 'varProfile', 'varGraduation', 'varPostGraduation'])
-            ->map(fn (User $doctor) => [
-                'id' => $doctor->id,
-                'name' => $doctor->name,
-                'surname' => $doctor->surname,
-                'full_name' => trim($doctor->name . ' ' . ($doctor->surname ?? '')),
-                'photo' => $doctor->varProfile ? asset('api/docterprofile/' . $doctor->varProfile) : null,
-                'degree' => collect([$doctor->varGraduation, $doctor->varPostGraduation])->filter()->implode(', '),
-                'graduation' => $doctor->varGraduation,
-                'post_graduation' => $doctor->varPostGraduation,
-                'speciality' => $doctor->categoryRel?->title,
-                'clinic_address' => $address,
-            ])
-            ->values();
+            ->get();
+
+        $languageNames = Language::whereIn('id', $doctors->pluck('language_ids')->flatten()->filter()->unique()->all())
+            ->pluck('language_name', 'id');
+
+        $doctors = $doctors->map(fn (User $doctor) => [
+            'id' => $doctor->id,
+            'name' => $doctor->name,
+            'surname' => $doctor->surname,
+            'full_name' => trim($doctor->name . ' ' . ($doctor->surname ?? '')),
+            'image' => $doctor->varProfile ? asset('api/docterprofile/' . $doctor->varProfile) : null,
+            'degree' => collect([$doctor->varGraduation, $doctor->varPostGraduation])->filter()->implode(', '),
+            'graduation' => $doctor->varGraduation,
+            'graduation_year' => $doctor->varGraduationYear,
+            'post_graduation' => $doctor->varPostGraduation,
+            'post_graduation_year' => $doctor->varPostGraduationYear,
+            'speciality' => $doctor->categoryRel?->title,
+            'speciality_detail' => $doctor->varSpeciality,
+            'experience' => $doctor->varExperience,
+            'fees' => $doctor->varFees,
+            'consultation_time' => $doctor->varTimeDuration,
+            'languages' => collect($doctor->language_ids ?? [])
+                ->map(fn ($id) => $languageNames[(int) $id] ?? null)
+                ->filter()
+                ->values(),
+            'bio' => $doctor->bio_handle,
+            'clinic_address' => $address,
+            'clinic_time' => $clinicTime,
+        ])->values();
 
         return response()->json([
             'message' => 'success',
@@ -1548,11 +1525,13 @@ class PatientController extends Controller
                 'clinic' => [
                     'id' => $clinic->id,
                     'name' => $clinic->name,
+                    'image' => $clinic->logo_url,
                     'address' => $address,
                     'city_name' => $clinic->cityRel?->name,
                     'state_name' => $clinic->stateRel?->name,
                     'phone' => $clinic->phone,
-                    'logo' => $clinic->logo_url,
+                    'clinic_time' => $clinicTime,
+                    'timings' => $clinic->timings ?? [],
                 ],
                 'doctors' => $doctors,
             ],
