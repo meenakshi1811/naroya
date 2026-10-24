@@ -1413,14 +1413,11 @@ class PatientController extends Controller
 
 
     /**
-     * GET|POST /api/patient/clinics: active clinics with at least one approved doctor,
-     * as id, name and image. Filters by state_id / city_id exactly like the doctor
-     * listings, pages with pageSize / pageNumber.
+     * GET|POST /api/patient/clinics: id and name of every active clinic with at least
+     * one approved doctor. Filters by state_id / city_id exactly like the doctor listings.
      */
     public function clinics(Request $request)
     {
-        $pageSize = max(1, min((int) $request->input('pageSize', 10), 100));
-        $pageNumber = max(1, (int) $request->input('pageNumber', 1));
         $locationFilters = $this->resolveOptionalLocationFilters($request);
 
         $query = Clinic::query()
@@ -1430,24 +1427,17 @@ class PatientController extends Controller
 
         $this->applyLocationFilter($query, $locationFilters, 'clinics.city_id', 'clinics.state');
 
-        $clinics = $query->paginate($pageSize, ['id', 'name', 'logo'], 'pageNumber', $pageNumber);
-
-        $items = $clinics->getCollection()->map(fn (Clinic $clinic) => [
-            'id' => $clinic->id,
-            'name' => $clinic->name,
-            'image' => $clinic->logo_url,
-        ])->values();
+        $clinics = $query->get(['clinics.id', 'clinics.name'])
+            ->map(fn (Clinic $clinic) => [
+                'id' => $clinic->id,
+                'name' => $clinic->name,
+            ])
+            ->values();
 
         return response()->json([
             'message' => 'success',
             'data' => [
-                'clinics' => $items,
-                'pagination' => [
-                    'current_page' => $clinics->currentPage(),
-                    'per_page' => $clinics->perPage(),
-                    'total' => $clinics->total(),
-                    'last_page' => $clinics->lastPage(),
-                ],
+                'clinics' => $clinics,
             ],
         ], 200);
     }
