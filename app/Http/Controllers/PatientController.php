@@ -1260,7 +1260,14 @@ class PatientController extends Controller
                             'sympton' => 'required|string',
                             'symton_desc' => 'required|string',
                             'is_freeslot' => 'nullable|in:0,1',
+                            'name' => 'nullable|string|max:255',
                         ]);
+
+                        $postedName = trim((string) $request->input('name', ''));
+                        if ($postedName !== '') {
+                            $patient->name = $postedName;
+                            $patient->save();
+                        }
 
 
                         // Check if the time slot is already booked
