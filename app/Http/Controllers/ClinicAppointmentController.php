@@ -223,7 +223,7 @@ class ClinicAppointmentController extends Controller
     }
 
     /**
-     * POST /api/patient/cancel-appointment-clinic with appointment_id and reason.
+     * POST /api/patient/cancel-appointment-clinic with appointment_id and an optional reason.
      * Same as /patient/cancel-appointment for a clinic booking, but it also frees the
      * token and only lets the patient cancel their own appointment.
      */
@@ -238,7 +238,7 @@ class ClinicAppointmentController extends Controller
 
         $validator = Validator::make($request->all(), [
             'appointment_id' => 'required|integer',
-            'reason' => 'required|string|max:1000',
+            'reason' => 'nullable|string|max:1000',
         ]);
 
         if ($validator->fails()) {
@@ -264,12 +264,19 @@ class ClinicAppointmentController extends Controller
         }
 
         $releasedToken = $appointment->token_no !== null ? (int) $appointment->token_no : null;
+        $reason = trim((string) $request->input('reason', ''));
 
-        $appointment->update([
+        $changes = [
             'chrIsCanceled' => 'Y',
-            'varCancelReason' => $request->input('reason'),
             'token_no' => null,
-        ]);
+        ];
+
+        // Without a reason the column is left as it is rather than set to NULL.
+        if ($reason !== '') {
+            $changes['varCancelReason'] = $reason;
+        }
+
+        $appointment->update($changes);
 
         $doctor = $appointment->doctor;
 
@@ -277,7 +284,7 @@ class ClinicAppointmentController extends Controller
             (new NotificationController())->sendPushNotification(
                 $doctor->fcm_token,
                 'Appointment Canceled',
-                "The appointment with {$patient->name}" . ($releasedToken ? " (token {$releasedToken})" : '') . " has been canceled. Reason: {$request->input('reason')}",
+                "The appointment with {$patient->name}" . ($releasedToken ? " (token {$releasedToken})" : '') . ' has been canceled.' . ($reason !== '' ? " Reason: {$reason}" : ''),
                 'doctor',
                 [
                     'type' => 'appointment_canceled',
