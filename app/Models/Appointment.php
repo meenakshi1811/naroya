@@ -174,6 +174,11 @@ class Appointment extends Model
         return $this->belongsTo(User::class, 'dr_id');
     }
 
+    public function clinic()
+    {
+        return $this->belongsTo(Clinic::class, 'clinic_id');
+    }
+
     public function hasPaidSlotConflict(): bool
     {
         return static::query()

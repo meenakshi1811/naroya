@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\Clinic;
+use App\Models\ClinicTokenQueue;
 use App\Models\Patients;
 use App\Models\User;
 use Carbon\Carbon;
@@ -147,6 +148,76 @@ class ClinicAppointmentController extends Controller
                 'appointment' => $appointment,
                 'token_no' => $tokenNo,
                 'clinic' => ['id' => $clinic->id, 'name' => $clinic->name],
+            ],
+        ], 200);
+    }
+
+    /**
+     * GET|POST /api/patient/my-clinic-tokens with optional clinic_id, doctor_id and date (Y-m-d).
+     * The logged-in patient's booked clinic tokens: upcoming ones (today onward) by default,
+     * or only the given date. Each comes with its appointment_id, needed to cancel it.
+     */
+    public function myTokens(Request $request): JsonResponse
+    {
+        // AuthenticateToken has already verified this token.
+        $patient = Patients::find(decrypt($request->bearerToken())['id'] ?? null);
+
+        if (! $patient) {
+            return $this->error('Unauthorized request', 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'clinic_id' => 'nullable|integer',
+            'doctor_id' => 'nullable|integer',
+            'date' => 'nullable|date_format:Y-m-d',
+        ], [
+            'date.date_format' => 'date must be in Y-m-d format.',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors()->first());
+        }
+
+        $appointments = Appointment::query()
+            ->where('patient_id', $patient->id)
+            ->whereNotNull('clinic_id')
+            ->whereNotNull('token_no')
+            ->where('chrIsCanceled', 'N')
+            ->where('chrIsRejected', 'N')
+            ->when(
+                $request->filled('date'),
+                fn ($query) => $query->where('varAppointment', $request->input('date')),
+                fn ($query) => $query->where('varAppointment', '>=', Carbon::now()->toDateString())
+            )
+            ->when($request->filled('clinic_id'), fn ($query) => $query->where('clinic_id', (int) $request->input('clinic_id')))
+            ->when($request->filled('doctor_id'), fn ($query) => $query->where('dr_id', (int) $request->input('doctor_id')))
+            ->with(['clinic:id,name', 'doctor:id,name,surname'])
+            ->orderBy('varAppointment')
+            ->orderBy('token_no')
+            ->get();
+
+        // Running token for each clinic and date in one query.
+        $runningTokens = ClinicTokenQueue::whereIn('clinic_id', $appointments->pluck('clinic_id')->unique())
+            ->whereIn('queue_date', $appointments->pluck('varAppointment')->unique())
+            ->get()
+            ->mapWithKeys(fn (ClinicTokenQueue $queue) => [$queue->clinic_id . '|' . Carbon::parse($queue->queue_date)->toDateString() => (int) $queue->current_token]);
+
+        $tokens = $appointments->map(fn (Appointment $appointment) => [
+            'appointment_id' => $appointment->id,
+            'token_no' => (int) $appointment->token_no,
+            'date' => $appointment->varAppointment,
+            'clinic_id' => (int) $appointment->clinic_id,
+            'clinic_name' => $appointment->clinic?->name,
+            'doctor_id' => (int) $appointment->dr_id,
+            'doctor_name' => $appointment->doctor ? trim($appointment->doctor->name . ' ' . ($appointment->doctor->surname ?? '')) : null,
+            'status' => $appointment->chrIsAccepted === 'Y' ? 'accepted' : 'pending',
+            'running_token' => $runningTokens[$appointment->clinic_id . '|' . $appointment->varAppointment] ?? 0,
+        ])->values();
+
+        return response()->json([
+            'message' => 'success',
+            'data' => [
+                'tokens' => $tokens,
             ],
         ], 200);
     }
