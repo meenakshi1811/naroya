@@ -33,9 +33,7 @@ class AppointmentController extends Controller
             if ($appointment) {
                 $appointment->update([
                     'chrIsCanceled' => 'Y',
-                    'varCancelReason' => $request->reason,
-                    // Gives a booked clinic token back; no-op when there isn't one.
-                    'token_no' => null,
+                    'varCancelReason' => $request->reason
                 ]);
 
                 $doctor = $appointment->doctor;
