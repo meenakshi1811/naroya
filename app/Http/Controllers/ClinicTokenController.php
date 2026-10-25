@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\Validator;
 class ClinicTokenController extends Controller
 {
     /**
-     * GET|POST /api/clinic-running-token with clinic_id and doctor_id.
+     * GET|POST /api/clinic-running-token with clinic_id and doctor_id (optional for a doctor or employee: defaults to their own).
      * Works with either a patient login token or a doctor login token.
      */
     public function running(Request $request): JsonResponse
@@ -37,7 +37,7 @@ class ClinicTokenController extends Controller
     }
 
     /**
-     * GET|POST /api/clinic-tokens with clinic_id, doctor_id and optional date (Y-m-d, default today).
+     * GET|POST /api/clinic-tokens with clinic_id, doctor_id (optional for staff) and optional date (Y-m-d, default today).
      * Token map like a cinema seat plan: every token 1..max_tokens with its status.
      * Works with either a patient login token or a doctor login token.
      */
@@ -52,16 +52,10 @@ class ClinicTokenController extends Controller
         $date = $context['date'];
         $patient = $context['patient'];
 
-        $booked = $this->activeTokens($clinic, $date)->get(['token_no', 'patient_id']);
-        $bookedTokens = $booked->pluck('token_no')->map(fn ($token) => (int) $token)->unique()->flip();
+        [$booked, $bookedTokens, $total] = $this->tokenBoard($clinic, $date);
         $myTokens = $patient
             ? $booked->where('patient_id', $patient->id)->pluck('token_no')->map(fn ($token) => (int) $token)->flip()
             : collect();
-
-        // Without a daily max, show what's booked plus one free token. If the max
-        // was lowered after booking, still show the tokens already handed out.
-        $highestBooked = $bookedTokens->keys()->max() ?? 0;
-        $total = max($clinic->max_tokens ?: $highestBooked + 1, $highestBooked);
 
         $tokens = [];
         for ($number = 1; $number <= $total; $number++) {
@@ -82,6 +76,36 @@ class ClinicTokenController extends Controller
             'available_count' => $total - $bookedTokens->count(),
             'running_token' => $this->currentToken($clinic, $date),
             'tokens' => $tokens,
+        ]);
+    }
+
+    /**
+     * GET|POST /api/clinic-available-tokens with clinic_id, doctor_id (optional for staff) and optional date
+     * (Y-m-d, default today): the token numbers still free, e.g. [20, 25, 30].
+     * Works with either a patient login token or a doctor login token.
+     */
+    public function available(Request $request): JsonResponse
+    {
+        $context = $this->readerContext($request, withDate: true);
+        if ($context instanceof JsonResponse) {
+            return $context;
+        }
+
+        $clinic = $context['clinic'];
+        [, $bookedTokens, $total] = $this->tokenBoard($clinic, $context['date']);
+
+        $available = collect(range(1, $total))
+            ->reject(fn (int $number) => $bookedTokens->has($number))
+            ->values();
+
+        return $this->success([
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $context['doctor_id'],
+            'date' => $context['date'],
+            'max_tokens' => $clinic->max_tokens,
+            'booked_count' => $bookedTokens->count(),
+            'available_count' => $available->count(),
+            'available_tokens' => $available,
         ]);
     }
 
@@ -432,15 +456,16 @@ class ClinicTokenController extends Controller
 
     /**
      * Shared checks for the read endpoints: a patient or doctor login, then a
-     * clinic_id of an active clinic and a doctor_id of a doctor in it.
+     * clinic_id of an active clinic and a doctor_id of a doctor in it (staff default to their own).
      */
     private function readerContext(Request $request, bool $withDate = false): array|JsonResponse
     {
         // Patient token first: Passport clears the Authorization header when it
         // rejects a token, and it would reject every patient token.
         $patient = $this->patientFromToken($request);
+        $staff = $patient ? null : Auth::guard('api')->user();
 
-        if (! $patient && ! Auth::guard('api')->check()) {
+        if (! $patient && ! $staff) {
             return response()->json([
                 'message' => 'Unauthorized request',
                 'data' => [
@@ -449,9 +474,12 @@ class ClinicTokenController extends Controller
             ], 401);
         }
 
+        // Patients must say which clinic and doctor; a doctor or employee defaults to
+        // their own clinic and (for a doctor) their own id.
+        $presence = $patient ? 'required' : 'nullable';
         $rules = [
-            'clinic_id' => 'required|integer',
-            'doctor_id' => 'required|integer',
+            'clinic_id' => $presence . '|integer',
+            'doctor_id' => $presence . '|integer',
         ];
 
         if ($withDate) {
@@ -461,25 +489,34 @@ class ClinicTokenController extends Controller
         $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
-            return $this->error($validator->errors()->has('date')
-                ? 'date must be in Y-m-d format.'
-                : 'clinic_id and doctor_id are required.');
+            return $this->error(match (true) {
+                $validator->errors()->has('date') => 'date must be in Y-m-d format.',
+                $patient !== null => 'clinic_id and doctor_id are required.',
+                default => 'clinic_id and doctor_id must be numbers.',
+            });
         }
 
-        $clinic = Clinic::where('is_active', true)->find($request->input('clinic_id'));
+        $clinicGiven = $request->filled('clinic_id');
+        $clinicId = $clinicGiven ? (int) $request->input('clinic_id') : $staff?->clinic_id;
+        $clinic = $clinicId ? Clinic::where('is_active', true)->find($clinicId) : null;
 
         if (! $clinic) {
-            return $this->error('Clinic not found.');
+            return $this->error($clinicGiven ? 'Clinic not found.' : 'You are not linked to an active clinic.');
         }
 
-        $doctorId = (int) $request->input('doctor_id');
-        $doctorInClinic = User::doctors()
-            ->whereKey($doctorId)
-            ->where('clinic_id', $clinic->id)
-            ->exists();
+        $doctorId = $request->filled('doctor_id')
+            ? (int) $request->input('doctor_id')
+            : ($staff && ! $staff->isEmployee() ? (int) $staff->id : null);
 
-        if (! $doctorInClinic) {
-            return $this->error('This doctor is not part of the selected clinic.');
+        if ($doctorId !== null) {
+            $doctorInClinic = User::doctors()
+                ->whereKey($doctorId)
+                ->where('clinic_id', $clinic->id)
+                ->exists();
+
+            if (! $doctorInClinic) {
+                return $this->error('This doctor is not part of the selected clinic.');
+            }
         }
 
         return [
@@ -488,6 +525,21 @@ class ClinicTokenController extends Controller
             'patient' => $patient,
             'date' => $request->input('date') ?: $this->today(),
         ];
+    }
+
+    /**
+     * The day's booked rows, their token numbers (as keys) and how many tokens the
+     * board has. Without a daily max it is what's booked plus one free token; if the
+     * max was lowered after booking, tokens already handed out still count.
+     */
+    private function tokenBoard(Clinic $clinic, string $date): array
+    {
+        $booked = $this->activeTokens($clinic, $date)->get(['token_no', 'patient_id']);
+        $bookedTokens = $booked->pluck('token_no')->map(fn ($token) => (int) $token)->unique()->flip();
+        $highestBooked = $bookedTokens->keys()->max() ?? 0;
+        $total = max($clinic->max_tokens ?: $highestBooked + 1, $highestBooked);
+
+        return [$booked, $bookedTokens, $total];
     }
 
     /** Tokens still in the queue: cancelled and rejected requests are skipped. */
