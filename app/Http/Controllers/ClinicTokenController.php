@@ -265,15 +265,9 @@ class ClinicTokenController extends Controller
         $patients = $appointments->map(fn (Appointment $appointment) => [
             'appointment_id' => $appointment->id,
             'token_no' => (int) $appointment->token_no,
-            'patient_id' => $appointment->patient_id,
             'name' => trim(($appointment->patient?->name ?? '') . ' ' . ($appointment->patient?->lastname ?? '')),
             'mobile' => $appointment->patient?->phone,
             'is_present' => (bool) $appointment->is_present,
-            'status' => $appointment->chrIsAccepted === 'Y' ? 'accepted' : 'pending',
-            'is_paid' => $appointment->charIsPaid === 'Y',
-            'doctor_id' => $appointment->dr_id,
-            'start_time' => $appointment->startTime,
-            'end_time' => $appointment->endTime,
         ])->values();
 
         return $this->success([
