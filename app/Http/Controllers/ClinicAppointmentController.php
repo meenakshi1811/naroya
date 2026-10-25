@@ -151,6 +151,93 @@ class ClinicAppointmentController extends Controller
         ], 200);
     }
 
+    /**
+     * POST /api/patient/cancel-appointment-clinic with appointment_id and reason.
+     * Same as /patient/cancel-appointment for a clinic booking, but it also frees the
+     * token and only lets the patient cancel their own appointment.
+     */
+    public function cancel(Request $request): JsonResponse
+    {
+        // AuthenticateToken has already verified this token.
+        $patient = Patients::find(decrypt($request->bearerToken())['id'] ?? null);
+
+        if (! $patient) {
+            return $this->error('Unauthorized request', 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'appointment_id' => 'required|integer',
+            'reason' => 'required|string|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors()->first());
+        }
+
+        $appointment = Appointment::with('doctor')
+            ->whereKey((int) $request->input('appointment_id'))
+            ->where('patient_id', $patient->id)
+            ->whereNotNull('clinic_id')
+            ->first();
+
+        if (! $appointment) {
+            return $this->error('Clinic appointment not found.');
+        }
+
+        if ($appointment->chrIsCanceled === 'Y') {
+            return $this->error('This appointment is already cancelled.');
+        }
+
+        if ($appointment->chrIsRejected === 'Y') {
+            return $this->error('This appointment was rejected by the doctor and cannot be cancelled.');
+        }
+
+        $releasedToken = $appointment->token_no !== null ? (int) $appointment->token_no : null;
+
+        $appointment->update([
+            'chrIsCanceled' => 'Y',
+            'varCancelReason' => $request->input('reason'),
+            'token_no' => null,
+        ]);
+
+        $doctor = $appointment->doctor;
+
+        if ($doctor && $doctor->fcm_token) {
+            (new NotificationController())->sendPushNotification(
+                $doctor->fcm_token,
+                'Appointment Canceled',
+                "The appointment with {$patient->name}" . ($releasedToken ? " (token {$releasedToken})" : '') . " has been canceled. Reason: {$request->input('reason')}",
+                'doctor',
+                [
+                    'type' => 'appointment_canceled',
+                    'appointmentId' => (string) $appointment->id,
+                ],
+                'appointment_canceled'
+            );
+        }
+
+        return response()->json([
+            'message' => 'Appointment cancelled successfully!',
+            'data' => [
+                'appointment_id' => $appointment->id,
+                'clinic_id' => $appointment->clinic_id,
+                'token_no' => $releasedToken,
+                // Same patient block as /patient/cancel-appointment returns.
+                'user' => [
+                    'id' => $patient->id,
+                    'name' => $patient->name,
+                    'lastname' => $patient->lastname,
+                    'country' => $patient->country,
+                    'state' => $patient->state,
+                    'email' => $patient->email,
+                    'varProfile' => $patient->varProfile
+                        ? config('app.url') . 'api/patientprofile/' . $patient->varProfile
+                        : 'null',
+                ],
+            ],
+        ], 200);
+    }
+
     /** First session start to last session end, or the default day window. */
     private function clinicDayWindow(Clinic $clinic): array
     {
