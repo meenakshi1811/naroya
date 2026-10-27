@@ -240,6 +240,9 @@ class AuthController extends Controller
                 'message' => 'Login successful!',
                 'data' => [
                     'user' => $user,
+                    // Doctors and clinic employees share this login; the app routes on role.
+                    'role' => $user->role ?? User::ROLE_DOCTOR,
+                    'clinic_id' => $user->clinic_id,
                     'token_type' => $tokenData['token_type'],
                     'expires_in' => $tokenData['expires_in'],
                     'access_token' => $tokenData['access_token'],
@@ -450,6 +453,8 @@ class AuthController extends Controller
             'users.bio_handle',
             'users.language_ids',
             'users.localization_id',
+            'users.role',
+            'users.clinic_id',
             'language_master.language_name as localization_language_name',
             'cities.name as city_name'
         )
