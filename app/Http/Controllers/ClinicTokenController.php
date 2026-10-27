@@ -12,6 +12,7 @@ use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -22,6 +23,13 @@ use Illuminate\Support\Facades\Validator;
  */
 class ClinicTokenController extends Controller
 {
+    /**
+     * How long the running token read is cached. The number only moves when staff
+     * advance it, and those writes clear the cache, so a few seconds of staleness on
+     * the (heavily polled) read path is safe and spares the DB a query per poll.
+     */
+    private const RUNNING_TOKEN_TTL = 5;
+
     /**
      * GET|POST /api/clinic-running-token with clinic_id and doctor_id (optional for a doctor or employee: defaults to their own).
      * Works with either a patient login token or a doctor login token.
@@ -103,6 +111,7 @@ class ClinicTokenController extends Controller
             'doctor_id' => $context['doctor_id'],
             'date' => $context['date'],
             'max_tokens' => $clinic->max_tokens,
+            'total_tokens' => $total,
             'booked_count' => $bookedTokens->count(),
             'available_count' => $available->count(),
             'available_tokens' => $available,
@@ -446,12 +455,16 @@ class ClinicTokenController extends Controller
         ];
     }
 
-    /** 0 until staff call the first token of the day. */
+    /** 0 until staff call the first token of the day. Cached briefly; writes clear it (see ClinicTokenQueue). */
     private function currentToken(Clinic $clinic, string $date): int
     {
-        return (int) ClinicTokenQueue::where('clinic_id', $clinic->id)
-            ->where('queue_date', $date)
-            ->value('current_token');
+        return (int) Cache::remember(
+            ClinicTokenQueue::runningTokenCacheKey($clinic->id, $date),
+            self::RUNNING_TOKEN_TTL,
+            fn () => (int) ClinicTokenQueue::where('clinic_id', $clinic->id)
+                ->where('queue_date', $date)
+                ->value('current_token')
+        );
     }
 
     /**
