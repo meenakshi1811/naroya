@@ -61,6 +61,12 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/doctor/clinic-token/decrease', [App\Http\Controllers\ClinicTokenController::class, 'decrease']);
     Route::post('/doctor/clinic-token/update', [App\Http\Controllers\ClinicTokenController::class, 'change']);
     Route::get('/doctor/clinic-patients', [App\Http\Controllers\ClinicTokenController::class, 'patients']);
+    // Clinic staff: the logged-in user's clinic, and a clinic doctor's employees
+    Route::get('/my-clinic', [App\Http\Controllers\ClinicStaffController::class, 'clinic']);
+    Route::get('/doctor/employees', [App\Http\Controllers\ClinicStaffController::class, 'index']);
+    Route::post('/doctor/employees', [App\Http\Controllers\ClinicStaffController::class, 'store']);
+    Route::match(['put', 'post'], '/doctor/employees/{id}', [App\Http\Controllers\ClinicStaffController::class, 'update']);
+    Route::delete('/doctor/employees/{id}', [App\Http\Controllers\ClinicStaffController::class, 'destroy']);
     Route::post('/doctor/clinic-patients/attendance', [App\Http\Controllers\ClinicTokenController::class, 'attendance']);
     Route::post('/doctor/clinic-token/set', [App\Http\Controllers\ClinicTokenController::class, 'set']);
     Route::post('/doctor/clinic-token/clear', [App\Http\Controllers\ClinicTokenController::class, 'clear']);
