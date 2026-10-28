@@ -20,6 +20,18 @@ class Handler extends ExceptionHandler
     ];
 
     /**
+     * Passport's token guard reports this every time a request carries an expired,
+     * revoked or non-Passport bearer token, then answers 401 as normal. Those are
+     * expected, so keep them out of the logs and Sentry. Login (grant) failures use
+     * Laravel\Passport\Exceptions\OAuthServerException and are still reported.
+     *
+     * @var array<int, class-string<\Throwable>>
+     */
+    protected $dontReport = [
+        \League\OAuth2\Server\Exception\OAuthServerException::class,
+    ];
+
+    /**
      * Register the exception handling callbacks for the application.
      */
     public function register(): void
