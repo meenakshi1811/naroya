@@ -23,37 +23,15 @@ class ClinicStaffController extends Controller
     /** GET /api/my-clinic: the logged-in doctor's or employee's clinic. */
     public function clinic(Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        if ($user->chrApproval !== 'Y') {
-            return $this->pendingApproval();
+        $clinic = $this->ownClinic($request, ['stateRel:id,name', 'cityRel:id,name', 'countryRel:id,countryname']);
+        if ($clinic instanceof JsonResponse) {
+            return $clinic;
         }
 
-        $clinic = $user->clinic_id
-            ? Clinic::where('is_active', true)
-                ->with(['stateRel:id,name', 'cityRel:id,name', 'countryRel:id,countryname'])
-                ->find($user->clinic_id)
-            : null;
-
-        if (! $clinic) {
-            return $this->error('You are not linked to an active clinic.');
-        }
-
-        $doctors = $clinic->doctors()
-            ->where('chrApproval', 'Y')
-            ->with('categoryRel:id,title')
-            ->orderBy('name')
-            ->get(['id', 'clinic_id', 'name', 'surname', 'category', 'varProfile'])
-            ->map(fn (User $doctor) => [
-                'id' => $doctor->id,
-                'full_name' => $this->fullName($doctor),
-                'speciality' => $doctor->categoryRel?->title,
-                'image' => $doctor->varProfile ? asset('api/docterprofile/' . $doctor->varProfile) : null,
-            ])
-            ->values();
+        $doctors = $this->clinicDoctors($clinic);
 
         return $this->success([
-            'role' => $user->role,
+            'role' => $request->user()->role,
             'clinic' => [
                 'id' => $clinic->id,
                 'name' => $clinic->name,
@@ -72,6 +50,26 @@ class ClinicStaffController extends Controller
             ],
             'doctors' => $doctors,
             'employees_count' => $clinic->employees()->count(),
+        ]);
+    }
+
+    /**
+     * GET /api/my-clinic/doctors: the doctors of the logged-in employee's (or doctor's)
+     * clinic, e.g. to pick one and pass its id as doctor_id to /doctor/clinic-patients.
+     */
+    public function doctors(Request $request): JsonResponse
+    {
+        $clinic = $this->ownClinic($request);
+        if ($clinic instanceof JsonResponse) {
+            return $clinic;
+        }
+
+        $doctors = $this->clinicDoctors($clinic);
+
+        return $this->success([
+            'clinic_id' => $clinic->id,
+            'total' => $doctors->count(),
+            'doctors' => $doctors,
         ]);
     }
 
@@ -243,6 +241,40 @@ class ClinicStaffController extends Controller
         return $this->success([
             'employee_id' => (int) $id,
         ], 'Employee deleted successfully.');
+    }
+
+    /** The logged-in doctor's or employee's active clinic, or an error response. */
+    private function ownClinic(Request $request, array $with = []): Clinic|JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->chrApproval !== 'Y') {
+            return $this->pendingApproval();
+        }
+
+        $clinic = $user->clinic_id
+            ? Clinic::where('is_active', true)->with($with)->find($user->clinic_id)
+            : null;
+
+        return $clinic ?: $this->error('You are not linked to an active clinic.');
+    }
+
+    /** The clinic's approved doctors, by name. */
+    private function clinicDoctors(Clinic $clinic)
+    {
+        return $clinic->doctors()
+            ->where('chrApproval', 'Y')
+            ->with('categoryRel:id,title')
+            ->orderBy('name')
+            ->get(['id', 'clinic_id', 'name', 'surname', 'category', 'varProfile', 'varGraduation', 'varPostGraduation'])
+            ->map(fn (User $doctor) => [
+                'id' => $doctor->id,
+                'full_name' => $this->fullName($doctor),
+                'speciality' => $doctor->categoryRel?->title,
+                'degree' => collect([$doctor->varGraduation, $doctor->varPostGraduation])->filter()->implode(', '),
+                'image' => $doctor->varProfile ? asset('api/docterprofile/' . $doctor->varProfile) : null,
+            ])
+            ->values();
     }
 
     /** The logged-in doctor and their active clinic, or an error response. */

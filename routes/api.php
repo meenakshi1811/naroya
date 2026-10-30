@@ -63,6 +63,7 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/doctor/clinic-patients', [App\Http\Controllers\ClinicTokenController::class, 'patients']);
     // Clinic staff: the logged-in user's clinic, and a clinic doctor's employees
     Route::get('/my-clinic', [App\Http\Controllers\ClinicStaffController::class, 'clinic']);
+    Route::get('/my-clinic/doctors', [App\Http\Controllers\ClinicStaffController::class, 'doctors']);
     Route::get('/doctor/employees', [App\Http\Controllers\ClinicStaffController::class, 'index']);
     Route::post('/doctor/employees', [App\Http\Controllers\ClinicStaffController::class, 'store']);
     Route::match(['put', 'post'], '/doctor/employees/{id}', [App\Http\Controllers\ClinicStaffController::class, 'update']);
