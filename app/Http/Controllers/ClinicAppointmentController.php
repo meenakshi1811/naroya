@@ -88,7 +88,9 @@ class ClinicAppointmentController extends Controller
             // Same clinic row lock as the other booking paths, so two bookings can't take one token.
             Clinic::whereKey($clinic->id)->lockForUpdate()->first();
 
+            // Tokens are numbered per doctor: another doctor's token 1 doesn't block this one.
             $takenTokens = Appointment::where('clinic_id', $clinic->id)
+                ->where('dr_id', $doctor->id)
                 ->where('varAppointment', $date)
                 ->where('chrIsCanceled', 'N')
                 ->where('chrIsRejected', 'N')
@@ -98,7 +100,7 @@ class ClinicAppointmentController extends Controller
                 ->flip();
 
             if ($clinic->max_tokens && $takenTokens->count() >= $clinic->max_tokens) {
-                return 'No tokens are available at ' . $clinic->name . ' on the selected date.';
+                return 'No tokens are available with this doctor at ' . $clinic->name . ' on the selected date.';
             }
 
             if ($takenTokens->has($tokenNo)) {
@@ -196,11 +198,14 @@ class ClinicAppointmentController extends Controller
             ->orderBy('token_no')
             ->get();
 
-        // Running token for each clinic and date in one query.
+        // Running token for each clinic, doctor and date in one query.
         $runningTokens = ClinicTokenQueue::whereIn('clinic_id', $appointments->pluck('clinic_id')->unique())
+            ->whereIn('doctor_id', $appointments->pluck('dr_id')->unique())
             ->whereIn('queue_date', $appointments->pluck('varAppointment')->unique())
             ->get()
-            ->mapWithKeys(fn (ClinicTokenQueue $queue) => [$queue->clinic_id . '|' . Carbon::parse($queue->queue_date)->toDateString() => (int) $queue->current_token]);
+            ->mapWithKeys(fn (ClinicTokenQueue $queue) => [
+                $queue->clinic_id . '|' . $queue->doctor_id . '|' . Carbon::parse($queue->queue_date)->toDateString() => (int) $queue->current_token,
+            ]);
 
         $tokens = $appointments->map(fn (Appointment $appointment) => [
             'appointment_id' => $appointment->id,
@@ -211,7 +216,7 @@ class ClinicAppointmentController extends Controller
             'doctor_id' => (int) $appointment->dr_id,
             'doctor_name' => $appointment->doctor ? trim($appointment->doctor->name . ' ' . ($appointment->doctor->surname ?? '')) : null,
             'status' => $appointment->chrIsAccepted === 'Y' ? 'accepted' : 'pending',
-            'running_token' => $runningTokens[$appointment->clinic_id . '|' . $appointment->varAppointment] ?? 0,
+            'running_token' => $runningTokens[$appointment->clinic_id . '|' . $appointment->dr_id . '|' . $appointment->varAppointment] ?? 0,
         ])->values();
 
         return response()->json([

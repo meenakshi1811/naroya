@@ -11,6 +11,7 @@ class ClinicTokenQueue extends Model
 
     protected $fillable = [
         'clinic_id',
+        'doctor_id',
         'queue_date',
         'current_token',
         'updated_by',
@@ -26,16 +27,16 @@ class ClinicTokenQueue extends Model
         // queue row drops it, so the next read (including the writer's own response)
         // reflects the new token straight away instead of waiting out the TTL.
         $forget = fn (self $queue) => Cache::forget(
-            self::runningTokenCacheKey($queue->clinic_id, (string) $queue->queue_date)
+            self::runningTokenCacheKey($queue->clinic_id, (int) $queue->doctor_id, (string) $queue->queue_date)
         );
 
         static::saved($forget);
         static::deleted($forget);
     }
 
-    /** Cache key for a clinic's running token on a given day (Y-m-d). */
-    public static function runningTokenCacheKey(int|string $clinicId, string $date): string
+    /** Cache key for a doctor's running token at a clinic on a given day (Y-m-d). */
+    public static function runningTokenCacheKey(int|string $clinicId, int|string $doctorId, string $date): string
     {
-        return "clinic_running_token:{$clinicId}:{$date}";
+        return "clinic_running_token:{$clinicId}:{$doctorId}:{$date}";
     }
 }

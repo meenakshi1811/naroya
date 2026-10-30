@@ -4,9 +4,12 @@
 
 @php
     $dateString = $date->toDateString();
-    $routeFor = fn ($day) => route('admin.clinic.appointments', ['clinic' => $clinic, 'date' => $day]);
+    $routeFor = fn ($day, $doctorId = null) => route('admin.clinic.appointments', array_filter([
+        'clinic' => $clinic->id, 'date' => $day, 'doctor' => $doctorId ?? $doctor?->id,
+    ]));
     $formatTime = fn ($time) => $time ? date('g:i A', strtotime($time)) : null;
     $personName = fn ($person, string $lastNameField) => $person ? trim($person->name . ' ' . ($person->{$lastNameField} ?? '')) : null;
+    $doctorLabel = $doctor ? 'Dr. ' . $personName($doctor, 'surname') : null;
 @endphp
 
 <div class="container-fluid cm">
@@ -20,9 +23,12 @@
                 <span>Appointments &amp; tokens</span>
             </nav>
             <h1 class="cm-title">Appointments &amp; tokens</h1>
-            <p class="cm-subtitle">{{ $clinic->name }} · {{ $date->format('l, d F Y') }}</p>
+            <p class="cm-subtitle">{{ $clinic->name }}{{ $doctorLabel ? ' · ' . $doctorLabel : '' }} · {{ $date->format('l, d F Y') }}</p>
         </div>
         <form method="GET" action="{{ route('admin.clinic.appointments', $clinic) }}" class="cm-date-nav">
+            @if($doctor)
+                <input type="hidden" name="doctor" value="{{ $doctor->id }}">
+            @endif
             <a href="{{ $routeFor($date->copy()->subDay()->toDateString()) }}" class="cm-icon-btn" title="Previous day" aria-label="Previous day">
                 <i class="bi bi-chevron-left"></i>
             </a>
@@ -31,10 +37,26 @@
                 <i class="bi bi-chevron-right"></i>
             </a>
             @unless($date->isToday())
-                <a href="{{ route('admin.clinic.appointments', $clinic) }}" class="btn btn-light btn-sm">Today</a>
+                <a href="{{ $routeFor(null) }}" class="btn btn-light btn-sm">Today</a>
             @endunless
         </form>
     </div>
+
+    {{-- Each doctor has their own token numbers and running token. --}}
+    @if($doctors->count() > 1)
+        <div class="mb-4">
+            <div class="cm-tabs cm-tabs-wrap" aria-label="Choose doctor">
+                @foreach($doctors as $tabDoctor)
+                    <a href="{{ $routeFor($dateString, $tabDoctor->id) }}"
+                       class="cm-tab {{ $doctor && $doctor->id === $tabDoctor->id ? 'is-active' : '' }}"
+                       @if($doctor && $doctor->id === $tabDoctor->id) aria-current="page" @endif>
+                        Dr. {{ $personName($tabDoctor, 'surname') }}
+                        <span class="cm-tab-count">{{ $bookingCounts->get($tabDoctor->id, 0) }}</span>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    @endif
 
     <div class="cm-stats">
         <div class="cm-stat">
@@ -81,10 +103,12 @@
             <div>
                 <h2 class="cm-card-title">Token board</h2>
                 <p class="cm-card-subtitle">
-                    @if($clinic->max_tokens)
-                        {{ $stats['occupied'] }} of {{ $clinic->max_tokens }} tokens booked for {{ $date->format('d M Y') }}.
+                    @if(! $doctor)
+                        No doctors are linked to this clinic yet.
+                    @elseif($clinic->max_tokens)
+                        {{ $stats['occupied'] }} of {{ $clinic->max_tokens }} tokens booked with {{ $doctorLabel }} for {{ $date->format('d M Y') }}.
                     @else
-                        No daily limit set for this clinic. Showing booked tokens plus the next free one.
+                        No daily limit set for this clinic. Showing {{ $doctorLabel }}'s booked tokens plus the next free one.
                     @endif
                 </p>
             </div>
@@ -103,7 +127,7 @@
                         $isPresent = $booking && (int) $booking->is_present === 1;
                         $label = 'Token ' . $number . ': ';
                         $label .= $booking
-                            ? ($personName($booking->patient, 'lastname') ?: 'Patient') . ($booking->doctor ? ' with Dr. ' . $personName($booking->doctor, 'surname') : '') . ($isPresent ? ' (present)' : '')
+                            ? ($personName($booking->patient, 'lastname') ?: 'Patient') . ($isPresent ? ' (present)' : '')
                             : 'available';
                     @endphp
                     <div class="cm-token {{ $booking ? 'is-booked' : '' }} {{ $isPresent ? 'is-present' : '' }} {{ $runningToken === $number ? 'is-running' : '' }}"
@@ -121,7 +145,7 @@
             <div>
                 <h2 class="cm-card-title">Appointments</h2>
                 <p class="cm-card-subtitle">
-                    {{ $appointments->count() }} {{ $appointments->count() === 1 ? 'appointment' : 'appointments' }} at {{ $clinic->name }} on {{ $date->format('d M Y') }}{{ $stats['cancelled'] ? ', including ' . $stats['cancelled'] . ' cancelled or rejected' : '' }}.
+                    {{ $appointments->count() }} {{ $appointments->count() === 1 ? 'appointment' : 'appointments' }}{{ $doctorLabel ? ' with ' . $doctorLabel : '' }} at {{ $clinic->name }} on {{ $date->format('d M Y') }}{{ $stats['cancelled'] ? ', including ' . $stats['cancelled'] . ' cancelled or rejected' : '' }}.
                 </p>
             </div>
         </div>
@@ -130,7 +154,7 @@
             <div class="cm-empty">
                 <span class="cm-empty-icon"><i class="bi bi-calendar-x"></i></span>
                 <h3>No appointments on this date</h3>
-                <p>Patients haven't booked any doctor at {{ $clinic->name }} for {{ $date->format('d M Y') }} yet.</p>
+                <p>Patients haven't booked {{ $doctorLabel ?? 'any doctor' }} at {{ $clinic->name }} for {{ $date->format('d M Y') }} yet.</p>
             </div>
         @else
             <div class="table-responsive">

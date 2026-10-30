@@ -2191,11 +2191,12 @@ class PatientController extends Controller
     }
 
     /**
-     * Gives the appointment a token at the doctor's clinic for that date: the one
-     * the patient picked from the token map, or else the lowest free number.
-     * Cancelled and rejected requests free their number, so tokens stay within
-     * the clinic's daily maximum. Must run inside a transaction: the clinic row
-     * lock keeps two concurrent bookings from taking the same token.
+     * Gives the appointment a token with the doctor at their clinic for that date:
+     * the one the patient picked from the token map, or else the lowest free number.
+     * Tokens are numbered per doctor, and cancelled and rejected requests free their
+     * number, so each doctor's tokens stay within the clinic's daily maximum. Must run
+     * inside a transaction: the clinic row lock keeps two concurrent bookings from
+     * taking the same token.
      */
     private function assignClinicToken(Appointment $appointment, ?User $doctor, $requestedToken = null): void
     {
@@ -2214,6 +2215,7 @@ class PatientController extends Controller
 
         // Appointments whose token staff cleared keep clinic_id but no longer hold a token.
         $takenTokens = Appointment::where('clinic_id', $clinic->id)
+            ->where('dr_id', $doctor->id)
             ->where('varAppointment', $appointment->varAppointment)
             ->where('chrIsCanceled', 'N')
             ->where('chrIsRejected', 'N')

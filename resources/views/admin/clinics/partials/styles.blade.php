@@ -343,6 +343,15 @@
         color: var(--cm-ink);
     }
 
+    a.cm-tab {
+        text-decoration: none;
+    }
+
+    .cm-tabs-wrap {
+        flex-wrap: wrap;
+        max-width: 100%;
+    }
+
     .cm-tab-count {
         background: #eef0ef;
         color: var(--cm-muted);

@@ -186,7 +186,7 @@
                         <span class="input-group-text">tokens</span>
                         @error('max_tokens')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
-                    <div class="form-text">Leave blank if the clinic has no daily limit.</div>
+                    <div class="form-text">Applies to each doctor: every doctor gets their own tokens 1 to this number. Leave blank for no daily limit.</div>
                 </div>
             </div>
         </section>

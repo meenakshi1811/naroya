@@ -105,14 +105,16 @@ class ClinicController extends Controller
     }
 
     /**
-     * Date-wise appointments booked at the clinic and how its daily tokens are occupied.
+     * Date-wise appointments booked at the clinic and how a doctor's daily tokens are
+     * occupied. Tokens and the running token are per doctor, so the page shows one
+     * doctor at a time (?doctor=id), defaulting to the first doctor with bookings.
      */
     public function appointments(Request $request, Clinic $clinic)
     {
         $date = $this->selectedDate($request->input('date'));
         $dateString = $date->toDateString();
 
-        $appointments = Appointment::query()
+        $dayAppointments = Appointment::query()
             ->where('clinic_id', $clinic->id)
             ->where('varAppointment', $dateString)
             ->with(['patient:id,name,lastname,phone', 'doctor:id,name,surname'])
@@ -121,6 +123,18 @@ class ClinicController extends Controller
             ->orderBy('token_no')
             ->orderBy('startTime')
             ->get();
+
+        // The clinic's doctors, plus any who have left but still have bookings that day.
+        $bookingCounts = $dayAppointments->countBy('dr_id');
+        $doctors = User::whereIn('id', $clinic->doctors()->pluck('id')->merge($bookingCounts->keys())->unique())
+            ->orderBy('name')
+            ->get(['id', 'name', 'surname']);
+
+        $doctor = $doctors->firstWhere('id', (int) $request->input('doctor'))
+            ?? $doctors->first(fn (User $doctor) => $bookingCounts->has($doctor->id))
+            ?? $doctors->first();
+
+        $appointments = $doctor ? $dayAppointments->where('dr_id', $doctor->id)->values() : collect();
 
         $isActive = fn (Appointment $appointment) => $appointment->chrIsCanceled !== 'Y' && $appointment->chrIsRejected !== 'Y';
 
@@ -132,9 +146,12 @@ class ClinicController extends Controller
         $highestBooked = $occupied->keys()->max() ?? 0;
         $totalTokens = max($clinic->max_tokens ?: $highestBooked + 1, $highestBooked);
 
-        $runningToken = (int) ClinicTokenQueue::where('clinic_id', $clinic->id)
-            ->where('queue_date', $dateString)
-            ->value('current_token');
+        $runningToken = $doctor
+            ? (int) ClinicTokenQueue::where('clinic_id', $clinic->id)
+                ->where('doctor_id', $doctor->id)
+                ->where('queue_date', $dateString)
+                ->value('current_token')
+            : 0;
 
         $stats = [
             'occupied' => $occupied->count(),
@@ -144,7 +161,7 @@ class ClinicController extends Controller
         ];
 
         return view('admin.clinics.appointments', compact(
-            'clinic', 'date', 'appointments', 'occupied', 'totalTokens', 'runningToken', 'stats'
+            'clinic', 'date', 'doctors', 'doctor', 'bookingCounts', 'appointments', 'occupied', 'totalTokens', 'runningToken', 'stats'
         ));
     }
 
