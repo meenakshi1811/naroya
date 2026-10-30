@@ -30,6 +30,9 @@ class ClinicTokenController extends Controller
      */
     private const RUNNING_TOKEN_TTL = 5;
 
+    /** Patients within this many places after the running token get a "your turn is coming up" push. */
+    private const REMINDER_POSITIONS = 5;
+
     /**
      * GET|POST /api/clinic-running-token with clinic_id and doctor_id (optional for a doctor or employee: defaults to their own).
      * Works with either a patient login token or a doctor login token.
@@ -146,8 +149,9 @@ class ClinicTokenController extends Controller
         }
 
         $date = $this->today();
+        $reminders = [];
 
-        $advanced = DB::transaction(function () use ($clinic, $date, $request) {
+        $advanced = DB::transaction(function () use ($clinic, $date, $request, &$reminders) {
             $queue = $this->lockQueue($clinic, $date);
 
             $nextToken = $this->activeTokens($clinic, $date)
@@ -162,10 +166,13 @@ class ClinicTokenController extends Controller
             $queue->updated_by = $request->user()->id;
             $queue->save();
 
+            $reminders = $this->claimTokenReminders($clinic, $date, $queue->current_token);
+
             return true;
         });
 
         $data = $this->runningToken($clinic, $this->staffDoctorId($request));
+        $this->sendTokenReminders($clinic, $reminders);
 
         return $this->success(
             $data,
@@ -210,12 +217,16 @@ class ClinicTokenController extends Controller
 
         $date = $this->today();
 
-        DB::transaction(function () use ($clinic, $date, $token, $request) {
+        $reminders = DB::transaction(function () use ($clinic, $date, $token, $request) {
             $queue = $this->lockQueue($clinic, $date);
             $queue->current_token = $token;
             $queue->updated_by = $request->user()->id;
             $queue->save();
+
+            return $this->claimTokenReminders($clinic, $date, $token);
         });
+
+        $this->sendTokenReminders($clinic, $reminders);
 
         return $this->success(
             $this->runningToken($clinic, $this->staffDoctorId($request)),
@@ -235,8 +246,9 @@ class ClinicTokenController extends Controller
         }
 
         $date = $this->today();
+        $reminders = [];
 
-        $moved = DB::transaction(function () use ($clinic, $date, $request) {
+        $moved = DB::transaction(function () use ($clinic, $date, $request, &$reminders) {
             $queue = $this->lockQueue($clinic, $date);
 
             if ($queue->current_token === 0) {
@@ -251,10 +263,13 @@ class ClinicTokenController extends Controller
             $queue->updated_by = $request->user()->id;
             $queue->save();
 
+            $reminders = $this->claimTokenReminders($clinic, $date, $queue->current_token);
+
             return true;
         });
 
         $data = $this->runningToken($clinic, $this->staffDoctorId($request));
+        $this->sendTokenReminders($clinic, $reminders);
 
         $message = match (true) {
             ! $moved => 'The token queue has not started yet.',
@@ -382,12 +397,16 @@ class ClinicTokenController extends Controller
             return $this->error('Token ' . $token . ' has not been issued for today.');
         }
 
-        DB::transaction(function () use ($clinic, $date, $token, $request) {
+        $reminders = DB::transaction(function () use ($clinic, $date, $token, $request) {
             $queue = $this->lockQueue($clinic, $date);
             $queue->current_token = $token;
             $queue->updated_by = $request->user()->id;
             $queue->save();
+
+            return $this->claimTokenReminders($clinic, $date, $token);
         });
+
+        $this->sendTokenReminders($clinic, $reminders);
 
         return $this->success(
             $this->runningToken($clinic, $this->staffDoctorId($request)),
@@ -580,6 +599,86 @@ class ClinicTokenController extends Controller
             ->where('queue_date', $date)
             ->lockForUpdate()
             ->first();
+    }
+
+    /**
+     * Marks the bookings now within REMINDER_POSITIONS places after the running token
+     * as reminded and returns them with their place in line (1 = next). Every place is
+     * checked, not just the last one, so a late booking, a cancellation or a jump in the
+     * token still gets everyone in range told; each booking is reminded only once,
+     * however often the token moves back and forth. Call inside the queue transaction.
+     */
+    private function claimTokenReminders(Clinic $clinic, string $date, int $runningToken): array
+    {
+        if ($runningToken === 0) {
+            return [];
+        }
+
+        $upcoming = $this->activeTokens($clinic, $date)
+            ->where('token_no', '>', $runningToken)
+            ->orderBy('token_no')
+            ->limit(self::REMINDER_POSITIONS)
+            ->get(['id', 'token_reminder_sent_at']);
+
+        $places = [];
+        foreach ($upcoming->values() as $index => $appointment) {
+            if ($appointment->token_reminder_sent_at === null) {
+                $places[$appointment->id] = $index + 1;
+            }
+        }
+
+        if (! $places) {
+            return [];
+        }
+
+        Appointment::whereIn('id', array_keys($places))->update(['token_reminder_sent_at' => now()]);
+
+        return ['running_token' => $runningToken, 'places' => $places];
+    }
+
+    /** Pushes the claimed reminders after the response is sent, so FCM never slows the doctor's tap. */
+    private function sendTokenReminders(Clinic $clinic, array $reminders): void
+    {
+        if (! $reminders) {
+            return;
+        }
+
+        app()->terminating(function () use ($clinic, $reminders) {
+            $runningToken = $reminders['running_token'];
+            $appointments = Appointment::with('patient:id,fcm_token')
+                ->whereIn('id', array_keys($reminders['places']))
+                ->get(['id', 'patient_id', 'token_no']);
+            $notifications = new NotificationController();
+
+            foreach ($appointments as $appointment) {
+                if (empty($appointment->patient?->fcm_token)) {
+                    continue;
+                }
+
+                $place = $reminders['places'][$appointment->id];
+                $ahead = $place - 1;
+                $serving = 'Now serving token ' . $runningToken . ' at ' . $clinic->name . '. ';
+
+                $notifications->sendPushNotification(
+                    $appointment->patient->fcm_token,
+                    $ahead === 0 ? "You're next!" : 'Your turn is coming up',
+                    $ahead === 0
+                        ? $serving . 'Your token ' . $appointment->token_no . ' is next, please be at the clinic.'
+                        : $serving . 'Your token ' . $appointment->token_no . ' is coming up with ' . $ahead
+                            . ($ahead === 1 ? ' patient' : ' patients') . ' ahead of you. Please be available.',
+                    'patient',
+                    [
+                        'type' => 'clinic_token_reminder',
+                        'appointmentId' => $appointment->id,
+                        'clinicId' => $clinic->id,
+                        'tokenNo' => $appointment->token_no,
+                        'runningToken' => $runningToken,
+                        'patientsAhead' => $ahead,
+                    ],
+                    'clinic_token_reminder'
+                );
+            }
+        });
     }
 
     /** The logged-in patient, using the same check as the AuthenticateToken middleware. */
