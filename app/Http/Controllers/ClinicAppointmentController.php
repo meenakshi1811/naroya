@@ -112,6 +112,7 @@ class ClinicAppointmentController extends Controller
             $appointment->dr_id = $doctor->id;
             $appointment->clinic_id = $clinic->id;
             $appointment->token_no = $tokenNo;
+            $appointment->is_clinic_booking = 1;
             $appointment->amount = $doctor->varFees ?? null;
             $appointment->is_freeslot = 0;
             $appointment->varAppointment = $date;

@@ -1174,11 +1174,12 @@ class PatientController extends Controller
         $start = Carbon::createFromFormat('Y-m-d H:i', "{$date} {$startTime}");
         $end = Carbon::createFromFormat('Y-m-d H:i', "{$date} {$endTime}");
 
-        // Fetch booked slots for the given doctor
+        // Fetch booked slots for the given doctor (a clinic token spans the clinic's day, not a slot)
         $storedTimeSlots = Appointment::where('varAppointment', $date)
             ->where('dr_id', $request->doctor)
             ->where('chrIsCanceled', 'N')
             ->where('chrIsRejected', 'N')
+            ->withoutClinicBookings()
             ->orderBy('startTime', 'asc')
             ->get();
 
@@ -1277,6 +1278,7 @@ class PatientController extends Controller
                             ->where('chrIsCanceled', 'N')
                             ->where('chrIsRejected', 'N')
                             ->where('charIsPaid', 'Y')
+                            ->withoutClinicBookings()
                             // Ensure date is in YYYY-MM-DD format
                             // ->where(function ($query) use ($request) {
                             //     $query->whereBetween('startTime', [$request->time_start, $request->time_end])

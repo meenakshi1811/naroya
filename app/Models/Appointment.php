@@ -21,6 +21,7 @@ class Appointment extends Model
         'dr_id',
         'clinic_id',
         'token_no',
+        'is_clinic_booking',
         'is_present',
         'token_reminder_sent_at',
         'amount',
@@ -178,6 +179,12 @@ class Appointment extends Model
     public function clinic()
     {
         return $this->belongsTo(Clinic::class, 'clinic_id');
+    }
+
+    /** Leaves out tokens booked at a clinic, which aren't time-slot consultations. */
+    public function scopeWithoutClinicBookings($query)
+    {
+        return $query->where($query->qualifyColumn('is_clinic_booking'), 0);
     }
 
     public function hasPaidSlotConflict(): bool

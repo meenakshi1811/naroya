@@ -27,7 +27,7 @@ class SendMeetingReminder extends Command
             ->where('chrIsCanceled', 'N')
             // Clinic token bookings all start at clinic opening; they get queue
             // reminders as the running token moves (ClinicTokenController) instead.
-            ->whereNull('token_no')
+            ->withoutClinicBookings()
             ->get();
 
         $notificationController = new NotificationController();
