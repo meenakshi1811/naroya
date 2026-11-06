@@ -4,12 +4,18 @@ namespace App\Http\Controllers;
 
 use Google\Auth\Credentials\ServiceAccountCredentials;
 use Google\Auth\HttpHandler\HttpHandlerFactory;
+use GuzzleHttp\Client as GuzzleClient;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class NotificationController extends Controller
 {
+    /** Seconds allowed to reach Google, and for a whole call; a push never holds up an API for long. */
+    private const CONNECT_TIMEOUT = 3;
+    private const TIMEOUT = 5;
+
     private string $serviceAccountPath;
 
     /**
@@ -73,7 +79,7 @@ class NotificationController extends Controller
             $accessToken = $this->getAccessToken();
             $projectId = $this->getProjectId();
 
-            $response = Http::withHeaders([
+            $response = Http::connectTimeout(self::CONNECT_TIMEOUT)->timeout(self::TIMEOUT)->withHeaders([
                 'Authorization' => 'Bearer '.$accessToken,
                 'Content-Type' => 'application/json',
             ])->post(
@@ -119,8 +125,19 @@ class NotificationController extends Controller
         }
     }
 
+    /**
+     * Google's access token lasts an hour, so it is cached and reused instead of being
+     * fetched again for every push (that extra round trip made each push slow).
+     */
     private function getAccessToken(): string
     {
+        $cacheKey = 'fcm_access_token:'.md5($this->serviceAccountPath);
+        $cached = Cache::get($cacheKey);
+
+        if (is_string($cached) && $cached !== '') {
+            return $cached;
+        }
+
         $credentialsPath = storage_path('app/'.$this->serviceAccountPath);
 
         if (! is_file($credentialsPath)) {
@@ -132,11 +149,19 @@ class NotificationController extends Controller
             $credentialsPath
         );
 
-        $accessToken = $credentials->fetchAuthToken(HttpHandlerFactory::build());
+        // Without a timeout a slow Google endpoint would hang the caller indefinitely.
+        $accessToken = $credentials->fetchAuthToken(HttpHandlerFactory::build(new GuzzleClient([
+            'connect_timeout' => self::CONNECT_TIMEOUT,
+            'timeout' => self::TIMEOUT,
+        ])));
 
         if (! isset($accessToken['access_token'])) {
             throw new RuntimeException('Failed to obtain Firebase access token.');
         }
+
+        // Renew five minutes before Google's expiry.
+        $ttl = max(60, (int) ($accessToken['expires_in'] ?? 3600) - 300);
+        Cache::put($cacheKey, $accessToken['access_token'], $ttl);
 
         return $accessToken['access_token'];
     }

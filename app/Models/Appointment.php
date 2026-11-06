@@ -24,6 +24,7 @@ class Appointment extends Model
         'is_clinic_booking',
         'is_present',
         'token_reminder_sent_at',
+        'token_reminder_pushed_at',
         'amount',
         'is_freeslot',
         'varAppointment',
